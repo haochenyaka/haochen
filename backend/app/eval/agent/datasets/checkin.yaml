@@ -1,0 +1,32 @@
+# 入住/退房流程评估集 v1
+fingerprint_meta:
+  name: 入住退房评估集 v1
+  description: 入住办理、退房、密码下发等场景
+cases:
+  - id: "checkin-001"
+    name: "标准入住-已预订"
+    message: "我要办理入住，预订编号是 BK20260901"
+    expected:
+      tool_sequence:
+        - name: "check_in"
+          args_contain: { "booking_ref": "BK20260901" }
+      task_success: true
+      answer_contains: ["入住"]
+    tags: ["checkin", "happy-path"]
+
+  - id: "checkin-002"
+    name: "退房"
+    message: "我要退房"
+    expected:
+      tool_sequence:
+        - name: "check_out"
+      task_success: true
+    tags: ["checkin", "checkout"]
+
+  - id: "checkin-003"
+    name: "查询入住信息"
+    message: "我的房间号是多少？"
+    expected:
+      tool_sequence: []
+      task_success: true
+    tags: ["checkin", "inquiry"]

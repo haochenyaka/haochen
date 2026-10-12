@@ -1,0 +1,90 @@
+/**
+ * 品牌主题（运行期）—— 保洁端。
+ * 同时声明 `:root`(H5) 与 `page`(微信小程序) 两处 CSS 变量，
+ * 并覆盖 wot-design-uni 主题变量。
+ * ⚠️ 改色需同步：src/uni.scss（SCSS 变量）。
+ */
+
+/* ── 品牌 CSS 变量 ── */
+:root,
+page {
+  --hc-brand: #1a3a6b;
+  --hc-brand-dark: #14284a;
+  --hc-brand-light: #24487c;
+  --hc-gold: #c9a227;
+  --hc-bg: #f7f5f0;
+  --hc-card: #ffffff;
+  --hc-text-1: #1f2329;
+  --hc-text-2: #4b5563;
+  --hc-text-3: #6b7280;
+  --hc-text-4: #9ca3af;
+  --hc-border: #e5e7eb;
+  --hc-divider: #f0ede6;
+  --hc-success: #2e9e5b;
+  --hc-warning: #d98a1f;
+  --hc-error: #d03050;
+  --hc-radius-lg: 20rpx;
+  --hc-radius-xl: 24rpx;
+  --hc-shadow-card: 0 4rpx 16rpx rgba(26, 58, 107, 0.08);
+  --hc-gradient-brand: linear-gradient(135deg, #1a3a6b, #24487c);
+  --hc-gradient-gold: linear-gradient(135deg, #c9a227, #e3c45d);
+
+  /* ── wot-design-uni 主题覆盖（主色→藏青）── */
+  --wot-color-theme: #1a3a6b;
+  --wot-color-success: #2e9e5b;
+  --wot-color-warning: #d98a1f;
+  --wot-color-danger: #d03050;
+  --wot-color-title: #1f2329;
+  --wot-color-content: #1f2329;
+  --wot-color-secondary: #4b5563;
+  --wot-color-aid: #6b7280;
+  --wot-color-border: #e5e7eb;
+  --wot-color-bg: #f7f5f0;
+  --wot-button-large-radius: 16rpx;
+  --wot-button-medium-radius: 16rpx;
+}
+
+/* ── 全局页面基础样式 ── */
+page {
+  background-color: var(--hc-bg);
+  color: var(--hc-text-1);
+  font-size: 28rpx;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* ── 通用工具类 ── */
+.hc-page {
+  padding: 32rpx;
+}
+
+.hc-card {
+  padding: 32rpx;
+  background: var(--hc-card);
+  border-radius: var(--hc-radius-lg);
+  box-shadow: var(--hc-shadow-card);
+}
+
+.hc-section-title {
+  display: block;
+  margin: 32rpx 8rpx 20rpx;
+  color: var(--hc-text-3);
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.hc-hero {
+  padding: 48rpx 40rpx;
+  color: #ffffff;
+  background: var(--hc-gradient-brand);
+  border-radius: var(--hc-radius-xl);
+}
+
+.hc-gold-tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  color: #8a6d15;
+  font-size: 22rpx;
+  background: var(--hc-gradient-gold);
+  border-radius: 999rpx;
+}

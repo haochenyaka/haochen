@@ -1,0 +1,87 @@
+/**
+ * 品牌 SCSS 变量（编译期）—— 三端统一：藏青 #1A3A6B + 香槟金 #C9A227。
+ * 由 uni-app 自动全局注入，无需 import。
+ * ⚠️ 改色需同步：src/styles/theme.scss（CSS 变量）、
+ *    ../../admin-web/src/theme/tokens.ts（后台 token）。
+ */
+
+/* ── 品牌色 ── */
+$brand-1: #eef2f8;
+$brand-2: #d6e0ef;
+$brand-3: #aec1db;
+$brand-5: #4f73a5;
+$brand-6: #1a3a6b; // 主色
+$brand-7: #16315b;
+$brand-8: #12284b;
+$brand-9: #0e1f3b;
+$gold-1: #fbf6e7;
+$gold-2: #f6ebc7;
+$gold-6: #c9a227; // 强调色
+
+/* ── 中性色 ── */
+$text-1: #1f2329;
+$text-2: #4b5563;
+$text-3: #6b7280;
+$text-4: #9ca3af;
+$border: #e5e7eb;
+$divider: #f0ede6;
+$bg-layout: #f7f5f0;
+$bg-container: #ffffff;
+
+/* ── 语义色 ── */
+$success: #2e9e5b;
+$warning: #d98a1f;
+$error: #d03050;
+
+/* ── 圆角 / 阴影 / 渐变（rpx） ── */
+$radius-sm: 12rpx;
+$radius-md: 16rpx;
+$radius-lg: 20rpx;
+$radius-xl: 24rpx;
+$shadow-card: 0 4rpx 16rpx rgba(26, 58, 107, 0.08);
+$gradient-brand: linear-gradient(135deg, #1a3a6b, #24487c);
+
+/* ── 覆盖 uni 官方变量（兼容插件市场组件） ── */
+$uni-color-primary: $brand-6;
+$uni-color-success: $success;
+$uni-color-warning: $warning;
+$uni-color-error: $error;
+
+$uni-text-color: $text-1;
+$uni-text-color-inverse: #fff;
+$uni-text-color-grey: $text-3;
+$uni-text-color-placeholder: $text-4;
+$uni-text-color-disable: #c0c0c0;
+
+$uni-bg-color: $bg-container;
+$uni-bg-color-grey: $bg-layout;
+$uni-bg-color-hover: #f1f1f1;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+
+$uni-border-color: $border;
+
+$uni-font-size-sm: 12px;
+$uni-font-size-base: 14px;
+$uni-font-size-lg: 16px;
+
+$uni-border-radius-sm: 2px;
+$uni-border-radius-base: 3px;
+$uni-border-radius-lg: 6px;
+$uni-border-radius-circle: 50%;
+
+$uni-spacing-row-sm: 5px;
+$uni-spacing-row-base: 10px;
+$uni-spacing-row-lg: 15px;
+
+$uni-spacing-col-sm: 4px;
+$uni-spacing-col-base: 8px;
+$uni-spacing-col-lg: 12px;
+
+$uni-opacity-disabled: 0.3;
+
+$uni-color-title: #2c405a;
+$uni-font-size-title: 20px;
+$uni-color-subtitle: #555;
+$uni-font-size-subtitle: 18px;
+$uni-color-paragraph: #3f536e;
+$uni-font-size-paragraph: 15px;

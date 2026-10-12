@@ -1,0 +1,21 @@
+# 派单/保洁流程评估集 v1
+fingerprint_meta:
+  name: 派单保洁评估集 v1
+  description: 保洁任务派发与查询场景
+cases:
+  - id: "dispatch-001"
+    name: "请求保洁"
+    message: "我需要打扫房间"
+    expected:
+      tool_sequence:
+        - name: "dispatch_cleaning"
+      task_success: true
+    tags: ["dispatch", "happy-path"]
+
+  - id: "dispatch-002"
+    name: "查询保洁状态"
+    message: "保洁什么时候到？"
+    expected:
+      tool_sequence: []
+      task_success: true
+    tags: ["dispatch", "inquiry"]

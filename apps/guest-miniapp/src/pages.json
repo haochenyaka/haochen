@@ -1,0 +1,91 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue",
+      "^hc-(.*)": "@/components/hc-$1/hc-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "皓晨酒店"
+      }
+    },
+    {
+      "path": "pages/chat/index",
+      "style": {
+        "navigationBarTitleText": "在线咨询"
+      }
+    },
+    {
+      "path": "pages/orders/index",
+      "style": {
+        "navigationBarTitleText": "我的订单"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/orders/detail",
+      "style": {
+        "navigationBarTitleText": "订单详情"
+      }
+    },
+    {
+      "path": "pages/rooms/index",
+      "style": {
+        "navigationBarTitleText": "房型与预订"
+      }
+    },
+    {
+      "path": "pages/rooms/booking",
+      "style": {
+        "navigationBarTitleText": "预订"
+      }
+    },
+    {
+      "path": "pages/services/room-service",
+      "style": {
+        "navigationBarTitleText": "客房服务"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#8a9099",
+    "selectedColor": "#1a3a6b",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/orders/index",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "皓晨酒店",
+    "navigationBarBackgroundColor": "#1a3a6b",
+    "backgroundColor": "#f7f5f0"
+  }
+}

@@ -1,0 +1,37 @@
+# 订单流程评估集 v1
+# 覆盖标准订房、加床、取消等场景
+fingerprint_meta:
+  name: 订单流程评估集 v1
+  description: 标准订房、加床、取消等场景
+cases:
+  - id: "order-001"
+    name: "标准订房-有房"
+    message: "我要订一间大床房，今晚入住"
+    expected:
+      tool_sequence:
+        - name: "inquire_room_type"
+          args_contain: { "room_type": "大床房" }
+        - name: "inquire_room"
+        - name: "create_order"
+      task_success: true
+      answer_contains: ["已为您创建订单"]
+    tags: ["order", "happy-path"]
+
+  - id: "order-002"
+    name: "查询房价"
+    message: "大床房多少钱一晚？"
+    expected:
+      tool_sequence:
+        - name: "inquire_room_type"
+          args_contain: { "room_type": "大床房" }
+      task_success: true
+    tags: ["order", "inquiry"]
+
+  - id: "order-003"
+    name: "取消订单"
+    message: "我要取消刚下的订单"
+    expected:
+      tool_sequence:
+        - name: "cancel_order"
+      task_success: true
+    tags: ["order", "cancellation"]

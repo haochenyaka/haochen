@@ -1,0 +1,67 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue",
+      "^hc-(.*)": "@/components/hc-$1/hc-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "员工登录"
+      }
+    },
+    {
+      "path": "pages/tasks/index",
+      "style": {
+        "navigationBarTitleText": "我的任务"
+      }
+    },
+    {
+      "path": "pages/tasks/detail",
+      "style": {
+        "navigationBarTitleText": "任务详情"
+      }
+    },
+    {
+      "path": "pages/checkin/index",
+      "style": {
+        "navigationBarTitleText": "打卡"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#8a9099",
+    "selectedColor": "#1a3a6b",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/tasks/index",
+        "text": "任务"
+      },
+      {
+        "pagePath": "pages/checkin/index",
+        "text": "打卡"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "皓晨保洁",
+    "navigationBarBackgroundColor": "#1a3a6b",
+    "backgroundColor": "#f7f5f0"
+  }
+}

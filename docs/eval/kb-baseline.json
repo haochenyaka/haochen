@@ -1,0 +1,4486 @@
+{
+  "report_id": 1,
+  "generated_at": "2026-09-27T13:42:40+00:00",
+  "dataset_path": "app\\eval\\kb_faq.jsonl",
+  "k": 10,
+  "dataset_fingerprint": "sha256:f4c352b295d078d3a4e335b3e4b5b8591aa8015d9325d8bd1478ce241ca3db67",
+  "content_fingerprint": "sha256:5912f1b17b5b6e9947b741365596fcf9a57073bcfffe3051cb37a7356ee0fc24",
+  "config_fingerprint": "sha256:309419c6240ee28c41dcc902e04333694592562dc14d05854e2eb312b6a54e5d",
+  "evaluator": null,
+  "retrieval_config": {
+    "k": 10,
+    "kb_codes": [
+      "hotel-guest"
+    ],
+    "kb_recall_limit": 30,
+    "kb_rerank_top_n": 6,
+    "kb_context_max_chars": 3000,
+    "kb_context_max_chunks_per_document": 3,
+    "kb_chunk_max_chars": 700,
+    "kb_chunk_overlap_chars": 80,
+    "embedding": "dev-deterministic:64",
+    "reranker": "keyword"
+  },
+  "metrics": {
+    "questions": 73,
+    "k": 10,
+    "recall_at_k": 0.986301,
+    "precision_at_k": 0.419635,
+    "f1_at_k": 0.561774,
+    "primary_top1_rate": 0.39726,
+    "hit_rate": 0.986301,
+    "answer_correctness": null,
+    "answered": 0,
+    "overall_score": 0.986301,
+    "overall_metric": "recall@10"
+  },
+  "comparable_reports": [],
+  "superseded_reports": [],
+  "outcomes": [
+    {
+      "item_id": "meal-01",
+      "question": "早餐供应时间是几点到几点？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.300006,
+          "recall_score": 0.031099
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.200009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.100008,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.100007,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.100005,
+          "recall_score": 0.031025
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-02",
+      "question": "早餐在哪里吃？需要餐券吗？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.300008,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.300007,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.200009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.100006,
+          "recall_score": 0.03055
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.100004,
+          "recall_score": 0.030303
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-03",
+      "question": "早餐多少钱一位？儿童怎么收费？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.500009,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.333339,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.166675,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.166674,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 2e-06,
+          "recall_score": 0.015152
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-04",
+      "question": "房价包含早餐吗？",
+      "gold_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.666676,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.500007,
+          "recall_score": 0.030622
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.166673,
+          "recall_score": 0.030579
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 8e-06,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 3e-06,
+          "recall_score": 0.015385
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-05",
+      "question": "怎么购买早餐？最晚什么时候买？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.333342,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.33334,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.250008,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.083339,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-06",
+      "question": "早餐提供哪些吃的？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】客房服务与清洁"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.285722,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.142866,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.142864,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.142863,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.142862,
+          "recall_score": 0.03055
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-07",
+      "question": "可以点餐送到房间吗？送餐时间是什么时候？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.411772,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.352946,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.235303,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.235298,
+          "recall_score": 0.030798
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.117648,
+          "recall_score": 0.029199
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-08",
+      "question": "晚上 22 点之后还能吃东西吗？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】客房服务与清洁"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.454553,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.181827,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.181825,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.181824,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.181823,
+          "recall_score": 0.03101
+        }
+      ],
+      "recall": 0.0,
+      "precision": 0.0,
+      "f1": 0.0,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-09",
+      "question": "酒店附近有什么吃饭或买东西的地方？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.133339,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.066676,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.066672,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.066671,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.06667,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-10",
+      "question": "房间可以做饭或用电磁炉吗？",
+      "gold_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.636373,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.636372,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.363643,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.272733,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.090913,
+          "recall_score": 0.029857
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "meal-11",
+      "question": "吃剩的外卖和餐后垃圾放哪里？",
+      "gold_titles": [
+        "【样例】早餐与餐饮"
+      ],
+      "primary_title": "【样例】早餐与餐饮",
+      "retrieved_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.250009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.083341,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.083339,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 7e-06,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 5e-06,
+          "recall_score": 0.03101
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-01",
+      "question": "房间 WiFi 叫什么名字？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.285723,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.285722,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.28572,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.142864,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.142861,
+          "recall_score": 0.03055
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-02",
+      "question": "WiFi 密码是多少？在哪里查看？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.800009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.300008,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.100007,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.100005,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 1e-06,
+          "recall_score": 0.028986
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-03",
+      "question": "忘记 WiFi 密码了怎么办？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.500009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.500008,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.375007,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.125006,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 1e-06,
+          "recall_score": 0.014493
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-04",
+      "question": "上网需要额外付费吗？房间能连几台设备？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】网络与智能设备",
+        "【样例】客房服务与清洁",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.375006,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.250009,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.187508,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.187507,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.125001,
+          "recall_score": 0.029412
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-05",
+      "question": "门锁密码在哪里看？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】酒店介绍与设施",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.571437,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.571435,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.142864,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 1e-06,
+          "recall_score": 0.029199
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.4,
+      "f1": 0.571429,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-06",
+      "question": "门锁怎么开门？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.600008,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.400009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.400004,
+          "recall_score": 0.030769
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.200007,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.014925
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-07",
+      "question": "门锁密码输错多次会被锁定吗？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.416676,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.250008,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.250007,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.083339,
+          "recall_score": 0.030798
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.083338,
+          "recall_score": 0.030579
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.2,
+      "f1": 0.333333,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-08",
+      "question": "门锁打不开怎么办？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.285721,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.142865,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.142863,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 2e-06,
+          "recall_score": 0.014925
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-09",
+      "question": "门锁密码什么时候失效？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】网络与智能设备",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.444452,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.444451,
+          "recall_score": 0.031319
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.333342,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.333339,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 1e-06,
+          "recall_score": 0.014493
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-10",
+      "question": "房间空调怎么开？默认多少度？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.727282,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.363642,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.272735,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.272734,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.090912,
+          "recall_score": 0.03031
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-11",
+      "question": "投影仪怎么投屏？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.500008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.166674,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.166673,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.014925
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-12",
+      "question": "智能音箱的唤醒词是什么？能控制什么？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.428578,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.285719,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.214294,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.214292,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.029644
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-13",
+      "question": "送物机器人怎么用？可以送什么？",
+      "gold_titles": [
+        "【样例】网络与智能设备"
+      ],
+      "primary_title": "【样例】网络与智能设备",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.416676,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.416673,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.250008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.166674,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 2e-06,
+          "recall_score": 0.014706
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "wifi-14",
+      "question": "机器人送物多久能到？取物有时间限制吗？",
+      "gold_titles": [
+        "【样例】网络与智能设备",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】常见问题",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】早餐与餐饮",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.562508,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.312509,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.250007,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.250004,
+          "recall_score": 0.030536
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.062505,
+          "recall_score": 0.030579
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.4,
+      "f1": 0.571429,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-01",
+      "question": "押金多少钱？怎么支付？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.625009,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.500008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.250007,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.250006,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.125001,
+          "recall_score": 0.014706
+        }
+      ],
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-02",
+      "question": "押金什么时候退？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】客房服务与清洁"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.833342,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.166674,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.166673,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.166668,
+          "recall_score": 0.014493
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 8e-06,
+          "recall_score": 0.032018
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-03",
+      "question": "入住需要什么证件？有人没登记可以住吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】客房服务与清洁"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.312509,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.312506,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.250008,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.187504,
+          "recall_score": 0.030366
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.187502,
+          "recall_score": 0.029851
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-04",
+      "question": "未成年人可以独自入住吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题",
+        "【样例】网络与智能设备"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.400009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.300006,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.200008,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.200004,
+          "recall_score": 0.03009
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.100002,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-05",
+      "question": "可以用别人的身份证办理入住吗？",
+      "gold_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】常见问题",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300009,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.384623,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.230776,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.230772,
+          "recall_score": 0.029857
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.076929,
+          "recall_score": 0.031319
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-06",
+      "question": "自助入住机核验失败怎么办？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】早餐与餐饮"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.636372,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.454554,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.363641,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.272734,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.090911,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-07",
+      "question": "可以带宠物入住吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】网络与智能设备"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.857152,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.428578,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.28572,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.285717,
+          "recall_score": 0.029877
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.142865,
+          "recall_score": 0.032002
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-08",
+      "question": "房间可以吸烟吗？会收费吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.900009,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.300008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.300006,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.200007,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.200005,
+          "recall_score": 0.030536
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-09",
+      "question": "可以加床吗？怎么收费？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.750009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.250008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.250007,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.125006,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.125005,
+          "recall_score": 0.030331
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-10",
+      "question": "访客可以留宿吗？最晚待到几点？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.583342,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.33334,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.166675,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.166673,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.166671,
+          "recall_score": 0.03031
+        }
+      ],
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-11",
+      "question": "晚上 22 点之后在房间要安静吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】客房服务与清洁"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.416675,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.416673,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.250009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.250003,
+          "recall_score": 0.030077
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.250002,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-12",
+      "question": "房间可以用大功率电器吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题",
+        "【样例】网络与智能设备"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.600009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.400008,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.300006,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.300005,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.200007,
+          "recall_score": 0.031258
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-13",
+      "question": "可以寄存行李吗？免费吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.888898,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.444452,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.444449,
+          "recall_score": 0.030536
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.33334,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 2e-06,
+          "recall_score": 0.015873
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-14",
+      "question": "退房后还能用行李寄存柜吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.9091,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.545463,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.454552,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.272733,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.18182,
+          "recall_score": 0.029851
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-15",
+      "question": "怎么开发票？多久能收到？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.444451,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.333338,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.222231,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.111119,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.111117,
+          "recall_score": 0.03125
+        }
+      ],
+      "recall": 1.0,
+      "precision": 1.0,
+      "f1": 1.0,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "stay-16",
+      "question": "可以开增值税专用发票吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.200009,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.100008,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.100007,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.100006,
+          "recall_score": 0.030331
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.100005,
+          "recall_score": 0.03031
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "checkout-01",
+      "question": "几点退房？需要去前台办理吗？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.545464,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.454552,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.363644,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.363642,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.18182,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "checkout-02",
+      "question": "延迟退房怎么收费？",
+      "gold_titles": [
+        "【样例】入住政策与押金",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.714294,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.428578,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.428576,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.285723,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.142859,
+          "recall_score": 0.029418
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "checkout-03",
+      "question": "免费延迟退房怎么申请？",
+      "gold_titles": [
+        "【样例】入住政策与押金"
+      ],
+      "primary_title": "【样例】入住政策与押金",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.666676,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.666674,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.44445,
+          "recall_score": 0.030777
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.333341,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.222226,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-01",
+      "question": "酒店地址在哪里？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.500009,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.166675,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.166674,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.166673,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.166672,
+          "recall_score": 0.031054
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-02",
+      "question": "酒店有几间客房？在哪些楼层？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.363644,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.272734,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.272732,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.181827,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.181821,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-03",
+      "question": "酒店有前台吗？怎么办理入住？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.909097,
+          "recall_score": 0.031319
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.454554,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.45455,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.454549,
+          "recall_score": 0.030622
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.27273,
+          "recall_score": 0.030303
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-04",
+      "question": "酒店有哪些房型？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】早餐与餐饮"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.333342,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.33334,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.333339,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.333337,
+          "recall_score": 0.03055
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.166675,
+          "recall_score": 0.031778
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-05",
+      "question": "大床房多大？适合几个人住？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】早餐与餐饮"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.300009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 8e-06,
+          "recall_score": 0.016393
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 7e-06,
+          "recall_score": 0.015873
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 6e-06,
+          "recall_score": 0.015625
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 5e-06,
+          "recall_score": 0.015385
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-06",
+      "question": "家庭套房可以住几个人？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施",
+        "【样例】网络与智能设备"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.555564,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.444449,
+          "recall_score": 0.030331
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.33334,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.11112,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.111115,
+          "recall_score": 0.03031
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-07",
+      "question": "几点可以入住？提前到店怎么办？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.833342,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.416672,
+          "recall_score": 0.030798
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.333341,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.333336,
+          "recall_score": 0.030331
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.166669,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-08",
+      "question": "可以提前入住吗？",
+      "gold_titles": [
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】常见问题",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300008,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.500009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.33334,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.333338,
+          "recall_score": 0.030536
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.333337,
+          "recall_score": 0.030536
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-09",
+      "question": "深夜到店还能办理入住吗？",
+      "gold_titles": [
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】常见问题",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.900006,
+          "recall_score": 0.031319
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.400009,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.400007,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.300008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.100002,
+          "recall_score": 0.029631
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-10",
+      "question": "从地铁站怎么到酒店？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】早餐与餐饮",
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.375009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.375008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.250007,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.250005,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.125004,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-11",
+      "question": "从高铁站或机场打车要多久？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.454554,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.090917,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.090915,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 7e-06,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 2e-06,
+          "recall_score": 0.015385
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.2,
+      "f1": 0.333333,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-12",
+      "question": "停车收费吗？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 1.300009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.250008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.250006,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 7e-06,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.015152
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-13",
+      "question": "酒店各楼层有哪些设施？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.222229,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.11112,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.111119,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.111117,
+          "recall_score": 0.031025
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.111116,
+          "recall_score": 0.03101
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "intro-14",
+      "question": "健身房几点开放？",
+      "gold_titles": [
+        "【样例】酒店介绍与设施"
+      ],
+      "primary_title": "【样例】酒店介绍与设施",
+      "retrieved_titles": [
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】早餐与餐饮",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.500008,
+          "recall_score": 0.031545
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.333339,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.166676,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.166674,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.016393
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.2,
+      "f1": 0.333333,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-01",
+      "question": "怎么呼叫客房清洁？",
+      "gold_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 1.300009,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 1.300008,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.714293,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.714291,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.142859,
+          "recall_score": 0.029631
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-02",
+      "question": "清洁服务到几点？晚上有紧急需求怎么办？",
+      "gold_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.625009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.375008,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.312507,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.250006,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.062501,
+          "recall_score": 0.029199
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-03",
+      "question": "标准清洁包含哪些内容？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】早餐与餐饮",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.444453,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.222227,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.111119,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.111118,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.111117,
+          "recall_score": 0.031258
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-04",
+      "question": "可以更换床单被套吗？要另外收费吗？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.500009,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.214292,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.071437,
+          "recall_score": 0.031498
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.071436,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.014925
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-05",
+      "question": "连住期间每天都会来打扫吗？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】早餐与餐饮",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.181824,
+          "recall_score": 0.030886
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.181821,
+          "recall_score": 0.030077
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.090918,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 8e-06,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 4e-06,
+          "recall_score": 0.03009
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-06",
+      "question": "保洁上门会直接进房间吗？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.400009,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.300008,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.300007,
+          "recall_score": 0.031281
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.200002,
+          "recall_score": 0.029877
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.100003,
+          "recall_score": 0.03009
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.2,
+      "f1": 0.333333,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-07",
+      "question": "可以要矿泉水、牙具或拖鞋吗？收费吗？",
+      "gold_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.428579,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.428578,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.357149,
+          "recall_score": 0.030798
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.214295,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 2e-06,
+          "recall_score": 0.015873
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-08",
+      "question": "可以借用吹风机吗？要押金吗？",
+      "gold_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.636372,
+          "recall_score": 0.031319
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.363642,
+          "recall_score": 0.030622
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.181827,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.090916,
+          "recall_score": 0.03125
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.09091,
+          "recall_score": 0.015152
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.666667,
+      "f1": 0.8,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-09",
+      "question": "借用的物品超时没还怎么办？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.363645,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.272734,
+          "recall_score": 0.031754
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.181826,
+          "recall_score": 0.032002
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.090915,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.090912,
+          "recall_score": 0.029877
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-10",
+      "question": "房间设备坏了怎么办？",
+      "gold_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 1.300009,
+          "recall_score": 0.032266
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.500008,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.375007,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.375004,
+          "recall_score": 0.03031
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 0.125003,
+          "recall_score": 0.030077
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.5,
+      "f1": 0.666667,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-11",
+      "question": "漏水、停电这类问题怎么处理？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.363645,
+          "recall_score": 0.031778
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.272735,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.181824,
+          "recall_score": 0.030835
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.181822,
+          "recall_score": 0.030303
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 1e-06,
+          "recall_score": 0.014493
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-12",
+      "question": "洗衣服在哪里？几点开放？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】客房服务与清洁",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.33334,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.222231,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.222228,
+          "recall_score": 0.03101
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.222226,
+          "recall_score": 0.030579
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 3e-06,
+          "recall_score": 0.030366
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": false,
+      "degraded": false
+    },
+    {
+      "item_id": "service-13",
+      "question": "洗衣服怎么收费？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】常见问题",
+        "【样例】酒店介绍与设施",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.333342,
+          "recall_score": 0.032522
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.33334,
+          "recall_score": 0.031054
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.166675,
+          "recall_score": 0.032018
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.166673,
+          "recall_score": 0.030769
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 4e-06,
+          "recall_score": 0.015873
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.25,
+      "f1": 0.4,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "service-14",
+      "question": "洗衣房有洗衣液吗？有什么注意事项？",
+      "gold_titles": [
+        "【样例】客房服务与清洁"
+      ],
+      "primary_title": "【样例】客房服务与清洁",
+      "retrieved_titles": [
+        "【样例】客房服务与清洁",
+        "【样例】入住政策与押金",
+        "【样例】酒店介绍与设施",
+        "【样例】常见问题",
+        "【样例】早餐与餐饮"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "925e11f5-942f-48a6-b350-c50004927913",
+          "document_id": "1126d879-9b6b-4de3-8676-eebae6e3335f",
+          "document_title": "【样例】客房服务与清洁",
+          "ordinal": 0,
+          "score": 0.230778,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "5256d1dd-da34-4167-aa77-c6af27dcb27b",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 0,
+          "score": 0.230777,
+          "recall_score": 0.031514
+        },
+        {
+          "chunk_id": "22d6f32a-87c2-405b-a3ac-120fa979bff2",
+          "document_id": "0c387033-554f-4b39-a8bb-d7d05113e534",
+          "document_title": "【样例】酒店介绍与设施",
+          "ordinal": 0,
+          "score": 0.153849,
+          "recall_score": 0.030331
+        },
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.076929,
+          "recall_score": 0.031258
+        },
+        {
+          "chunk_id": "9bc4b4e9-378e-47e3-b6d7-c5e8ad153ebe",
+          "document_id": "9eb40e22-6fa9-4acf-be22-672b92778929",
+          "document_title": "【样例】早餐与餐饮",
+          "ordinal": 0,
+          "score": 0.076927,
+          "recall_score": 0.03055
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.2,
+      "f1": 0.333333,
+      "primary_top1": true,
+      "degraded": false
+    },
+    {
+      "item_id": "faq-01",
+      "question": "可以换房吗？差价怎么算？",
+      "gold_titles": [
+        "【样例】常见问题"
+      ],
+      "primary_title": "【样例】常见问题",
+      "retrieved_titles": [
+        "【样例】常见问题",
+        "【样例】网络与智能设备",
+        "【样例】入住政策与押金"
+      ],
+      "retrieved": [
+        {
+          "chunk_id": "c52f6648-bc45-4d57-9459-7333bfec87e4",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 2,
+          "score": 0.666676,
+          "recall_score": 0.032787
+        },
+        {
+          "chunk_id": "e2576fa7-f90b-4fe2-a8cd-029d2a87b71b",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 0,
+          "score": 0.22223,
+          "recall_score": 0.032258
+        },
+        {
+          "chunk_id": "0025caaf-d906-441f-acaa-c70d913a31f5",
+          "document_id": "091c2257-0302-4832-8abe-c0dd6e628ec7",
+          "document_title": "【样例】常见问题",
+          "ordinal": 1,
+          "score": 0.222229,
+          "recall_score": 0.031746
+        },
+        {
+          "chunk_id": "08278d67-0e4d-4f24-9503-1c2614baefd8",
+          "document_id": "c7ba6627-bd14-46e4-a6e8-95f939b345af",
+          "document_title": "【样例】网络与智能设备",
+          "ordinal": 0,
+          "score": 0.111117,
+          "recall_score": 0.030118
+        },
+        {
+          "chunk_id": "79e5994f-a5ad-41e3-8101-2df146c8ad0d",
+          "document_id": "dfe83e12-c972-47e1-9346-bb8c1ac29ea3",
+          "document_title": "【样例】入住政策与押金",
+          "ordinal": 1,
+          "score": 5e-06,
+          "recall_score": 0.015625
+        }
+      ],
+      "recall": 1.0,
+      "precision": 0.333333,
+      "f1": 0.5,
+      "primary_top1": true,
+      "degraded": false
+    }
+  ]
+}

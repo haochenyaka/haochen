@@ -1,0 +1,72 @@
+# ============ 环境与密钥 ============
+.env
+.env.*
+!.env.example
+!.env.template
+deploy/.env
+deploy/.env.*
+!deploy/.env.example
+*.pem
+*.key
+*.p12
+
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+
+# 测试与工具缓存
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ============ Node / 前端 ============
+node_modules/
+dist/
+.output/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# uni-app / 微信小程序构建产物
+unpackage/
+apps/*/dist/
+apps/*/unpackage/
+
+# ============ 运行产物与数据 ============
+*.log
+logs/
+.yuxi-logs/
+uploads/
+data/
+workdir/
+*.sqlite
+*.sqlite3
+
+# ============ IDE / 编辑器 ============
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# ============ OS ============
+.DS_Store
+Thumbs.db
+desktop.ini

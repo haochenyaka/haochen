@@ -1,0 +1,76 @@
+@import './tokens.css';
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    sans-serif;
+  background-color: var(--bg-layout);
+  color: var(--text-1);
+}
+
+/* 美化滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c9beaf;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-3);
+}
+
+/* ───── Ant Design 基础微调 ───── */
+.ant-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* 表格：暖调表头 + 行悬停（组件级 token 未覆盖项） */
+.ant-table-thead > tr > th {
+  font-weight: 600;
+  background-color: var(--bg-hover) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background-color: var(--bg-hover) !important;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: var(--radius-lg);
+}
+
+/* 默认标签走藏青浅底 */
+.ant-tag {
+  border-radius: var(--radius-sm);
+}
+
+/* ───── 排版基类 ───── */
+.page-title {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.text-secondary {
+  color: var(--text-2);
+}
+
+.text-tertiary {
+  color: var(--text-3);
+}

@@ -1,0 +1,60 @@
+/**
+ * 品牌 CSS 变量镜像 —— 供 global.css / 布局 / 视图 scoped / ECharts 主题引用。
+ * ⚠️ 值需与 src/theme/tokens.ts 保持一致（AntD 内部色由 ConfigProvider 注入，
+ *    我们自绘的 DOM 走这些变量）。
+ */
+:root {
+  /* 藏青主色阶 */
+  --brand-1: #eef2f8;
+  --brand-2: #d6e0ef;
+  --brand-3: #aec1db;
+  --brand-4: #7e9ac1;
+  --brand-5: #4f73a5;
+  --brand-6: #1a3a6b;
+  --brand-7: #16315b;
+  --brand-8: #12284b;
+  --brand-9: #0e1f3b;
+  --brand-10: #0a162b;
+
+  /* 香槟金色阶 */
+  --gold-1: #fbf6e7;
+  --gold-2: #f6ebc7;
+  --gold-3: #edd892;
+  --gold-4: #e3c45d;
+  --gold-5: #d2af38;
+  --gold-6: #c9a227;
+  --gold-7: #a8851f;
+
+  /* 中性 */
+  --text-1: #1f2329;
+  --text-2: #4b5563;
+  --text-3: #6b7280;
+  --text-4: #9ca3af;
+  --border: #e5e7eb;
+  --divider: #f0ede6;
+  --bg-layout: #f7f5f0;
+  --bg-container: #ffffff;
+  --bg-hover: #faf9f5;
+
+  /* 语义 */
+  --success: #2e9e5b;
+  --warning: #d98a1f;
+  --error: #d03050;
+
+  /* 渐变 */
+  --gradient-brand: linear-gradient(135deg, #1a3a6b, #24487c);
+  --gradient-gold: linear-gradient(135deg, #c9a227, #e3c45d);
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 阴影（藏青底，非纯黑） */
+  --shadow-sm: 0 1px 2px rgba(26, 58, 107, 0.06);
+  --shadow-card: 0 2px 8px rgba(26, 58, 107, 0.08);
+  --shadow-md: 0 4px 16px rgba(26, 58, 107, 0.1);
+  --shadow-lg: 0 8px 28px rgba(26, 58, 107, 0.14);
+  --shadow-gold: 0 4px 14px rgba(201, 162, 39, 0.28);
+}
