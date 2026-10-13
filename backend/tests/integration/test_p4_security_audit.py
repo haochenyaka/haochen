@@ -180,9 +180,7 @@ def test_p4_plaintext_scan_across_all_tables(
 
     fake = FakeLockClient()
     _ensure_checkin_handler_registered()
-    monkeypatch.setattr(
-        lock_task_handlers_module, "LockClient", _StaticLockClient(fake)
-    )
+    monkeypatch.setattr(lock_task_handlers_module, "LockClient", _StaticLockClient(fake))
     monkeypatch.setattr(CheckinLockClient, "from_settings", classmethod(lambda cls: fake))
 
     registry = ToolRegistry()
@@ -230,22 +228,27 @@ def test_p4_plaintext_scan_across_all_tables(
                 room.room_no,
             )
 
-            await LockCredentialService(session).issue_for_order(
-                order_id=order.id, client=fake
-            )
+            await LockCredentialService(session).issue_for_order(order_id=order.id, client=fake)
             await session.commit()
 
             model.tool_args["order_no"] = order_no
 
-            intake = await intake_message(
-                session, username=username, text="我要入住密码"
-            )
+            intake = await intake_message(session, username=username, text="我要入住密码")
             assert intake.run_id is not None
             outcome = await executor.execute(intake.run_id)
 
             tables: dict[str, list[dict[str, Any]]] = {}
 
-            rows_src = (await session.execute(select(LockCredential))).scalars().all()
+            # 只扫本测试产生的数据：集成库为会话级共享，全库扫描会被其它测试的行污染
+            rows_src = (
+                (
+                    await session.execute(
+                        select(LockCredential).where(LockCredential.room_id == room.id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
             tables["lock_credentials"] = [
                 {
                     "room_no": r.room_no,
@@ -259,7 +262,17 @@ def test_p4_plaintext_scan_across_all_tables(
 
             from app.models.task import Task as TaskModel
 
-            rows_src = (await session.execute(select(TaskModel))).scalars().all()
+            rows_src = (
+                (
+                    await session.execute(
+                        select(TaskModel).where(
+                            TaskModel.payload["order_id"].astext == str(order_id)
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
             tables["tasks"] = [
                 {
                     "task_type": r.task_type,
@@ -284,7 +297,13 @@ def test_p4_plaintext_scan_across_all_tables(
             from app.models.domain import Payment as PaymentModel
 
             payment_rows = (
-                (await session.execute(select(PaymentModel))).scalars().all()
+                (
+                    await session.execute(
+                        select(PaymentModel).where(PaymentModel.order_id == order_id)
+                    )
+                )
+                .scalars()
+                .all()
             )
             tables["payments"] = [
                 {
@@ -294,19 +313,13 @@ def test_p4_plaintext_scan_across_all_tables(
                 for p in payment_rows
             ]
 
-            msg_rows = await MessageRepository(session).list_for_thread(
-                intake.thread_id
-            )
-            tables["messages"] = [
-                {"role": m.role, "content": str(m.content)} for m in msg_rows
-            ]
+            msg_rows = await MessageRepository(session).list_for_thread(intake.thread_id)
+            tables["messages"] = [{"role": m.role, "content": str(m.content)} for m in msg_rows]
 
             audit_rows = (
                 (
                     await session.execute(
-                        select(ToolAudit).where(
-                            ToolAudit.run_id == str(intake.run_id)
-                        )
+                        select(ToolAudit).where(ToolAudit.run_id == str(intake.run_id))
                     )
                 )
                 .scalars()
@@ -324,17 +337,13 @@ def test_p4_plaintext_scan_across_all_tables(
             model_rows = (
                 (
                     await session.execute(
-                        select(ModelAudit).where(
-                            ModelAudit.run_id == str(intake.run_id)
-                        )
+                        select(ModelAudit).where(ModelAudit.run_id == str(intake.run_id))
                     )
                 )
                 .scalars()
                 .all()
             )
-            tables["model_audit"] = [
-                {"model": r.model, "error": r.error} for r in model_rows
-            ]
+            tables["model_audit"] = [{"model": r.model, "error": r.error} for r in model_rows]
 
         return {
             "outcome": outcome,
@@ -351,9 +360,7 @@ def test_p4_plaintext_scan_across_all_tables(
         for row in rows:
             text = json.dumps(row, ensure_ascii=False, default=str)
             hits = scan_sensitive_plaintext(text)
-            assert not hits, (
-                f"明文密码进入表 {table_name}：{hits} 行={row}"
-            )
+            assert not hits, f"明文密码进入表 {table_name}：{hits} 行={row}"
 
     settings = get_settings()
     for row in values["tables"]["lock_credentials"]:
@@ -406,28 +413,19 @@ def test_guest_order_endpoints_reject_unauthorized(api: Api) -> None:
     data = _run(api, lambda session: _seed())
 
     assert api.client.get("/api/guest/orders").status_code == 401
-    assert (
-        api.client.post("/api/guest/orders", json={"room_type_code": code}).status_code == 401
-    )
-    assert (
-        api.client.get(f"/api/guest/orders/{data['order_no']}").status_code == 401
-    )
+    assert api.client.post("/api/guest/orders", json={"room_type_code": code}).status_code == 401
+    assert api.client.get(f"/api/guest/orders/{data['order_no']}").status_code == 401
     assert (
         api.client.post(f"/api/guest/orders/{data['order_no']}/cancel", json={}).status_code == 401
     )
-    assert (
-        api.client.post(f"/api/guest/orders/{data['order_no']}/pay", json={}).status_code == 401
-    )
+    assert api.client.post(f"/api/guest/orders/{data['order_no']}/pay", json={}).status_code == 401
     assert api.client.get("/api/guest/room-types").status_code == 401
     assert api.client.get(f"/api/guest/room-types/{code}").status_code == 401
 
     forged = {"Authorization": "Bearer forged"}
     assert api.client.get("/api/guest/orders", headers=forged).status_code == 401
     assert (
-        api.client.get(
-            f"/api/guest/orders/{data['order_no']}", headers=forged
-        ).status_code
-        == 401
+        api.client.get(f"/api/guest/orders/{data['order_no']}", headers=forged).status_code == 401
     )
     assert (
         api.client.post(
@@ -460,9 +458,7 @@ def test_guest_order_endpoints_reject_unauthorized(api: Api) -> None:
         )
 
     assert (
-        api.client.get(
-            f"/api/guest/orders/{data['order_no']}", headers=_auth(owner)
-        ).status_code
+        api.client.get(f"/api/guest/orders/{data['order_no']}", headers=_auth(owner)).status_code
         == 200
     )
 
@@ -567,9 +563,7 @@ def test_lock_leak_response_contains_plaintext_by_design(
         guest = await _guest(session, username=f"g-{suffix}")
         _order, room = await _seed_paid_order(session, guest_id=guest.id)
         await session.commit()
-        await LockCredentialService(session).rotate_daily_room(
-            room_no=room.room_no, client=fake
-        )
+        await LockCredentialService(session).rotate_daily_room(room_no=room.room_no, client=fake)
         await session.commit()
         return room.room_no
 
