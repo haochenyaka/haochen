@@ -31,6 +31,7 @@ from app.agents import (
 from app.config import get_settings
 from app.models.runtime import Message
 from app.repositories import AgentRunRepository, MessageRepository
+from app.services.admin_memory_service import DbMemoryProvider
 from app.services.agent_config_service import AgentConfigService, AgentRuntimeConfig
 from app.services.audit_service import AuditRecorder
 from app.services.langfuse_service import get_langfuse
@@ -147,6 +148,7 @@ class AgentRunBody:
             workdir=Path(get_settings().workdir_root) / "threads" / str(identity.thread_id),
             middleware_config=agent_config.middleware,  # 中间件配置段（config_json.middleware）
             tool_registry=self._tool_registry,
+            memory_provider=DbMemoryProvider(ctx.session_factory),
             events=ctx.events,
             session_factory=ctx.session_factory,
         )

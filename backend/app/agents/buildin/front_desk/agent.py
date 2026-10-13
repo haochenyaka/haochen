@@ -100,6 +100,7 @@ class FrontDeskAgent(BaseAgent):
             actor_id=runtime.actor_id,
             skills=runtime.skills,
             preload_skills=runtime.resources.ids("skill"),
+            memory_provider=runtime.memory_provider,
         )
         system_prompt = "\n\n".join(
             part

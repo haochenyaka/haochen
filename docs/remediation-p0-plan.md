@@ -79,6 +79,14 @@
 
 ## PR-0.2　接通长期记忆工位（读/注入）
 
+**状态：✅ 代码完成，自身测试通过（2026-10-13）**
+
+改动：`RuntimeContext` 增 `memory_provider` 字段（TYPE_CHECKING 导入避免成环）；`MemoryStation`「注入来源即启用」（配置开关或 provider 二者其一）；`DbMemoryProvider` 改持 `sessionmaker` 短开短读；`run_body` 构造并注入；`front_desk/agent.py` 传入流水线。
+
+验证：`test_memory_injection.py`（记忆真注入 + 敏感条目过滤）、`test_middlewares.py`（更新默认关闭/自动启用断言）→ **34 passed**；ruff/mypy 无新增问题。
+
+**已知既有问题（非本 PR 引入，已用 `git stash` 对照证明）**：`test_p4_security_audit.py::test_p4_plaintext_scan_across_all_tables` 在批量跑时偶发失败——其 `lock_credentials`/`tasks`/`payments` 表扫描**未按本测试数据过滤**，共享库中其它测试的行会污染（`code_hash` 用单个 `device_code` 校验全库行 → 冲突）。单独跑通过。待单独修复（测试隔离）。
+
 **目标**：`MemoryStation` 在运行时真正把 `GuestMemory` 注入模型请求，敏感条目被过滤。
 
 ### 根因

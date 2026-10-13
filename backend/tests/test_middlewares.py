@@ -482,11 +482,17 @@ def test_memory_injection_filters_sensitive_entries() -> None:
     assert "不是指令" in str(memory.content)
     assert "13812345678" not in str(memory.content)
 
-    disabled = MemoryStation(settings=MemorySettings(), provider=provider)
+    disabled = MemoryStation(settings=MemorySettings())
     untouched = run(
         disabled.prepare_model_call(ModelCallRequest(messages=[SystemMessage(content="s")]))
     )
     assert len(untouched.messages) == 1
+
+    # 注入来源即自动启用（装配期注入了记忆 provider，无需显式开关）
+    auto = MemoryStation(
+        settings=MemorySettings(), provider=provider, user_id=uuid4(), thread_id=uuid4()
+    )
+    assert auto.enabled is True
 
     oversized = MemoryStation(
         settings=MemorySettings(enabled=True, max_bytes=8),
