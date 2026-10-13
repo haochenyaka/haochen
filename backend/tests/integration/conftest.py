@@ -115,3 +115,40 @@ def _isolate_db(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
     finally:
         _run(reset=False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_rate_limit() -> Iterator[None]:
+    """每个集成用例前后清空 Redis 限流计数：所有 TestClient 请求共用同一客户端 IP
+    （`testclient`），auth 组 10 次/分钟的窗口计数会跨用例累积，整包跑一遍必然
+    触发 429 连锁失败（非授权拒绝，却让依赖登录的用例全崩）。
+
+    逐个用例清空计数即隔离；用例内部的限流验证（如 P9 D8）仍在单用例内自洽。
+    Redis 不可达或未配置限流时静默跳过。"""
+
+    def _flush() -> None:
+        async def _inner() -> None:
+            try:
+                from redis import asyncio as aioredis
+
+                from app.config import get_settings
+
+                redis = await aioredis.from_url(
+                    get_settings().redis_url, socket_connect_timeout=2, socket_timeout=2
+                )
+                try:
+                    keys = await redis.keys("ratelimit:*")
+                    if keys:
+                        await redis.delete(*keys)
+                finally:
+                    await redis.aclose()
+            except Exception:
+                return
+
+        asyncio.run(_inner())
+
+    _flush()
+    try:
+        yield
+    finally:
+        _flush()
