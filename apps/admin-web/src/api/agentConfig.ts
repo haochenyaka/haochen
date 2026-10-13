@@ -21,6 +21,7 @@ export interface AgentDetail {
   knowledge_base_ids: string[]
   configured: boolean
   config: Record<string, unknown> | null
+  middleware: Record<string, unknown>
   enabled_tools: string[] | null
   enabled_skills: string[] | null
   enabled_knowledge_bases: string[] | null

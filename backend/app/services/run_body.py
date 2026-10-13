@@ -31,6 +31,7 @@ from app.agents import (
 from app.config import get_settings
 from app.models.runtime import Message
 from app.repositories import AgentRunRepository, MessageRepository
+from app.services.agent_config_service import AgentConfigService, AgentRuntimeConfig
 from app.services.audit_service import AuditRecorder
 from app.services.langfuse_service import get_langfuse
 from app.services.run_types import RunResult
@@ -103,16 +104,26 @@ class AgentRunBody:
 
         async with ctx.session_factory() as session:
             history = await MessageRepository(session).list_for_thread(identity.thread_id)
+            agent_config = await AgentConfigService(session).load_runtime_config(
+                identity.agent_slug
+            )
 
         resources = await prepare_agent_runtime_context(
             agent_slug=identity.agent_slug,
             user_id=identity.user_id,
             requested=AgentResourceRequest(
-                refs=tuple(ResourceRef(kind="tool", id=name) for name in agent.tool_ids)
-                + tuple(
-                    ResourceRef(kind="knowledge_base", id=code) for code in agent.knowledge_base_ids
+                refs=tuple(
+                    ResourceRef(kind="tool", id=name)
+                    for name in _enabled_tools(agent, agent_config)
                 )
-                + tuple(ResourceRef(kind="skill", id=slug) for slug in agent.skill_ids)
+                + tuple(
+                    ResourceRef(kind="knowledge_base", id=code)
+                    for code in _enabled_knowledge_bases(agent, agent_config)
+                )
+                + tuple(
+                    ResourceRef(kind="skill", id=slug)
+                    for slug in _enabled_skills(agent, agent_config)
+                )
             ),
             policy=self._resource_policy
             or _default_resource_policy(
@@ -128,13 +139,13 @@ class AgentRunBody:
             run_id=identity.run_id,
             actor_id=ctx.owner_token,
             resources=resources,
-            config={},  # 管理端 Agent 配置（config_json.context）在 P2 接入
+            config=agent_config.context,  # 管理端 Agent 配置（config_json.context 段）
             prompt_docs=load_prompt_docs(agent.package_dir()),
             skills=load_skill_catalog(get_settings().skills_root),
             checkpointer=self._checkpointer or await get_shared_checkpointer(),
             recorder=recorder,
             workdir=Path(get_settings().workdir_root) / "threads" / str(identity.thread_id),
-            middleware_config={},  # 中间件配置段（config_json.middleware）在 P2 接入
+            middleware_config=agent_config.middleware,  # 中间件配置段（config_json.middleware）
             tool_registry=self._tool_registry,
             events=ctx.events,
             session_factory=ctx.session_factory,
@@ -167,9 +178,7 @@ class AgentRunBody:
             langfuse_trace_id=langfuse_trace_id,
         )
 
-    async def _prepare_langfuse_trace(
-        self, ctx: RunContext, identity: object
-    ) -> str | None:
+    async def _prepare_langfuse_trace(self, ctx: RunContext, identity: object) -> str | None:
         """Langfuse trace 预创建：独立短事务，失败不阻断 Run。
 
         从 identity 提取 run_id/thread_id/user_id/agent_slug 后创建 trace，
@@ -209,6 +218,23 @@ class AgentRunBody:
         except Exception as exc:
             logger.warning("langfuse trace_id 落库失败（不阻断 Run）：%s", exc)
         return trace_id
+
+
+def _enabled_tools(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    """工具集合：管理端显式选择优先，未配置（None）时回退 Agent 代码声明。"""
+    return config.enabled_tools if config.enabled_tools is not None else agent.tool_ids
+
+
+def _enabled_knowledge_bases(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    return (
+        config.enabled_knowledge_bases
+        if config.enabled_knowledge_bases is not None
+        else agent.knowledge_base_ids
+    )
+
+
+def _enabled_skills(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    return config.enabled_skills if config.enabled_skills is not None else agent.skill_ids
 
 
 def _default_resource_policy(

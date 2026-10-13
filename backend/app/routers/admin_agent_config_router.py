@@ -17,8 +17,7 @@ from app.security import Identity, require_roles
 from app.services.agent_config_service import (
     AgentConfigDTO,
     AgentConfigService,
-    SkillDTO,
-    ToolDTO,
+    normalize_config_json,
 )
 
 router = APIRouter(prefix="/admin/agent-config", tags=["admin-agent-config"])
@@ -55,6 +54,7 @@ class AgentDetailModel(BaseModel):
     knowledge_base_ids: list[str] = []
     configured: bool = False
     config: dict[str, object] | None = None
+    middleware: dict[str, object] = {}
     enabled_tools: list[str] | None = None
     enabled_skills: list[str] | None = None
     enabled_knowledge_bases: list[str] | None = None
@@ -89,7 +89,21 @@ class SaveAgentConfigBody(BaseModel):
 # ── Helpers ──────────────────────────────────────────────────────
 
 
+def _normalize_config_for_storage(
+    raw: dict[str, object] | None,
+) -> dict[str, object] | None:
+    """保存归一：前端提交的扁平表单键值包进 `{context, middleware}` 嵌套。
+
+    已是嵌套形状（含 context/middleware 键）时原样保留；空配置存 None 表示无覆盖。"""
+    if not raw:
+        return None
+    if "context" in raw or "middleware" in raw:
+        return raw
+    return {"context": raw, "middleware": {}}
+
+
 def _to_dto(dto: AgentConfigDTO) -> AgentDetailModel:
+    context, middleware = normalize_config_json(dto.config)
     return AgentDetailModel(
         slug=dto.slug,
         name=dto.name,
@@ -99,7 +113,8 @@ def _to_dto(dto: AgentConfigDTO) -> AgentDetailModel:
         skill_ids=list(dto.skill_ids),
         knowledge_base_ids=list(dto.knowledge_base_ids),
         configured=dto.configured,
-        config=dto.config,
+        config=context or None,
+        middleware=middleware,
         enabled_tools=dto.enabled_tools,
         enabled_skills=dto.enabled_skills,
         enabled_knowledge_bases=dto.enabled_knowledge_bases,
@@ -129,7 +144,7 @@ async def get_agent_detail(
     try:
         detail = await svc.get_agent_detail(slug)
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return _to_dto(detail)
 
 
@@ -144,15 +159,13 @@ async def save_agent_config(
     try:
         detail = await svc.save_agent_config(
             slug,
-            config_json=body.config_json,
+            config_json=_normalize_config_for_storage(body.config_json),
             enabled_tools=body.enabled_tools,
             enabled_skills=body.enabled_skills,
             enabled_knowledge_bases=body.enabled_knowledge_bases,
         )
     except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _to_dto(detail)
 
 
@@ -166,7 +179,7 @@ async def delete_agent_config(
     try:
         await svc.delete_agent_config(slug)
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.get("/tools", response_model=list[ToolModel])

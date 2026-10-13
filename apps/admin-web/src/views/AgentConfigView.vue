@@ -130,7 +130,10 @@ async function handleSave() {
   saving.value = true
   try {
     await saveAgentConfig(selectedSlug.value, {
-      config_json: formValues.value,
+      config_json: {
+        context: formValues.value,
+        middleware: detail.value.middleware ?? {},
+      },
       enabled_tools: enabledTools.value.length > 0 ? enabledTools.value : null,
       enabled_skills: enabledSkills.value.length > 0 ? enabledSkills.value : null,
     })

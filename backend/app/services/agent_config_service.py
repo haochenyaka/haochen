@@ -8,16 +8,50 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.agent_config import AgentConfig
 from app.agents.registry import discover_agents, get_agent
-from app.agents.toolkits.registry import default_registry
 from app.agents.skills.catalog import load_skill_catalog
+from app.agents.toolkits.registry import default_registry
+from app.models.agent_config import AgentConfig
+
+CONTEXT_SECTION = "context"
+MIDDLEWARE_SECTION = "middleware"
+
+
+@dataclass(frozen=True)
+class AgentRuntimeConfig:
+    """运行期配置：`context` 段交 `BaseContext.from_config`，`middleware` 段交
+    `MiddlewareConfig.from_mapping`；`enabled_*` 为管理端选择的资源子集（None 表示
+    沿用 Agent 代码声明）。运行期由 `run_body` 读取并装配。"""
+
+    context: dict[str, object] = field(default_factory=dict)
+    middleware: dict[str, object] = field(default_factory=dict)
+    enabled_tools: tuple[str, ...] | None = None
+    enabled_skills: tuple[str, ...] | None = None
+    enabled_knowledge_bases: tuple[str, ...] | None = None
+
+
+def normalize_config_json(
+    raw: Mapping[str, object] | None,
+) -> tuple[dict[str, object], dict[str, object]]:
+    """兼容解析 config_json：嵌套 `{context, middleware}` 或旧扁平（整段视为 context）。
+
+    历史数据是扁平形状（前端曾直接写表单键值），迁移期内两种都要读得出来；扁平输入无
+    中间件段，返回空 dict。段的非对象值显式失败（配置漂移不静默）。"""
+    values = dict(raw or {})
+    if CONTEXT_SECTION in values or MIDDLEWARE_SECTION in values:
+        context = values.get(CONTEXT_SECTION) or {}
+        middleware = values.get(MIDDLEWARE_SECTION) or {}
+        if not isinstance(context, Mapping) or not isinstance(middleware, Mapping):
+            raise ValueError("config_json 的 context / middleware 段必须是对象")
+        return dict(context), dict(middleware)
+    return values, {}
 
 
 @dataclass
@@ -197,6 +231,22 @@ class AgentConfigService:
             )
             for doc in sorted(catalog.documents.values(), key=lambda d: d.slug)
         ]
+
+    async def load_runtime_config(self, slug: str) -> AgentRuntimeConfig:
+        """读取某 Agent 的运行期配置：无覆盖记录时返回全默认（空段、None 资源）。"""
+        db_conf = await self._load_config(slug)
+        if db_conf is None:
+            return AgentRuntimeConfig()
+        context, middleware = normalize_config_json(db_conf.config_json)
+        return AgentRuntimeConfig(
+            context=context,
+            middleware=middleware,
+            enabled_tools=tuple(db_conf.enabled_tools) if db_conf.enabled_tools else None,
+            enabled_skills=tuple(db_conf.enabled_skills) if db_conf.enabled_skills else None,
+            enabled_knowledge_bases=(
+                tuple(db_conf.enabled_knowledge_bases) if db_conf.enabled_knowledge_bases else None
+            ),
+        )
 
     async def _load_config(self, slug: str) -> AgentConfig | None:
         stmt = select(AgentConfig).where(AgentConfig.agent_slug == slug)
