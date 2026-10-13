@@ -54,7 +54,7 @@ from app.services.run_body import AgentRunBody
 from app.services.run_worker import RunExecutor
 from tests.integration.db_utils import run_with_session_factory
 from tests.integration.support import RecordingDispatcher, RecordingRunEventBus, intake_message
-from tests.integration.test_checkin_tools import _guest, _seed_paid_order
+from tests.integration.test_checkin_tools import _future, _guest, _seed_paid_order
 from tests.integration.test_lock_credentials import (  # type: ignore[attr-defined]
     FakeLockClient,
     _ensure_checkin_handler_registered,
@@ -357,9 +357,10 @@ def test_p4_plaintext_scan_across_all_tables(
 
     settings = get_settings()
     for row in values["tables"]["lock_credentials"]:
+        # 与 app.lock.service.hash_lock_code 同口径：raw = room:version:key_version:code
         expected = hmac.new(
             settings.lock_master_key.encode(),
-            f"{row['room_no']}:{row['version']}:{device_code}".encode(),
+            f"{row['room_no']}:{row['version']}:1:{device_code}".encode(),
             "sha256",
         ).hexdigest()
         assert row["code_hash"] == expected, (
@@ -395,8 +396,8 @@ def test_guest_order_endpoints_reject_unauthorized(api: Api) -> None:
             headers=_auth(owner),
             json={
                 "room_type_code": code,
-                "check_in_date": "2026-10-01",
-                "check_out_date": "2026-10-03",
+                "check_in_date": _future(1).isoformat(),
+                "check_out_date": _future(3).isoformat(),
             },
         )
         assert resp.status_code == 201, resp.text
@@ -564,7 +565,7 @@ def test_lock_leak_response_contains_plaintext_by_design(
 
     async def _seed(session: AsyncSession) -> str:
         guest = await _guest(session, username=f"g-{suffix}")
-        order, (room,) = await _seed_paid_order(session, guest_id=guest.id)
+        _order, room = await _seed_paid_order(session, guest_id=guest.id)
         await session.commit()
         await LockCredentialService(session).rotate_daily_room(
             room_no=room.room_no, client=fake
