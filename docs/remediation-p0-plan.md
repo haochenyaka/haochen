@@ -89,6 +89,10 @@
 - `test_p4_security_audit.py::test_p4_plaintext_scan_across_all_tables` 批量跑偶发失败——全库扫描未按本测试数据过滤，共享库其它行污染。**已修**（按 room_id/order_id/payload 过滤，见提交 `25ba0da`）。
 - `test_room_service.py::TestCheckoutFlow::test_verify_and_complete_revokes_credential` 在 `test_lock_rotation` 之后跑失败（`409 凭证版本不匹配`）——根因是 `lock_rotation`/`room_service` 两个测试模块共享全局 lock-task-handler 注册表（`importlib.reload` + 模块级 `LockClient` 注入）导致替身状态串扰。**未修**（需改测试夹具，独立于本轮改动，待单独处理）。
 
+**全量 integration 单会话跑的既有基线（已 stash 对照，2026-10-13）**：
+- WITHOUT 本轮改动：**21 failed / 272 passed**；WITH 改动：**19 failed / 274 passed**（多 2 个 = 新增测试）。
+- 结论：**全量单会话 integration 跑本身脆弱**（共享库累积污染 + 部分测试对全库/全表重算），失败数在 19–21 间非确定浮动，**与本轮改动无关**；CI 应保证每个集成测试的数据隔离，或分片跑。
+
 **目标**：`MemoryStation` 在运行时真正把 `GuestMemory` 注入模型请求，敏感条目被过滤。
 
 ### 根因
@@ -197,6 +201,14 @@
 ---
 
 ## PR-0.5a　steer 工位补真（取消/接力）
+
+**状态：✅ 已完成并通过验证（2026-10-13）**
+
+改动：`SteerStation` 由空转改为「配置驱动、默认关闭」——启用后模型调用前查线程是否已排入更新请求，有则置取消信号并中断本 Run；`RunContext.cancel_event` 暴露公开属性、`RuntimeContext.cancel_event` 贯通、`run_body`/`front_desk` 接线；`run_worker` 显式按取消收敛 `SteerSuperseded`。
+
+验证：`test_steer.py`（两条消息 → run1 cancelled + run2 接力派发）通过；`test_middlewares.py` 默认关闭断言不变；运行时回归 58 passed；ruff/mypy 无新增问题。
+
+**关键决策**：启用采用**配置驱动**（`middleware.steer.enabled`），非"接线即启用"——避免隐式改变默认 Run 行为（客人连发两条时默认仍"先答完再答下一条"）。
 
 **目标**：`SteerStation` 从空转变成"发现更新的用户消息 → 中止当前 Run、让新消息接力"。
 

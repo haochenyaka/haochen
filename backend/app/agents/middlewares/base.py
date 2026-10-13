@@ -49,6 +49,16 @@ class DuplicateToolCallError(RuntimeError):
         self.key = key
 
 
+class SteerSuperseded(RuntimeError):
+    """Steer：检测到更新的用户消息，当前 Run 让位给队头新请求。
+
+    由运行执行器按取消收敛（cancel_event 已在触发点置位），新请求经既有接力链路派发。
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"当前 Run 被更新的用户消息接管：{reason}")
+
+
 @dataclass
 class ModelCallRequest:
     """一次模型调用的请求：前置工位可改写消息与可见工具集合。"""

@@ -101,6 +101,10 @@ class FrontDeskAgent(BaseAgent):
             skills=runtime.skills,
             preload_skills=runtime.resources.ids("skill"),
             memory_provider=runtime.memory_provider,
+            steer_session_factory=runtime.session_factory,
+            steer_cancel_signal=(
+                runtime.cancel_event.set if runtime.cancel_event is not None else None
+            ),
         )
         system_prompt = "\n\n".join(
             part

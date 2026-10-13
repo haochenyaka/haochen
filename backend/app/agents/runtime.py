@@ -85,6 +85,8 @@ class RuntimeContext:
     """工具注册表覆盖（测试注入用）；缺省取进程级内置注册表。"""
     memory_provider: MemoryProvider | None = None
     """长期记忆来源：装配期注入（None 时记忆工位关闭，不注入记忆）。"""
+    cancel_event: asyncio.Event | None = None
+    """Run 级取消信号：Steer 等工位置位以请求中止（None 时不接线）。"""
     events: RunEventEmitter | None = None
     """运行事件发射器：None 时事件不发射（投影可缺失，事实不受影响）。"""
     session_factory: async_sessionmaker[AsyncSession] = SessionFactory

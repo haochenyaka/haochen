@@ -149,6 +149,7 @@ class AgentRunBody:
             middleware_config=agent_config.middleware,  # 中间件配置段（config_json.middleware）
             tool_registry=self._tool_registry,
             memory_provider=DbMemoryProvider(ctx.session_factory),
+            cancel_event=ctx.cancel_event,
             events=ctx.events,
             session_factory=ctx.session_factory,
         )

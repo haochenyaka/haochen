@@ -24,6 +24,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.agents.middlewares.base import SteerSuperseded
 from app.db import SessionFactory
 from app.repositories import (
     AgentRunRepository,
@@ -85,6 +86,11 @@ class RunContext:
     @property
     def cancelled(self) -> bool:
         return self._cancel_event.is_set()
+
+    @property
+    def cancel_event(self) -> asyncio.Event:
+        """Run 级取消信号：装配期注入给 Steer 等工位（置位即请求中止本 Run）。"""
+        return self._cancel_event
 
     async def ensure_not_cancelled(self) -> None:
         """以数据库为准复核取消意图；已请求取消则抛出 RunCancelled。"""
@@ -153,6 +159,9 @@ class RunExecutor:
             try:
                 result = await self._body(ctx)
             except RunCancelled:
+                return await self._finalize(claim, status="cancelled", events=events)
+            except SteerSuperseded:
+                # 更新的用户消息已接管：按取消收敛，新请求由接力链路派发
                 return await self._finalize(claim, status="cancelled", events=events)
             except Exception as exc:
                 error_class = type(exc).__name__
