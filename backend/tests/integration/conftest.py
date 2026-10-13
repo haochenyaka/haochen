@@ -66,3 +66,52 @@ def runtime_db_url() -> Iterator[str]:
         asyncio.run(
             _execute_admin_sql(database_url, f'DROP DATABASE IF EXISTS "{temp_name}" WITH (FORCE)')
         )
+
+
+_TRUNCATE_EXCLUDE = (
+    "alembic_version",
+    "spatial_ref_sys",
+    "checkpoint_migrations",
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_db(request: pytest.FixtureRequest) -> Iterator[None]:
+    """每个集成用例前后清空业务表：集成库为会话级共享，跨用例残留会导致
+    "全库重算"类断言（报表/评估/凭证版本/健康面板）偶发失败。
+
+    用例执行前后各清一次（前置清防止污染泄漏到依赖来源，后置清是主要隔离手段）。
+    非集成用例（不依赖 runtime_db_url）直接跳过，不做任何事。"""
+    if "runtime_db_url" not in request.fixturenames:
+        yield
+        return
+    raw_url = request.getfixturevalue("runtime_db_url")
+    # asyncpg 只认 postgresql/postgres scheme，去掉 SQLAlchemy 的驱动后缀
+    pg_url = make_url(raw_url).set(drivername="postgresql").render_as_string(hide_password=False)
+
+    def _run(reset: bool) -> None:
+        async def _inner() -> None:
+            conn = await asyncpg.connect(pg_url)
+            try:
+                if reset:
+                    seq = "pg_get_serial_sequence('checkpoint_migrations', 'v')"
+                    await conn.execute(f"SELECT setval({seq}, 1, false)")
+                tables = await conn.fetch(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+                )
+                names = [
+                    row["tablename"] for row in tables if row["tablename"] not in _TRUNCATE_EXCLUDE
+                ]
+                if names:
+                    quoted = ", ".join(f'"{name}"' for name in names)
+                    await conn.execute(f"TRUNCATE {quoted} RESTART IDENTITY CASCADE")
+            finally:
+                await conn.close()
+
+        asyncio.run(_inner())
+
+    _run(reset=True)
+    try:
+        yield
+    finally:
+        _run(reset=False)
