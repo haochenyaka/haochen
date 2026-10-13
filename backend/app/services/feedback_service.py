@@ -121,11 +121,12 @@ class FeedbackCollector:
                 hk.task_type,
                 hk.guest_score,
                 hk.guest_comment,
+                hk.rated_at,
                 hk.verified_at
             FROM housekeeping_tasks hk
             WHERE hk.guest_score IS NOT NULL
-              AND hk.verified_at >= :since
-            ORDER BY hk.verified_at DESC
+              AND hk.rated_at >= :since
+            ORDER BY hk.rated_at DESC
             LIMIT 100
         """)
         rows = (await self._session.execute(stmt, {"since": since})).all()
@@ -136,12 +137,13 @@ class FeedbackCollector:
                 "task_type": row.task_type,
                 "score": float(row.guest_score) if row.guest_score else None,
                 "comment": row.guest_comment,
+                "rated_at": row.rated_at.isoformat() if row.rated_at else None,
                 "verified_at": row.verified_at.isoformat() if row.verified_at else None,
             }
             for row in rows
         ]
 
-    async def export_to_jsonl(self, output_path: str | Path | None = None) -> Path:
+    async def export_to_jsonl(self, output_path: str | Path | None = None) -> tuple[int, Path]:
         """将在线反馈导出为 JSONL 格式评估集。
 
         输出文件可用于追加到 kb_faq.jsonl 或作为独立 feedback 评估集。

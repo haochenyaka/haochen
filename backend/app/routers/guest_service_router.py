@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.domain.errors import ConflictError, DomainError, NotFoundError, PermissionDeniedError
 from app.repositories.guest_repository import GuestRepository
+from app.repositories.housekeeping_repository import HousekeepingTaskRepository
+from app.repositories.order_repository import OrderRepository
 from app.security import Identity, require_identity
 from app.services.checkout_service import CheckoutService
 from app.services.complaint_service import ComplaintService
@@ -54,6 +56,20 @@ class CleanResponse(BaseModel):
     created_at: datetime
 
 
+class RateCleanBody(BaseModel):
+    score: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=500)
+
+
+class CleanRatingResponse(BaseModel):
+    id: UUID
+    room_no: str
+    status: str
+    guest_score: int
+    guest_comment: str | None
+    rated_at: datetime | None
+
+
 class ComplaintBody(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
     category: str | None = Field(default=None, max_length=32)
@@ -78,6 +94,20 @@ IDEMPOTENCY_KEY_MAX = 64
 async def _guest_id(session: AsyncSession, identity: Identity) -> UUID:
     guest = await GuestRepository(session).get_or_create_by_user(identity.user_id)
     return guest.id
+
+
+async def _owns_task(session: AsyncSession, *, task: Any, guest_id: UUID) -> bool:
+    """判定清洁任务是否属于当前客人。
+
+    checkout_clean 经 order_id 关联订单归属；call_clean 经 payload.requested_by 记录发起人。
+    两者皆无归属线索时一律拒绝（fail-closed）。
+    """
+    if task.order_id is not None:
+        order = await OrderRepository(session).get_by_id(task.order_id)
+        return order is not None and order.guest_id == guest_id
+    payload = task.payload if isinstance(task.payload, dict) else None
+    requested_by = payload.get("requested_by") if payload else None
+    return requested_by is not None and str(requested_by) == str(guest_id)
 
 
 def _raise_http(exc: DomainError) -> NoReturn:
@@ -182,11 +212,14 @@ async def request_clean(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="房间不存在")
     hs = HousekeepingService(session)
     try:
+        payload: dict[str, Any] = {"requested_by": str(guest_id)}
+        if body.note:
+            payload["note"] = body.note
         task = await hs.create(
             task_type="call_clean",
             room_id=room.id,
             room_no=room.room_no,
-            payload={"requested_by": str(guest_id), "note": body.note} if body.note else None,
+            payload=payload,
         )
         await session.commit()
     except DomainError as exc:
@@ -197,6 +230,39 @@ async def request_clean(
         room_no=task.room_no,
         status=task.status,
         created_at=task.created_at,
+    )
+
+
+@router.post("/clean/{task_id}/rating", response_model=CleanRatingResponse)
+async def rate_clean(
+    task_id: UUID,
+    body: RateCleanBody,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    identity: Annotated[Identity, Depends(require_identity)],
+) -> CleanRatingResponse:
+    """客人对已完成的清洁任务评分（1-5 分 + 备注）。
+
+    仅本人发起/关联的任务可评：checkout_clean 按订单归属校验，call_clean 按发起人校验。
+    """
+    guest_id = await _guest_id(session, identity)
+    task = await HousekeepingTaskRepository(session).get_by_id(task_id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="清洁任务不存在")
+    if not await _owns_task(session, task=task, guest_id=guest_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="任务不属于当前客人")
+    hs = HousekeepingService(session)
+    try:
+        rated = await hs.rate(task_id, score=body.score, comment=body.comment)
+        await session.commit()
+    except DomainError as exc:
+        _raise_http(exc)
+    return CleanRatingResponse(
+        id=rated.id,
+        room_no=rated.room_no,
+        status=rated.status,
+        guest_score=int(rated.guest_score or 0),
+        guest_comment=rated.guest_comment,
+        rated_at=rated.rated_at,
     )
 
 

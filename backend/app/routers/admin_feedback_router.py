@@ -41,6 +41,7 @@ class StaffRatingItem(BaseModel):
     task_type: str | None = None
     score: float | None = None
     comment: str | None = None
+    rated_at: str | None = None
     verified_at: str | None = None
 
 
@@ -108,7 +109,21 @@ async def list_staff_ratings(
     since = datetime.now(UTC) - timedelta(days=days)
     collector = FeedbackCollector(session)
     items = await collector.get_staff_ratings(since=since)
-    return [StaffRatingItem(**item) for item in items]
+    results: list[StaffRatingItem] = []
+    for item in items:
+        raw_score = item.get("score")
+        results.append(
+            StaffRatingItem(
+                task_id=str(item["task_id"]),
+                room_id=str(item["room_id"]) if item.get("room_id") else None,
+                task_type=str(item["task_type"]) if item.get("task_type") else None,
+                score=float(raw_score) if isinstance(raw_score, (int, float)) else None,
+                comment=str(item["comment"]) if item.get("comment") else None,
+                rated_at=str(item["rated_at"]) if item.get("rated_at") else None,
+                verified_at=str(item["verified_at"]) if item.get("verified_at") else None,
+            )
+        )
+    return results
 
 
 @router.post("/export", response_model=ExportResult)
