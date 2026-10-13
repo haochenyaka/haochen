@@ -85,7 +85,9 @@
 
 验证：`test_memory_injection.py`（记忆真注入 + 敏感条目过滤）、`test_middlewares.py`（更新默认关闭/自动启用断言）→ **34 passed**；ruff/mypy 无新增问题。
 
-**已知既有问题（非本 PR 引入，已用 `git stash` 对照证明）**：`test_p4_security_audit.py::test_p4_plaintext_scan_across_all_tables` 在批量跑时偶发失败——其 `lock_credentials`/`tasks`/`payments` 表扫描**未按本测试数据过滤**，共享库中其它测试的行会污染（`code_hash` 用单个 `device_code` 校验全库行 → 冲突）。单独跑通过。待单独修复（测试隔离）。
+**已知既有问题（非本 PR 引入，已用 `git stash` 对照证明）**：
+- `test_p4_security_audit.py::test_p4_plaintext_scan_across_all_tables` 批量跑偶发失败——全库扫描未按本测试数据过滤，共享库其它行污染。**已修**（按 room_id/order_id/payload 过滤，见提交 `25ba0da`）。
+- `test_room_service.py::TestCheckoutFlow::test_verify_and_complete_revokes_credential` 在 `test_lock_rotation` 之后跑失败（`409 凭证版本不匹配`）——根因是 `lock_rotation`/`room_service` 两个测试模块共享全局 lock-task-handler 注册表（`importlib.reload` + 模块级 `LockClient` 注入）导致替身状态串扰。**未修**（需改测试夹具，独立于本轮改动，待单独处理）。
 
 **目标**：`MemoryStation` 在运行时真正把 `GuestMemory` 注入模型请求，敏感条目被过滤。
 
