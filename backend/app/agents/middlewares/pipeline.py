@@ -277,6 +277,7 @@ def build_middleware_pipeline(
     sleeper: Sleeper | None = None,
     steer_session_factory: async_sessionmaker[AsyncSession] | None = None,
     steer_cancel_signal: SteerCancelSignal | None = None,
+    approval_interrupt_enabled: bool = False,
 ) -> MiddlewarePipeline:
     """装配 11 道工位；顺序与基线一致，否则显式失败。"""
     resolved = (
@@ -313,7 +314,11 @@ def build_middleware_pipeline(
             ModelRetryStation(settings=resolved.model_retry, sleeper=sleeper),
             ToolGuardStation(settings=resolved.tool_guard, run_id=run_id),
             token_usage_station,
-            ToolApprovalStation(settings=resolved.tool_approval, policy=approval_policy),
+            ToolApprovalStation(
+                settings=resolved.tool_approval,
+                policy=approval_policy,
+                interrupt_enabled=approval_interrupt_enabled,
+            ),
         ]
     )
     keys = tuple(station.key for station in pipeline.stations)

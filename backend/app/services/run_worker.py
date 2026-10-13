@@ -36,7 +36,7 @@ from app.services.run_body import AgentRunBody
 from app.services.run_dispatch import NullRunDispatcher, RunDispatcher, dispatch_run
 from app.services.run_event_bus import RunEventBus
 from app.services.run_events import RunEventEmitter
-from app.services.run_types import RunIdentity, RunResult
+from app.services.run_types import RunIdentity, RunInterrupted, RunResult
 from app.services.thread_dispatch import DispatchPlan, promote_head_if_idle
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,9 @@ LEASE_SECONDS = 60
 HEARTBEAT_INTERVAL_SECONDS = 20
 RECOVERY_BATCH_SIZE = 200
 
-RunOutcome = Literal["completed", "failed", "cancelled", "not_claimable", "lease_lost"]
+RunOutcome = Literal[
+    "completed", "failed", "cancelled", "interrupted", "not_claimable", "lease_lost"
+]
 
 
 class RunCancelled(Exception):
@@ -102,7 +104,7 @@ class RunContext:
 
 
 class RunBody(Protocol):
-    async def __call__(self, ctx: RunContext) -> RunResult | None: ...
+    async def __call__(self, ctx: RunContext) -> RunResult | RunInterrupted | None: ...
 
 
 class RunExecutor:
@@ -176,6 +178,9 @@ class RunExecutor:
             if lease_lost.is_set():
                 logger.warning("run finished after lease loss; terminal write skipped: %s", run_id)
                 return "lease_lost"
+            if isinstance(result, RunInterrupted):
+                # 危险工具审批挂起：不写终态、不接力，等人工决定后 resume
+                return await self._mark_interrupted(claim, result, events)
             return await self._finalize(claim, status="completed", result=result, events=events)
         finally:
             heartbeat_task.cancel()
@@ -189,6 +194,11 @@ class RunExecutor:
             attempt = await runs.claim(
                 run_id, owner_token=owner_token, lease_seconds=self._lease_seconds
             )
+            if attempt is None:
+                # 首次认领失败：可能是审批挂起的 interrupted Run 在 resume
+                attempt = await runs.claim_resume(
+                    run_id, owner_token=owner_token, lease_seconds=self._lease_seconds
+                )
             if attempt is None:
                 await session.rollback()
                 return None
@@ -306,6 +316,33 @@ class RunExecutor:
         )
         await dispatch_run(self._dispatcher, plan.run_id if plan is not None else None)
         return cast(RunOutcome, status)
+
+    async def _mark_interrupted(
+        self, claim: RunClaim, result: RunInterrupted, events: RunEventEmitter
+    ) -> RunOutcome:
+        """危险工具审批挂起：Run 转 interrupted（不占租约、非终态），发 interrupt 事件。
+
+        不接力队头（线程仍被本 Run 占用，等审批恢复）；请求不收敛。人工决定后由恢复入口
+        重新投递同一 Run（`claim_resume` 认领），图从检查点续跑。
+        """
+        identity = claim.identity
+        async with self._session_factory() as session:
+            written = await AgentRunRepository(session).mark_interrupted(
+                identity.run_id, owner_token=claim.owner_token
+            )
+            await session.commit()
+        if not written:
+            logger.warning("mark_interrupted rejected: run_id=%s", identity.run_id)
+            return "lease_lost"
+        for item in result.approvals:
+            await events.interrupt(
+                tool=str(item.get("tool_name", "")),
+                call_id=str(item.get("call_id", "")),
+                reason=str(item.get("reason", "")),
+            )
+        # 终态收敛事件：SSE 据此收流（避免订阅方在非终态的 interrupted Run 上挂起）
+        await events.run_finished(status="interrupted")
+        return "interrupted"
 
 
 async def repost_pending_runs(

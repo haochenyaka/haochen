@@ -41,6 +41,7 @@ from app.repositories.task_repository import (
     TaskRepository,
 )
 from app.repositories.thread_repository import ThreadRepository
+from app.repositories.tool_approval_repository import ToolApprovalRepository
 from app.repositories.user_repository import UserRepository
 
 __all__ = [
@@ -78,5 +79,6 @@ __all__ = [
     "StaffRepository",
     "TaskRepository",
     "ThreadRepository",
+    "ToolApprovalRepository",
     "UserRepository",
 ]

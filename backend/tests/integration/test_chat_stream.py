@@ -40,7 +40,7 @@ from app.services.run_events import (
     EVENT_MESSAGE_DELTA,
     EVENT_RUN_CANCELLED,
     EVENT_RUN_COMPLETED,
-    EVENT_RUN_FAILED,
+    EVENT_RUN_INTERRUPTED,
     EVENT_RUN_STARTED,
     EVENT_TOOL_CALL,
     EVENT_TOOL_RESULT,
@@ -379,10 +379,10 @@ def test_stream_endpoint_guards_and_resumes(
     assert stranger.status_code == 403
 
 
-def test_approval_wait_emits_interrupt_and_fails_run(
+def test_approval_wait_emits_interrupt_and_suspends(
     runtime_db_url: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """危险工具进入审批等待：发 interrupt 后按失败收敛，不写工具事实、不留回复。"""
+    """危险工具进入审批等待：Run 挂起为 interrupted、发 interrupt 事件、不写工具事实。"""
     force_stub_model(monkeypatch)
     registry = ToolRegistry()
 
@@ -446,22 +446,20 @@ def test_approval_wait_emits_interrupt_and_fails_run(
         }
 
     result = run_with_session_factory(runtime_db_url, _body)
-    assert result["outcome"] == "failed"
+    # 挂起：Run 转 interrupted（非终态、不写工具事实、无回复），发 interrupt 事件
+    assert result["outcome"] == "interrupted"
     assert [record.event for record in result["events"]] == [
         EVENT_RUN_STARTED,
         EVENT_TOOL_CALL,
         EVENT_INTERRUPT,
-        EVENT_RUN_FAILED,
+        EVENT_RUN_INTERRUPTED,
     ]
     interrupt = result["events"][2].data
     assert interrupt["tool"] == "rotate_room_password"
     assert interrupt["call_id"] == "call-1"
     assert "审批" in interrupt["reason"]
-    failed = result["events"][3].data
-    assert failed["status"] == "failed"
-    assert failed["error_class"] == "ToolApprovalRequired"
-    assert result["run_status"] == "failed"
-    assert result["run_error"] is not None
+    assert result["run_status"] == "interrupted"
+    assert result["run_error"] is None
     assert result["tool_rows"] == 0
     assert result["assistant_count"] == 0
 

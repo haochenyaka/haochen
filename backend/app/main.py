@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routers import (
     admin_agent_config_router,
+    admin_approval_router,
     admin_conversation_router,
     admin_data_pipeline_router,
     admin_datalake_router,
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router.router, prefix="/api")
     app.include_router(admin_router.router, prefix="/api")
     app.include_router(admin_agent_config_router.router, prefix="/api")
+    app.include_router(admin_approval_router.router, prefix="/api")
     app.include_router(admin_conversation_router.router, prefix="/api")
     app.include_router(admin_eval_agent_router.router, prefix="/api")
     app.include_router(admin_eval_kb_router.router, prefix="/api")

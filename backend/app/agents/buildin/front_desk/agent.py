@@ -105,6 +105,7 @@ class FrontDeskAgent(BaseAgent):
             steer_cancel_signal=(
                 runtime.cancel_event.set if runtime.cancel_event is not None else None
             ),
+            approval_interrupt_enabled=runtime.checkpointer is not None,
         )
         system_prompt = "\n\n".join(
             part

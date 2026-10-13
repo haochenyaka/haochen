@@ -106,6 +106,48 @@ class AgentRunRepository:
         await self._session.flush()
         return attempt
 
+    async def claim_resume(
+        self, run_id: UUID, *, owner_token: str, lease_seconds: int
+    ) -> AgentRunAttempt | None:
+        """interrupted → running；返回本次尝试事实；未就绪（非 interrupted）返回 None。
+
+        恢复入口复用：审批决定后由图从检查点续跑，租约与心跳机制与初次执行一致。"""
+        now = func.now()
+        lease_until = now + timedelta(seconds=lease_seconds)
+        stmt = (
+            update(AgentRun)
+            .where(AgentRun.id == run_id, AgentRun.status == "interrupted")
+            .values(
+                status="running",
+                owner_token=owner_token,
+                attempt_count=AgentRun.attempt_count + 1,
+                started_at=now,
+                last_heartbeat_at=now,
+                lease_expires_at=lease_until,
+            )
+            .returning(
+                AgentRun.attempt_count,
+                AgentRun.started_at,
+                AgentRun.last_heartbeat_at,
+                AgentRun.lease_expires_at,
+            )
+            .execution_options(synchronize_session=False)
+        )
+        row = (await self._session.execute(stmt)).one_or_none()
+        if row is None:
+            return None
+        attempt = AgentRunAttempt(
+            run_id=run_id,
+            attempt_no=row.attempt_count,
+            owner_token=owner_token,
+            started_at=row.started_at,
+            last_heartbeat_at=row.last_heartbeat_at,
+            lease_expires_at=row.lease_expires_at,
+        )
+        self._session.add(attempt)
+        await self._session.flush()
+        return attempt
+
     async def mark_first_token(self, run_id: UUID) -> bool:
         """首个 message.delta 时落首 token 时刻；幂等（仅 first_token_at 为 NULL 时写）。
 

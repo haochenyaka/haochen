@@ -239,9 +239,28 @@
 
 ---
 
-## PR-0.5b　tool_approval 接 interrupt/resume（**已纳入 P0**）
+## PR-0.5b　tool_approval 接 interrupt/resume（**已完成，2026-10-13**）
+
+**状态：✅ 已完成并通过验证**
 
 **目标**：危险工具调用时真正暂停等待人工审批，审批通过后恢复执行，而非把 Run 弄失败。
+
+**实现（复用已有 `interrupted` 状态与 `mark_interrupted` 预留机制）**：
+- **挂起**：`ToolApprovalStation.before_tool` 图内经 `interrupt()` 挂起（首次抛 `GraphInterrupt` 冒泡被 langgraph 转 `__interrupt__`）；图有检查点时启用，无检查点回退失败语义。
+- **事实**：新增 `tool_approval_requests` 表（迁移 `20261013_0021`）+ 模型 + 仓储；审批元数据从图 `__interrupt__` 解析后落库。
+- **中断**：`run_body` 检测 `__interrupt__` → 落审批事实 → 返回 `RunInterrupted`；`run_worker._mark_interrupted` 把 Run 置 `interrupted`（非终态、不占租约）、发 interrupt 事件、不接力。
+- **恢复**：`AgentRunRepository.claim_resume`（interrupted→running）+ `_claim` 回退认领；`run_body._resolve_resume` 据已决定审批构造 `Command(resume=)`，图从检查点续跑并 `mark_consumed`。
+- **决定**：`ToolApprovalService` + `admin_approval_router`（`GET pending` / `POST {id}/decide`，admin/manager）；决定落库后投递同一 Run 恢复。
+- **拒绝**：`ToolApprovalRejected` → `registry._blocked_approval` 回一条拒绝消息进对话（Run 正常完成，模型据此改道/转人工）。
+- **前端**：`ApprovalsView.vue` + `api/approval.ts` + 路由。
+- **SSE**：新增 `run.interrupted` 终态收敛事件。
+
+验证：`test_tool_approval_interrupt.py`（挂起→批准→恢复执行 / 挂起→拒绝→拒绝回执）2 例、`test_chat_stream.py`（挂起事件链）更新、全量单测 264 passed；ruff/mypy 无新增问题。
+
+**已知边界（如实登记）**：
+- **单审批/单 interrupt**：一次稍复杂的请求若在恢复后触发第二个危险工具，会因 `get_decided_for_run` 的多义性而无法区分（首个已 consumed），当前限一次会话内一个待审批。多审批留后续。
+- **执行体可重入**：`run_body` 读取 DB 已决定审批作为 resume 判据，故 resume 与首次执行的代码路径统一（首次无已决定审批 → 按历史消息发起）。
+- **崩溃安全**：interrupt 前的工具调用（如更早的只读调用）在挂起时不重放；resume 从检查点继续。
 
 ### 根因
 - `app/agents/middlewares/tool_approval.py:82` 默认策略只 `raise ToolApprovalRequired` 直接失败；`base.py:34-40` 注释「interrupt/resume 随 T9 接入」。

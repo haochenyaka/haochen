@@ -21,6 +21,7 @@ from app.services.run_events import (
     EVENT_RUN_CANCELLED,
     EVENT_RUN_COMPLETED,
     EVENT_RUN_FAILED,
+    EVENT_RUN_INTERRUPTED,
     EVENT_RUN_STARTED,
     EVENT_TOOL_CALL,
     EVENT_TOOL_RESULT,
@@ -76,9 +77,15 @@ def test_terminal_event_type_mapping() -> None:
     assert terminal_event_type("completed") == EVENT_RUN_COMPLETED
     assert terminal_event_type("failed") == EVENT_RUN_FAILED
     assert terminal_event_type("cancelled") == EVENT_RUN_CANCELLED
+    # interrupted 是审批挂起的终态收敛事件（SSE 据此收流，Run 可 resume）
+    assert terminal_event_type("interrupted") == EVENT_RUN_INTERRUPTED
     assert terminal_event_type("running") is None
-    assert terminal_event_type("interrupted") is None
-    assert TERMINAL_EVENT_TYPES == {EVENT_RUN_COMPLETED, EVENT_RUN_FAILED, EVENT_RUN_CANCELLED}
+    assert TERMINAL_EVENT_TYPES == {
+        EVENT_RUN_COMPLETED,
+        EVENT_RUN_FAILED,
+        EVENT_RUN_CANCELLED,
+        EVENT_RUN_INTERRUPTED,
+    }
 
 
 def test_emitter_envelope_seq_and_protocol_methods() -> None:
