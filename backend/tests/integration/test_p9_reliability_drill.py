@@ -31,17 +31,21 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from app.db import get_session
+from app.lock.service import LockCredentialService
 from app.main import app
 from app.models.admin_log import AdminActionLog
 from app.repositories import UserRepository
 from app.security import hash_password
 from app.services.run_body import AgentRunBody
 from app.services.run_worker import RunExecutor
-from app.lock.service import LockCredentialService
 from tests.integration.db_utils import run_with_session_factory
 from tests.integration.support import RecordingDispatcher, RecordingRunEventBus, intake_message
 from tests.integration.test_checkin_tools import _guest, _seed_paid_order
-from tests.integration.test_lock_credentials import FakeLockClient, _StaticLockClient, _credential_rows
+from tests.integration.test_lock_credentials import (
+    FakeLockClient,
+    _credential_rows,
+    _StaticLockClient,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -52,11 +56,7 @@ SessionFactoryArg = async_sessionmaker[AsyncSession]
 
 def _psycopg_dsn(async_url: str) -> str:
     """从 asyncpg URL 派生 psycopg DSN（去掉 +asyncpg 驱动后缀）。"""
-    return (
-        make_url(async_url)
-        .set(drivername="postgresql")
-        .render_as_string(hide_password=False)
-    )
+    return make_url(async_url).set(drivername="postgresql").render_as_string(hide_password=False)
 
 
 def _find_pg_tool(name: str) -> str | None:
@@ -71,9 +71,7 @@ def _get_row_counts(factory: SessionFactoryArg, tables: list[str]) -> dict[str, 
         async with factory() as session:
             counts: dict[str, int] = {}
             for table in tables:
-                result = await session.execute(
-                    text(f"SELECT COUNT(*) FROM {table}")
-                )
+                result = await session.execute(text(f"SELECT COUNT(*) FROM {table}"))
                 counts[table] = int(result.scalar_one())
             return counts
 
@@ -175,14 +173,15 @@ def test_drill_rate_limiter_integration() -> None:
 
     测试使用 TestClient 直接向 app 发送请求（无 Redis 时限流中间件应跳过）。
     """
-    from app.security.rate_limiter import setup_rate_limiter
 
     # 临时启用速率限制（测试环境可能已设为 False）
     import os as _os
+
     _os.environ.setdefault("RATE_LIMIT_ENABLED", "true")
 
     # 重新加载配置使环境变量生效
     from app.config import get_settings
+
     settings = get_settings()
     if not settings.rate_limit_enabled:
         pytest.skip("速率限制未启用 (rate_limit_enabled=False)")
@@ -221,6 +220,7 @@ def test_drill_rate_limiter_integration() -> None:
 @dataclass
 class _ApiFixture:
     """TestClient + engine 夹具容器。"""
+
     client: TestClient
     engine: AsyncEngine
 
@@ -247,9 +247,7 @@ def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_drill_password_leak_handling(
-    api: _ApiFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_drill_password_leak_handling(api: _ApiFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     """D9 密码泄露处置：管理端 API 轮换凭证，验证明文返回、旧凭证吊销与操作留痕。
 
     测试步骤：
@@ -264,12 +262,13 @@ def test_drill_password_leak_handling(
 
     # 替换 LockClient 为替身
     from app.routers import admin_lock_router
+
     monkeypatch.setattr(admin_lock_router, "LockClient", _StaticLockClient(fake))
 
     async def _seed(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             guest = await _guest(session)
-            order_data, (room,) = await _seed_paid_order(session, guest_id=guest.id)
+            order_data, room = await _seed_paid_order(session, guest_id=guest.id)
             await session.commit()
             # 执行每日轮换以产生 v1 active + v2 next 凭证
             service = LockCredentialService(session)
@@ -279,8 +278,9 @@ def test_drill_password_leak_handling(
 
     engine = api.engine
     seeds = run_with_session_factory(
-        # 从 api 的 engine 提取 URL 重建 factory（避免事件循环冲突）
-        str(engine.url),
+        # 从 api 的 engine 提取 URL 重建 factory（避免事件循环冲突）；
+        # 注意 str(engine.url) 会把密码渲染成 ***，须显式保留密码
+        engine.url.render_as_string(hide_password=False),
         _seed,
     )
     room_no = seeds["room_no"]
@@ -391,6 +391,7 @@ def test_drill_cross_process_duplicate_delivery(
         4. 验证 thread 中仅产生一条 assistant 消息
     """
     from langgraph.checkpoint.memory import InMemorySaver
+
     from tests.integration.support import force_stub_model
 
     force_stub_model(monkeypatch)
@@ -418,14 +419,14 @@ def test_drill_cross_process_duplicate_delivery(
 
         async with factory() as session:
             from app.models.runtime import Message
+
             messages = (
-                (await session.execute(
+                await session.execute(
                     select(func.count())
                     .select_from(Message)
                     .where(Message.thread_id == intake.thread_id, Message.role == "assistant")
-                ))
-                .scalar_one()
-            )
+                )
+            ).scalar_one()
 
         return {
             "first_outcome": first_outcome,

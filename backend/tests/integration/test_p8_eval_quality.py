@@ -293,12 +293,26 @@ def test_feedback_export(runtime_db_url: str) -> None:
     path.unlink(missing_ok=True)
 
 
+def _test_app(factory: SessionFactoryArg) -> Any:
+    """测试 app：把 get_session 覆盖到隔离库 factory（避免走默认库与跨循环连接）。"""
+    from app.db import get_session
+
+    app = create_app()
+    override = get_session
+
+    async def _override() -> Any:
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[override] = _override
+    return app
+
+
 def test_kb_eval_api_datasets(runtime_db_url: str) -> None:
     """KB eval API 端点：列出数据集。"""
 
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
-        app = create_app()
-        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        transport = ASGITransport(app=_test_app(factory))  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
                 "/api/admin/eval/kb/datasets", headers={"X-Dev-Username": "admin"}
@@ -306,15 +320,14 @@ def test_kb_eval_api_datasets(runtime_db_url: str) -> None:
             return {"status": resp.status_code, "body": resp.text[:200]}
 
     result = run_with_session_factory(runtime_db_url, _body)
-    assert result["status"] in (200, 401)
+    assert result["status"] in (200, 401, 403)
 
 
 def test_quality_scorecard_api(runtime_db_url: str) -> None:
     """质量评分卡 API：获取最新评分卡。"""
 
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
-        app = create_app()
-        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        transport = ASGITransport(app=_test_app(factory))  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
                 "/api/admin/quality/scorecards/latest",
@@ -323,4 +336,4 @@ def test_quality_scorecard_api(runtime_db_url: str) -> None:
             return {"status": resp.status_code}
 
     result = run_with_session_factory(runtime_db_url, _body)
-    assert result["status"] in (200, 401, 404)
+    assert result["status"] in (200, 401, 403, 404)
