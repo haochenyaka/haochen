@@ -725,23 +725,24 @@ def test_credential_guard_masks_before_summary_history_dump(tmp_path: Path) -> N
     assert "已按下发流程处理" in str(prepared.messages[1].content)
 
 
-def test_credential_guard_defaults_to_password_only_and_rejects_unknown_category() -> None:
+def test_credential_guard_defaults_to_all_categories_and_rejects_unknown() -> None:
     station = CredentialGuardStation()
     text = "手机 13812345678，身份证 11010519491231002X"
-    kept = run(
+    masked = run(
         station.after_tool(ToolCallRequest(name="t", args={}, call_id="c"), ToolResult("c", text))
     )
-    assert kept.content == text
-    assert station.redactions == []
+    # 出厂默认即打码三类：身份证保前 6 后 4、手机号保前 3 后 4，中间等长打码
+    assert masked.content == "手机 138****5678，身份证 110105********002X"
+    assert scan_sensitive_plaintext(str(masked.content)) == []
+    assert station.redactions == [{"stage": "tool_result", "categories": ["id_card", "phone"]}]
 
-    wider = CredentialGuardStation(
-        settings=CredentialGuardSettings(mask_categories=("password", "phone", "id_card"))
+    narrow = CredentialGuardStation(settings=CredentialGuardSettings(mask_categories=("password",)))
+    kept = run(
+        narrow.after_tool(ToolCallRequest(name="t", args={}, call_id="c"), ToolResult("c", text))
     )
-    widened = run(
-        wider.after_tool(ToolCallRequest(name="t", args={}, call_id="c"), ToolResult("c", text))
-    )
-    assert widened.content == "手机 [手机号已打码]，身份证 [身份证已打码]"
-    assert scan_sensitive_plaintext(str(widened.content)) == []
+    # 收窄为仅密码：手机号与身份证保留原文
+    assert kept.content == text
+    assert narrow.redactions == []
 
     with pytest.raises(MiddlewareConfigError):
         CredentialGuardStation(settings=CredentialGuardSettings(mask_categories=("mail",)))

@@ -3,8 +3,8 @@
 打码落在各持久化边界上：工具回包进入检查点与后续模型请求之前、助手消息入库之前、压缩
 历史落盘之前、工具入参进入审计与事件投影之前；生成中的流式增量不审查——下发与提醒场景
 的实时回复可以带当日密码，但任何落库副本都是打码形态（明文不落数据库、不进消息历史）。
-默认只打码密码字段，身份证与手机号由记忆过滤负责不进长期记忆；打码类别可配置且未知
-类别显式失败。
+默认打码三类：密码整值占位，身份证/手机号保留前 6 后 4 / 前 3 后 4、中间等长打码（最小化
+且保留可读）；打码类别可配置且未知类别显式失败。
 
 下发通道（Request-scoped delivery conduit）：标了 credential_delivery 的工具回包在打码
 之前先取走明文，暂存在工位内存里，只并入下一次模型请求的开头系统消息（请求态副本，不进
@@ -70,14 +70,22 @@ SENSITIVE_KEY_PATTERN = re.compile(
 """入参键名疑似凭据：整值打码（值本身无字段标记，内容扫描判不出来）。"""
 
 MASK_TEXT = "[已打码]"
+MASK_CHAR = "*"
 PLACEHOLDER_BY_CATEGORY = {
     "password": f"密码：{MASK_TEXT}",
     "id_card": "[身份证已打码]",
     "phone": "[手机号已打码]",
 }
-"""占位文本：password 保留字段名便于阅读，值形态不再构成可命中的敏感串。"""
+"""整值占位文本：password 保留字段名便于阅读，值形态不再构成可命中的敏感串。
 
-DEFAULT_MASK_CATEGORIES: tuple[str, ...] = ("password",)
+身份证与手机号默认走"保留前后缀、中间打码"（见 PARTIAL_KEEP），占位文本仅作
+无部分打码配置时的兜底。"""
+
+PARTIAL_KEEP: dict[str, tuple[int, int]] = {"id_card": (6, 4), "phone": (3, 4)}
+"""部分打码的保留位数（前缀, 后缀）：身份证保前 6 后 4，手机号保前 3 后 4，
+中间以 MASK_CHAR 等长替换（如 138****5678 / 110101********1234）。"""
+
+DEFAULT_MASK_CATEGORIES: tuple[str, ...] = ("password", "id_card", "phone")
 SAMPLE_MAX_CHARS = 64
 
 PROMPT_CONSTRAINT = (
@@ -112,13 +120,29 @@ def scan_sensitive_plaintext(text: str) -> list[SensitiveMatch]:
     return matches
 
 
+def _mask_segment(match: re.Match[str], category: str) -> str:
+    """命中片段的重写：password 整值占位；身份证/手机号按 PARTIAL_KEEP 保留前后缀。
+
+    部分打码是"最小化 + 可读"的取舍——号码本人仍可辨认，库内不再留存完整值；
+    完整形态被破坏后不再匹配敏感正则（scan_sensitive_plaintext 零命中）。"""
+    span = match.group(0)
+    keep = PARTIAL_KEEP.get(category)
+    if keep is None:
+        return PLACEHOLDER_BY_CATEGORY[category]
+    prefix, suffix = keep
+    if len(span) <= prefix + suffix:
+        return MASK_CHAR * len(span)
+    middle = MASK_CHAR * (len(span) - prefix - suffix)
+    return f"{span[:prefix]}{middle}{span[-suffix:]}"
+
+
 def mask_sensitive_plaintext(
     text: str, *, categories: Sequence[str] = DEFAULT_MASK_CATEGORIES
 ) -> tuple[str, tuple[str, ...]]:
     """按类别打码：返回（打码文本、命中类别）；未命中返回原文与空元组。"""
     wanted = frozenset(categories)
     hits = sorted(
-        (match.start(), match.end(), category)
+        (match.start(), match.end(), category, match)
         for category, pattern in SENSITIVE_PATTERNS
         if category in wanted
         for match in pattern.finditer(text)
@@ -128,11 +152,11 @@ def mask_sensitive_plaintext(
     pieces: list[str] = []
     used: list[str] = []
     cursor = 0
-    for start, end, category in hits:
+    for start, end, category, match in hits:
         if start < cursor:
             continue
         pieces.append(text[cursor:start])
-        pieces.append(PLACEHOLDER_BY_CATEGORY[category])
+        pieces.append(_mask_segment(match, category))
         cursor = end
         used.append(category)
     pieces.append(text[cursor:])
