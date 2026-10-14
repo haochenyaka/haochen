@@ -129,9 +129,15 @@ async def list_logs(
 ) -> LogListResponse:
     svc = AdminLogService(session)
     result = await svc.list_logs(
-        start=start, end=end, kind=kind, agent_slug=agent_slug,
-        status=status, run_id=run_id, include_deleted=include_deleted,
-        page=page, page_size=page_size,
+        start=start,
+        end=end,
+        kind=kind,
+        agent_slug=agent_slug,
+        status=status,
+        run_id=run_id,
+        include_deleted=include_deleted,
+        page=page,
+        page_size=page_size,
     )
     return LogListResponse(
         entries=[LogEntryResponse(**entry.__dict__) for entry in result.entries],
@@ -152,15 +158,28 @@ async def get_run_timeline(
     repo = AuditRepository(session)
     timeline = await repo.list_timeline(run_id=run_id, limit=limit, include_deleted=True)
     return AuditTimelineResponse(
-        entries=[AuditEntryResponse(
-            kind=e.kind, id=e.id, run_id=e.run_id, seq=e.seq,
-            agent_slug=e.agent_slug, status=e.status, created_at=e.created_at,
-            duration_ms=e.duration_ms, error=e.error, model=e.model,
-            prompt_tokens=e.prompt_tokens, cached_prompt_tokens=e.cached_prompt_tokens,
-            completion_tokens=e.completion_tokens, retrieval_refs=e.retrieval_refs,
-            tool_name=e.tool_name, args_digest=e.args_digest,
-            idempotency_key=e.idempotency_key,
-        ) for e in timeline.entries],
+        entries=[
+            AuditEntryResponse(
+                kind=e.kind,
+                id=e.id,
+                run_id=e.run_id,
+                seq=e.seq,
+                agent_slug=e.agent_slug,
+                status=e.status,
+                created_at=e.created_at,
+                duration_ms=e.duration_ms,
+                error=e.error,
+                model=e.model,
+                prompt_tokens=e.prompt_tokens,
+                cached_prompt_tokens=e.cached_prompt_tokens,
+                completion_tokens=e.completion_tokens,
+                retrieval_refs=e.retrieval_refs,
+                tool_name=e.tool_name,
+                args_digest=e.args_digest,
+                idempotency_key=e.idempotency_key,
+            )
+            for e in timeline.entries
+        ],
         truncated=timeline.truncated,
     )
 
@@ -187,7 +206,10 @@ async def soft_delete_audit_logs(
     await session.commit()
     logger.info(
         "审计日志软删：actor=%s model=%d tool=%d log_id=%d",
-        identity.username, result.model_affected, result.tool_affected, result.log_id,
+        identity.username,
+        result.model_affected,
+        result.tool_affected,
+        result.log_id,
     )
     return SoftDeleteResponse(
         model_affected=result.model_affected,

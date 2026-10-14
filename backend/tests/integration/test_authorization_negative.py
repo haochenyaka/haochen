@@ -515,24 +515,16 @@ def test_admin_quality_eval_role_enforcement(api: Api) -> None:
     resp = api.client.get("/api/admin/quality/scorecards/latest")
     assert resp.status_code == 401, resp.text
 
-    resp = api.client.get(
-        "/api/admin/eval/agent/reports", headers=_auth(world.manager_token)
-    )
+    resp = api.client.get("/api/admin/eval/agent/reports", headers=_auth(world.manager_token))
     assert resp.status_code in (200, 404), resp.text
 
-    resp = api.client.get(
-        "/api/admin/eval/agent/reports", headers=_auth(world.staff_a_token)
-    )
+    resp = api.client.get("/api/admin/eval/agent/reports", headers=_auth(world.staff_a_token))
     assert resp.status_code == 403, resp.text
 
-    resp = api.client.get(
-        "/api/admin/eval/kb/datasets", headers=_auth(world.manager_token)
-    )
+    resp = api.client.get("/api/admin/eval/kb/datasets", headers=_auth(world.manager_token))
     assert resp.status_code in (200, 404), resp.text
 
-    resp = api.client.get(
-        "/api/admin/eval/kb/datasets", headers=_auth(world.staff_a_token)
-    )
+    resp = api.client.get("/api/admin/eval/kb/datasets", headers=_auth(world.staff_a_token))
     assert resp.status_code == 403, resp.text
 
     assert _snapshot(api, world) == world.snapshots
@@ -542,14 +534,10 @@ def test_admin_feedback_role_enforcement(api: Api) -> None:
     """管理端反馈接口：manager 可读，staff 403，anonymous 401。"""
     world = _build_world(api)
 
-    resp = api.client.get(
-        "/api/admin/feedback/downvoted", headers=_auth(world.manager_token)
-    )
+    resp = api.client.get("/api/admin/feedback/downvoted", headers=_auth(world.manager_token))
     assert resp.status_code in (200, 404), resp.text
 
-    resp = api.client.get(
-        "/api/admin/feedback/downvoted", headers=_auth(world.staff_a_token)
-    )
+    resp = api.client.get("/api/admin/feedback/downvoted", headers=_auth(world.staff_a_token))
     assert resp.status_code == 403, resp.text
 
     resp = api.client.get("/api/admin/feedback/downvoted")
@@ -566,14 +554,10 @@ def test_admin_hotel_config_write_role_enforcement(api: Api) -> None:
     assert resp.status_code in (200, 404), resp.text
 
     body = {"hotel_name": "越权酒店"}
-    resp = api.client.put(
-        "/api/admin/hotel-config", headers=_auth(world.manager_token), json=body
-    )
+    resp = api.client.put("/api/admin/hotel-config", headers=_auth(world.manager_token), json=body)
     assert resp.status_code == 403, resp.text
 
-    resp = api.client.put(
-        "/api/admin/hotel-config", headers=_auth(world.staff_a_token), json=body
-    )
+    resp = api.client.put("/api/admin/hotel-config", headers=_auth(world.staff_a_token), json=body)
     assert resp.status_code == 403, resp.text
 
     resp = api.client.put("/api/admin/hotel-config", json=body)

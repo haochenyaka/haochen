@@ -58,9 +58,7 @@ class RoomTypeRepository:
             stmt = stmt.where(RoomType.active.is_(True))
         if search:
             like = f"%{search}%"
-            stmt = stmt.where(
-                    or_(RoomType.code.ilike(like), RoomType.name.ilike(like))
-                )
+            stmt = stmt.where(or_(RoomType.code.ilike(like), RoomType.name.ilike(like)))
         stmt = stmt.order_by(RoomType.code)
         return list((await self._session.execute(stmt)).scalars())
 
@@ -106,7 +104,11 @@ class RoomRepository:
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
     async def list_all(
-        self, *, room_type_id: UUID | None = None, status: str | None = None, search: str | None = None
+        self,
+        *,
+        room_type_id: UUID | None = None,
+        status: str | None = None,
+        search: str | None = None,
     ) -> list[Room]:
         stmt = select(Room)
         if room_type_id is not None:

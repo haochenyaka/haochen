@@ -50,7 +50,9 @@ def _rate_limit_key(request: Request, group: str) -> str:
 
     优先使用 X-Forwarded-For 取真实客户端 IP，回退到 remote_addr。
     """
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    ip = request.headers.get(
+        "x-forwarded-for", request.client.host if request.client else "unknown"
+    )
     # 取第一个 IP（X-Forwarded-For 可能是逗号分隔的链）
     client_ip = ip.split(",")[0].strip()
     return f"ratelimit:{group}:{client_ip}"
@@ -76,7 +78,9 @@ class RateLimiter:
             return self._redis
         try:
             from redis import asyncio as aioredis
+
             from app.config import get_settings
+
             settings = get_settings()
             self._redis = await aioredis.from_url(
                 settings.redis_url,
@@ -120,10 +124,13 @@ class RateLimiter:
 
             count = results[1]  # zcard 结果
             if count >= max_requests:
-                remaining = 0
                 logger.warning(
                     "速率限制 %s %s: %d/%d (窗口 %ds)",
-                    _route_group(request), key, count, max_requests, window,
+                    _route_group(request),
+                    key,
+                    count,
+                    max_requests,
+                    window,
                 )
                 return False
             return True
@@ -131,9 +138,7 @@ class RateLimiter:
             logger.warning("速率限制检查失败，放行：%s", exc)
             return True
 
-    def _get_limits(
-        self, request: Request, settings: Settings
-    ) -> tuple[int, int]:
+    def _get_limits(self, request: Request, settings: Settings) -> tuple[int, int]:
         """按路由组返回 (窗口秒数, 最大请求数)。"""
         group = _route_group(request)
         if group == "health":

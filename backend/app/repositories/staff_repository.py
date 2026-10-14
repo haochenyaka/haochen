@@ -42,7 +42,9 @@ class StaffRepository:
         stmt = select(Staff).where(Staff.user_id == user_id)
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def list_all(self, *, status: str | None = None, search: str | None = None) -> list[Staff]:
+    async def list_all(
+        self, *, status: str | None = None, search: str | None = None
+    ) -> list[Staff]:
         stmt = select(Staff)
         if status is not None:
             stmt = stmt.where(Staff.status == status)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -72,7 +73,7 @@ class Message(Base):
     seq: Mapped[int] = mapped_column(BigInteger, Identity(), nullable=False)
     thread_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("threads.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
-    content: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     run_id: Mapped[str | None] = mapped_column(String(64))
     meta: Mapped[dict[str, object] | None] = mapped_column("metadata", JSONB)
     created_at: Mapped[datetime] = mapped_column(

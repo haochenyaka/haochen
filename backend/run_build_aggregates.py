@@ -10,8 +10,7 @@
 
 import asyncio
 import logging
-import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -19,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data_pipeline.lake_storage import LakeStorage
 from app.db import SessionFactory
-from app.services.task_registry import TaskContext
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,17 +54,21 @@ async def _export_table(
         params: dict[str, Any] = {"limit": batch_size, "checkpoint": current_checkpoint}
 
         rows = (
-            await session.execute(
-                text(f"""
+            (
+                await session.execute(
+                    text(f"""
                     SELECT {col_list}
                     FROM {table}
                     WHERE {where_sql}
                     ORDER BY {checkpoint_col}
                     LIMIT :limit
                 """),
-                params,
+                    params,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
 
         if not rows:
             break
@@ -101,10 +103,13 @@ async def export_messages_direct(storage: LakeStorage) -> dict[str, Any]:
     logger.info("=== Exporting messages ===")
     async with SessionFactory() as session:
         result = await _export_table(
-            session, storage,
+            session,
+            storage,
             table="messages",
             columns=[
-                "seq", "thread_id", "role",
+                "seq",
+                "thread_id",
+                "role",
                 "content::text as content_text",
                 "metadata::text as metadata_text",
                 "run_id::text as run_id_text",
@@ -123,20 +128,28 @@ async def export_audits_direct(storage: LakeStorage) -> dict[str, Any]:
     for table_name in ["model_audit", "tool_audit"]:
         logger.info("=== Exporting %s ===", table_name)
         cols = [
-            "id", "run_id::text as run_id_text", "agent_slug",
-            "status", "duration_ms", "error",
+            "id",
+            "run_id::text as run_id_text",
+            "agent_slug",
+            "status",
+            "duration_ms",
+            "error",
         ]
         if table_name == "model_audit":
             cols += [
-                "model", "prompt_tokens", "completion_tokens",
-                "cached_prompt_tokens", "created_at",
+                "model",
+                "prompt_tokens",
+                "completion_tokens",
+                "cached_prompt_tokens",
+                "created_at",
             ]
         else:
             cols += ["tool_name", "created_at"]
 
         async with SessionFactory() as session:
             result = await _export_table(
-                session, storage,
+                session,
+                storage,
                 table=table_name,
                 columns=cols,
                 batch_size=2000,
@@ -149,11 +162,8 @@ async def export_audits_direct(storage: LakeStorage) -> dict[str, Any]:
 
 async def build_aggregates_direct(storage: LakeStorage) -> dict[str, Any]:
     """使用 DuckDB 读取 Parquet 文件，生成预聚合表。"""
+
     import duckdb
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-    import tempfile
-    from pathlib import Path
 
     logger.info("=== Building aggregates ===")
 
@@ -191,9 +201,7 @@ async def build_aggregates_direct(storage: LakeStorage) -> dict[str, Any]:
             """).fetch_arrow_table()
 
             if agg.num_rows > 0:
-                await storage.write_parquet(
-                    "agg_token_daily", date.today(), 0, agg.to_pylist()
-                )
+                await storage.write_parquet("agg_token_daily", date.today(), 0, agg.to_pylist())
                 results["token_agg"] = agg.num_rows
                 logger.info("  agg_token_daily: %d rows", agg.num_rows)
 
@@ -219,9 +227,7 @@ async def build_aggregates_direct(storage: LakeStorage) -> dict[str, Any]:
             """).fetch_arrow_table()
 
             if tool_agg.num_rows > 0:
-                await storage.write_parquet(
-                    "agg_tool_daily", date.today(), 0, tool_agg.to_pylist()
-                )
+                await storage.write_parquet("agg_tool_daily", date.today(), 0, tool_agg.to_pylist())
                 results["tool_agg"] = tool_agg.num_rows
                 logger.info("  agg_tool_daily: %d rows", tool_agg.num_rows)
 

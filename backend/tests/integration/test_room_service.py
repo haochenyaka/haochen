@@ -163,11 +163,13 @@ class TestRobotDelivery:
             _, guest_id = await _seed_guest_user(session)
             service = RobotDeliveryService(session)
             d1 = await service.create(
-                guest_id=guest_id, room_no="301",
+                guest_id=guest_id,
+                room_no="301",
                 item={"name": "矿泉水", "quantity": 2},
             )
             d2 = await service.create(
-                guest_id=guest_id, room_no="302",
+                guest_id=guest_id,
+                room_no="302",
                 item={"name": "拖鞋", "quantity": 1},
             )
             assert d1.status == "queued"
@@ -182,12 +184,14 @@ class TestRobotDelivery:
             _, guest_id = await _seed_guest_user(session)
             service = RobotDeliveryService(session)
             d1 = await service.create(
-                guest_id=guest_id, room_no="301",
+                guest_id=guest_id,
+                room_no="301",
                 item={"name": "毛巾", "quantity": 1},
                 idempotency_key="dup-key-1",
             )
             d2 = await service.create(
-                guest_id=guest_id, room_no="301",
+                guest_id=guest_id,
+                room_no="301",
                 item={"name": "毛巾", "quantity": 1},
                 idempotency_key="dup-key-1",
             )
@@ -201,7 +205,8 @@ class TestRobotDelivery:
             _, guest_id = await _seed_guest_user(session)
             service = RobotDeliveryService(session)
             d = await service.create(
-                guest_id=guest_id, room_no="301",
+                guest_id=guest_id,
+                room_no="301",
                 item={"name": "可乐", "quantity": 1},
             )
             for status in ("dispatching", "delivering", "arrived", "delivered"):
@@ -216,12 +221,12 @@ class TestHousekeepingTask:
     def test_call_clean_create(self, api: Api) -> None:
         async def body(session: AsyncSession) -> None:
             _, guest_id = await _seed_guest_user(session)
-            order_id, room_no, room_id = await _seed_room_and_order(
-                session, guest_id=guest_id
-            )
+            order_id, room_no, room_id = await _seed_room_and_order(session, guest_id=guest_id)
             hs = HousekeepingService(session)
             task = await hs.create(
-                task_type="call_clean", room_id=room_id, room_no=room_no,
+                task_type="call_clean",
+                room_id=room_id,
+                room_no=room_no,
                 payload={"note": "需要打扫"},
             )
             assert task.task_type == "call_clean"
@@ -232,9 +237,7 @@ class TestHousekeepingTask:
     def test_task_full_lifecycle(self, api: Api) -> None:
         async def body(session: AsyncSession) -> None:
             _, guest_id = await _seed_guest_user(session)
-            order_id, room_no, room_id = await _seed_room_and_order(
-                session, guest_id=guest_id
-            )
+            order_id, room_no, room_id = await _seed_room_and_order(session, guest_id=guest_id)
             staff_user_id = await _seed_staff_user(session)
             staff_repo = StaffRepository(session)
             staff = await staff_repo.get_by_user_id(staff_user_id)
@@ -242,7 +245,9 @@ class TestHousekeepingTask:
 
             hs = HousekeepingService(session)
             task = await hs.create(
-                task_type="call_clean", room_id=room_id, room_no=room_no,
+                task_type="call_clean",
+                room_id=room_id,
+                room_no=room_no,
             )
 
             task = await hs.transition(task.id, "accepted", assigned_staff_id=staff.id)
@@ -276,7 +281,9 @@ class TestHousekeepingTask:
 
             hs = HousekeepingService(session)
             task = await hs.create(
-                task_type="checkout_clean", room_id=room_id, room_no=room_no,
+                task_type="checkout_clean",
+                room_id=room_id,
+                room_no=room_no,
                 order_id=order_id,
             )
             task = await hs.transition(task.id, "accepted", assigned_staff_id=staff.id)
@@ -285,13 +292,12 @@ class TestHousekeepingTask:
 
             # 不带 password_rotated 的 verify 必须拒绝
             from app.domain.errors import ConflictError
+
             with pytest.raises(ConflictError, match="确认密码已修改"):
                 await hs.transition(task.id, "verified")
 
             # 带 password_rotated=true 的 verify 必须通过
-            task = await hs.transition(
-                task.id, "verified", evidence={"password_rotated": True}
-            )
+            task = await hs.transition(task.id, "verified", evidence={"password_rotated": True})
             assert task.status == "verified"
 
         _run(api, body)
@@ -308,16 +314,16 @@ class TestCheckoutFlow:
             checkout = CheckoutService(session)
             _order = await session.get(Order, order_id)
             assert _order is not None
-            order = await checkout.initiate_checkout(
-                guest_id=guest_id, order_no=_order.order_no
-            )
+            order = await checkout.initiate_checkout(guest_id=guest_id, order_no=_order.order_no)
             assert order.status == "checkout_pending"
 
             # 验证任务已创建
             tasks = list(
-                (await session.execute(
-                    select(HousekeepingTask).where(HousekeepingTask.order_id == order_id)
-                )).scalars()
+                (
+                    await session.execute(
+                        select(HousekeepingTask).where(HousekeepingTask.order_id == order_id)
+                    )
+                ).scalars()
             )
             assert len(tasks) >= 1
             assert tasks[0].task_type == "checkout_clean"
@@ -335,14 +341,14 @@ class TestCheckoutFlow:
             assert order is not None
 
             checkout = CheckoutService(session)
-            order = await checkout.initiate_checkout(
-                guest_id=guest_id, order_no=order.order_no
-            )
+            order = await checkout.initiate_checkout(guest_id=guest_id, order_no=order.order_no)
 
             tasks = list(
-                (await session.execute(
-                    select(HousekeepingTask).where(HousekeepingTask.order_id == order_id)
-                )).scalars()
+                (
+                    await session.execute(
+                        select(HousekeepingTask).where(HousekeepingTask.order_id == order_id)
+                    )
+                ).scalars()
             )
             task = tasks[0]
 
@@ -355,7 +361,8 @@ class TestCheckoutFlow:
             # verify_and_complete 吊销凭证并完成订单
             lock_client = FakeLockClient()
             result = await checkout.verify_and_complete(
-                task_id=task.id, lock_client=lock_client  # type: ignore[arg-type]
+                task_id=task.id,
+                lock_client=lock_client,  # type: ignore[arg-type]
             )
             assert result is not None
             assert result.status == "completed"
@@ -384,9 +391,7 @@ class TestGuestAPI:
 
         async def body(session: AsyncSession) -> str:
             _, guest_id = await _seed_guest_user(session, username=uuid4().hex[:8])
-            _, room_no, room_id = await _seed_room_and_order(
-                session, guest_id=guest_id
-            )
+            _, room_no, room_id = await _seed_room_and_order(session, guest_id=guest_id)
             return room_no
 
         room_no = _run(api, body)
@@ -444,9 +449,7 @@ class TestGuestAPI:
             return order.order_no, room_no
 
         order_no, _ = _run(api, _seed)
-        resp = api.client.post(
-            "/api/auth/login", json={"username": username, "password": password}
-        )
+        resp = api.client.post("/api/auth/login", json={"username": username, "password": password})
         assert resp.status_code == 200
         token = str(resp.json()["token"])
 
@@ -459,14 +462,10 @@ class TestGuestAPI:
         assert data["status"] == "checkout_pending"
 
     def test_unauthorized_returns_401(self, api: Api) -> None:
-        resp = api.client.post(
-            "/api/guest/services/clean", json={"room_no": "301"}
-        )
+        resp = api.client.post("/api/guest/services/clean", json={"room_no": "301"})
         assert resp.status_code == 401
 
-        resp = api.client.post(
-            "/api/guest/services/deliveries", json={"item_name": "水"}
-        )
+        resp = api.client.post("/api/guest/services/deliveries", json={"item_name": "水"})
         assert resp.status_code == 401
 
 

@@ -10,7 +10,7 @@ import io
 import logging
 import re
 import tempfile
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -31,9 +31,7 @@ def _date_path(table: str, dt: date, offset: int = 0) -> str:
 
 
 def _parse_date_path(path: str) -> tuple[str, date, int] | None:
-    m = re.match(
-        r"(.+)/year=(\d{4})/month=(\d{2})/day=(\d{2})/part-(\d+)\.parquet", path
-    )
+    m = re.match(r"(.+)/year=(\d{4})/month=(\d{2})/day=(\d{2})/part-(\d+)\.parquet", path)
     if not m:
         return None
     return (

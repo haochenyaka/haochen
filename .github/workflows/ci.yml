@@ -60,6 +60,9 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://haochen:haochen@localhost:5432/haochen
       REDIS_URL: redis://localhost:6379/0
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: haochen
+      MINIO_SECRET_KEY: haochen-dev-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -75,6 +78,25 @@ jobs:
         run: alembic downgrade base
       - name: Migration upgrade head again
         run: alembic upgrade head
+      # 报表/健康面板用例会先探数据湖（MinIO），需 localhost:9000 可达方可降级回 PG 重算。
+      # 官方 minio/minio 默认命令只打印用法即退出，无法作为 service 容器（不能覆盖启动命令），故用 docker run。
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=haochen \
+            -e MINIO_ROOT_PASSWORD=haochen-dev-secret \
+            minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "MinIO failed to become ready"
+          docker logs minio
+          exit 1
       - name: Integration tests
         run: pytest -q -m integration
 

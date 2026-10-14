@@ -28,8 +28,12 @@ def upgrade() -> None:
         sa.Column("phone", sa.String(32), nullable=True),
         sa.Column("brand", sa.String(64), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
     )
     # 插入默认行
     op.execute("INSERT INTO hotel_config (id, hotel_name) VALUES (1, '皓晨酒店')")

@@ -190,7 +190,9 @@ async def list_room_types(
     include_inactive: bool = False,
     search: str | None = Query(None, description="按编码或名称搜索"),
 ) -> list[RoomTypeResponse]:
-    rows = await RoomTypeRepository(session).list_all(include_inactive=include_inactive, search=search)
+    rows = await RoomTypeRepository(session).list_all(
+        include_inactive=include_inactive, search=search
+    )
     return [RoomTypeResponse(**vars(row)) for row in rows]
 
 
@@ -247,7 +249,9 @@ async def list_rooms(
 ) -> list[RoomResponse]:
     if status_filter is not None:
         _validate_room_status(status_filter)
-    rows = await RoomRepository(session).list_all(room_type_id=room_type_id, status=status_filter, search=search)
+    rows = await RoomRepository(session).list_all(
+        room_type_id=room_type_id, status=status_filter, search=search
+    )
     return [RoomResponse(**vars(row)) for row in rows]
 
 

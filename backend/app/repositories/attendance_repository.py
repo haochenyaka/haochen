@@ -41,7 +41,9 @@ class AttendanceCheckinRepository:
 
     async def get_by_id(self, record_id: UUID) -> AttendanceCheckin | None:
         return await self._session.get(
-            AttendanceCheckin, record_id, populate_existing=True,
+            AttendanceCheckin,
+            record_id,
+            populate_existing=True,
         )
 
     async def list_for_staff(
@@ -84,9 +86,7 @@ class AttendanceCheckinRepository:
         await self._session.flush()
         return record
 
-    async def get_today_record(
-        self, staff_id: UUID, direction: str
-    ) -> AttendanceCheckin | None:
+    async def get_today_record(self, staff_id: UUID, direction: str) -> AttendanceCheckin | None:
         """获取员工当日某方向的最新打卡记录。"""
         from sqlalchemy import Date, cast
 
@@ -95,8 +95,7 @@ class AttendanceCheckinRepository:
             .where(
                 AttendanceCheckin.staff_id == staff_id,
                 AttendanceCheckin.direction == direction,
-                cast(AttendanceCheckin.created_at, Date)
-                == datetime.now().astimezone().date(),
+                cast(AttendanceCheckin.created_at, Date) == datetime.now().astimezone().date(),
             )
             .order_by(AttendanceCheckin.created_at.desc())
             .limit(1)

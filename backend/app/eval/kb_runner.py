@@ -23,7 +23,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,9 +73,9 @@ class EvalReport:
     content_fingerprint: str
     config_fingerprint: str
     evaluator: str | None
-    retrieval_config: dict[str, object]
-    metrics: dict[str, object]
-    outcomes: list[dict[str, object]]
+    retrieval_config: dict[str, Any]
+    metrics: dict[str, Any]
+    outcomes: list[dict[str, Any]]
     generated_at: str
     report_id: int | None = None
     comparable_reports: tuple[int, ...] = ()

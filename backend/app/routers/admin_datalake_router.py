@@ -89,7 +89,7 @@ async def query_datalake(
         result = await svc.query(body.sql, limit=body.limit)
         return QueryResponse(**result)
     except DatalakeQueryError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/preview/{table}", response_model=QueryResponse)
@@ -101,7 +101,7 @@ async def preview_table(
     """预览表的前 N 行数据。"""
     svc = DatalakeQueryService()
     try:
-        result = await svc.query(f"SELECT * FROM \"{table}\" LIMIT {min(limit, 100)}", limit=0)
+        result = await svc.query(f'SELECT * FROM "{table}" LIMIT {min(limit, 100)}', limit=0)
         return QueryResponse(**result)
     except DatalakeQueryError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

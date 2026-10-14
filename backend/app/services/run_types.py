@@ -28,4 +28,5 @@ class RunInterrupted:
 
     `approvals` 为本次挂起的待审批元数据（call_id/工具/原因），执行器据此发 interrupt
     事件；审批事实已由执行体落库。"""
+
     approvals: list[dict[str, Any]] = field(default_factory=list)

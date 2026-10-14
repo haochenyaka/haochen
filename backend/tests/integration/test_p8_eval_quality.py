@@ -210,7 +210,11 @@ def test_qa_auditor_auto_label(runtime_db_url: str) -> None:
 
             stmt = select(QALabel).where(QALabel.thread_id == thread_id, QALabel.source == "auto")
             labels = (await session.execute(stmt)).scalars().all()
-            return {"label_count": count, "found": len(labels), "labels": [l.label for l in labels]}
+            return {
+                "label_count": count,
+                "found": len(labels),
+                "labels": [label.label for label in labels],
+            }
 
     result = run_with_session_factory(runtime_db_url, _body)
     assert result["label_count"] > 0

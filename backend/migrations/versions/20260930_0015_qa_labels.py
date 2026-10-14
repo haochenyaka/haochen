@@ -24,7 +24,12 @@ def upgrade() -> None:
     op.create_table(
         "qa_labels",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("thread_id", sa.Uuid(), sa.ForeignKey("threads.id", ondelete="CASCADE"), nullable=False,),
+        sa.Column(
+            "thread_id",
+            sa.Uuid(),
+            sa.ForeignKey("threads.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("label", sa.String(32), nullable=False),
         sa.Column("source", sa.String(16), nullable=False),
         sa.Column("confidence", sa.Float(), nullable=True),
@@ -39,12 +44,8 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_qa_labels_thread_label", "qa_labels", ["thread_id", "label"]
-    )
-    op.create_index(
-        "ix_qa_labels_label_created", "qa_labels", ["label", "created_at"]
-    )
+    op.create_index("ix_qa_labels_thread_label", "qa_labels", ["thread_id", "label"])
+    op.create_index("ix_qa_labels_label_created", "qa_labels", ["label", "created_at"])
 
 
 def downgrade() -> None:

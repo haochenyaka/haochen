@@ -71,13 +71,15 @@ class FeedbackCollector:
             assistant_text = ""
             if isinstance(row.assistant_content, dict):
                 assistant_text = row.assistant_content.get("text", "") or ""
-            results.append({
-                "feedback_id": str(row.feedback_id),
-                "question": user_text[:500],
-                "assistant_answer": assistant_text[:1000],
-                "rating": "down",
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-            })
+            results.append(
+                {
+                    "feedback_id": str(row.feedback_id),
+                    "question": user_text[:500],
+                    "assistant_answer": assistant_text[:1000],
+                    "rating": "down",
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                }
+            )
         return results
 
     async def get_upvoted_questions(self, since: datetime | None = None) -> list[dict[str, object]]:
@@ -103,12 +105,14 @@ class FeedbackCollector:
             user_text = ""
             if isinstance(row.user_content, dict):
                 user_text = row.user_content.get("text", "") or ""
-            results.append({
-                "feedback_id": str(row.feedback_id),
-                "question": user_text[:500],
-                "rating": "up",
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-            })
+            results.append(
+                {
+                    "feedback_id": str(row.feedback_id),
+                    "question": user_text[:500],
+                    "rating": "up",
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                }
+            )
         return results
 
     async def get_staff_ratings(self, since: datetime | None = None) -> list[dict[str, object]]:
@@ -154,15 +158,17 @@ class FeedbackCollector:
         downvoted = await self.get_downvoted_questions()
         items: list[dict[str, object]] = []
         for item in downvoted:
-            items.append({
-                "id": f"feedback-{item['feedback_id']}",
-                "question": item["question"],
-                "kb_code": "hotel_faq",
-                "gold_titles": ["[feedback_negative]"],
-                "primary_title": "[feedback_negative]",
-                "gold_answer": item.get("assistant_answer", ""),
-                "tags": ["feedback", "negative"],
-            })
+            items.append(
+                {
+                    "id": f"feedback-{item['feedback_id']}",
+                    "question": item["question"],
+                    "kb_code": "hotel_faq",
+                    "gold_titles": ["[feedback_negative]"],
+                    "primary_title": "[feedback_negative]",
+                    "gold_answer": item.get("assistant_answer", ""),
+                    "tags": ["feedback", "negative"],
+                }
+            )
 
         with open(path, "w", encoding="utf-8") as f:
             for item in items:

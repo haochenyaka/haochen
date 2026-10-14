@@ -79,7 +79,8 @@ def _get_row_counts(factory: SessionFactoryArg, tables: list[str]) -> dict[str, 
 
 
 def test_drill_backup_restore(runtime_db_url: str) -> None:
-    """D7 备份恢复演练：pg_dump 全量备份 → 模拟数据丢失 → pg_restore 恢复 → 验证行数与 alembic 版本一致。
+    """D7 备份恢复演练：pg_dump 全量备份 → 模拟数据丢失 → pg_restore 恢复 →
+    验证行数与 alembic 版本一致。
 
     测试步骤：
         1. 使用 pg_dump 创建备份文件
@@ -153,7 +154,8 @@ def test_drill_backup_restore(runtime_db_url: str) -> None:
 
         # 6. 验证 alembic 版本一致
         assert before["alembic_version"] == after["alembic_version"], (
-            f"alembic_version 行数变化：恢复前 {before['alembic_version']}，恢复后 {after['alembic_version']}"
+            f"alembic_version 行数变化：恢复前 {before['alembic_version']}，"
+            f"恢复后 {after['alembic_version']}"
         )
     finally:
         asyncio.run(engine.dispose())

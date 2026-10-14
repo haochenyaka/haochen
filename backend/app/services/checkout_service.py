@@ -33,9 +33,7 @@ class CheckoutService:
         self._housekeeping = HousekeepingService(session)
         self._lock = LockCredentialService(session)
 
-    async def initiate_checkout(
-        self, *, guest_id: UUID, order_no: str
-    ) -> Order:
+    async def initiate_checkout(self, *, guest_id: UUID, order_no: str) -> Order:
         """客人发起退房：订单 → checkout_pending + 派 checkout_clean 任务。"""
         order = await self._require_owned(guest_id=guest_id, order_no=order_no)
         if order.room_id is None:
@@ -46,7 +44,8 @@ class CheckoutService:
 
         order_service = OrderService(self._session)
         order = await order_service.transition(
-            order.id, "checkout_pending",
+            order.id,
+            "checkout_pending",
             event={
                 "type": "checkout_initiated",
                 "guest_id": str(guest_id),
@@ -62,9 +61,7 @@ class CheckoutService:
         )
         return order
 
-    async def verify_and_complete(
-        self, *, task_id: UUID, lock_client: LockClient
-    ) -> Order | None:
+    async def verify_and_complete(self, *, task_id: UUID, lock_client: LockClient) -> Order | None:
         """保洁确认改密后完成退房：吊销门锁凭证 → 订单 completed。
 
         返回更新后的订单，若该任务不关联订单则返回 None。
@@ -86,7 +83,8 @@ class CheckoutService:
 
         order_service = OrderService(self._session)
         return await order_service.transition(
-            order.id, "completed",
+            order.id,
+            "completed",
             event={
                 "type": "checkout_completed",
                 "room_no": task.room_no,

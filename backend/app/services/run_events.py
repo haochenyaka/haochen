@@ -122,9 +122,7 @@ class RunEventEmitter:
         try:
             await self._on_first_token()
         except Exception:
-            logger.warning(
-                "first token recording failed: run_id=%s", self._run_id, exc_info=True
-            )
+            logger.warning("first token recording failed: run_id=%s", self._run_id, exc_info=True)
 
     async def message_completed(self, *, text: str, message_id: UUID | str | None = None) -> None:
         await self.emit(

@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -17,7 +17,6 @@ from app.eval.agent.dataset import EvalSetError, dataset_fingerprint, load_eval_
 from app.eval.agent.runner import (
     DEFAULT_DATASET_DIR,
     EvalRunError,
-    evaluate_items,
     persist_report,
     run_eval,
 )
@@ -116,19 +115,19 @@ async def run_agent_eval(
             detail=f"数据集不存在：{dataset_path}",
         )
     try:
-        items = load_eval_set(dataset_path)
+        load_eval_set(dataset_path)
     except EvalSetError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     try:
         report = await run_eval(session, dataset_path=dataset_path)
     except EvalRunError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     report = await persist_report(session, report)
     return _to_report_detail(report)
 
@@ -184,9 +183,7 @@ async def invalidate_report(
     row = await repo.get(report_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="报告不存在")
-    await repo.mark_superseded(
-        report_id, superseded_by=report_id, reason="manual_invalidation"
-    )
+    await repo.mark_superseded(report_id, superseded_by=report_id, reason="manual_invalidation")
     await session.commit()
     # re-read to get updated state
     row = await repo.get(report_id)
@@ -208,6 +205,7 @@ async def invalidate_report(
 def _read_description(fpath: Path) -> str:
     """从 YAML 头部读取描述。"""
     import yaml
+
     raw = yaml.safe_load(fpath.read_text(encoding="utf-8"))
     if isinstance(raw, dict):
         meta = raw.get("fingerprint_meta", {})
@@ -218,6 +216,7 @@ def _read_description(fpath: Path) -> str:
 
 def _to_report_detail(report: object) -> ReportDetail:
     from app.eval.agent.runner import AgentEvalReportData
+
     if isinstance(report, AgentEvalReportData):
         outcomes = report.outcomes
         metrics = report.metrics
@@ -231,7 +230,7 @@ def _to_report_detail(report: object) -> ReportDetail:
         dataset_fingerprint=getattr(report, "dataset_fingerprint", ""),
         config_fingerprint=getattr(report, "config_fingerprint", ""),
         model=getattr(report, "model", None),
-        total_cases=metrics.get("questions", len(outcomes)),
+        total_cases=int(metrics.get("questions", len(outcomes))),
         metrics=metrics,
         outcomes=outcomes,
         superseded_by=None,
@@ -243,6 +242,7 @@ def _to_report_detail(report: object) -> ReportDetail:
 def _to_report_detail_from_orm(row: object) -> ReportDetail:
     metrics_dict = getattr(row, "metrics", {})
     outcomes_list = getattr(row, "outcomes", [])
+    created = getattr(row, "created_at", "")
     return _build_detail(
         report_id=getattr(row, "id", 0),
         dataset_path=getattr(row, "dataset_path", ""),
@@ -254,11 +254,7 @@ def _to_report_detail_from_orm(row: object) -> ReportDetail:
         outcomes=outcomes_list,
         superseded_by=getattr(row, "superseded_by", None),
         invalidated_reason=getattr(row, "invalidated_reason", None),
-        created_at=(
-            getattr(row, "created_at", "").isoformat()
-            if hasattr(getattr(row, "created_at", ""), "isoformat")
-            else str(getattr(row, "created_at", ""))
-        ),
+        created_at=created.isoformat() if hasattr(created, "isoformat") else str(created),
     )
 
 
@@ -270,8 +266,8 @@ def _build_detail(
     config_fingerprint: str,
     model: str | None,
     total_cases: int,
-    metrics: dict[str, object],
-    outcomes: list[dict[str, object]],
+    metrics: dict[str, Any],
+    outcomes: list[dict[str, Any]],
     superseded_by: int | None,
     invalidated_reason: str | None,
     created_at: str,

@@ -168,7 +168,9 @@ async def accept_handoff(
     identity: OperatorGuardDep,
 ) -> HandoffSummaryModel:
     svc = AdminConversationService(session)
-    ok = await svc.accept_handoff(handoff_id, assigned_to=identity.user_id, assigned_to_username=identity.username or "")
+    ok = await svc.accept_handoff(
+        handoff_id, assigned_to=identity.user_id, assigned_to_username=identity.username or ""
+    )
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="转人工请求不存在")
     items, _ = await svc.list_handoffs(offset=0, limit=1)
@@ -223,7 +225,11 @@ async def close_handoff(
 # ── Routes: Operator Reply ───────────────────────────────────────
 
 
-@router.post("/threads/{thread_id}/operator-reply", response_model=OperatorReplyResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/threads/{thread_id}/operator-reply",
+    response_model=OperatorReplyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def send_operator_reply(
     thread_id: UUID,
     body: OperatorReplyBody,

@@ -118,9 +118,15 @@ def test_cache_hit_trend(api: Api) -> None:
             assert intake.run_id
             session.add(
                 ModelAudit(
-                    run_id=str(intake.run_id), seq=1, agent_slug="front-desk",
-                    actor_type="guest", actor_id="t", model="deepseek-flash",
-                    status="completed", prompt_tokens=100, cached_prompt_tokens=40,
+                    run_id=str(intake.run_id),
+                    seq=1,
+                    agent_slug="front-desk",
+                    actor_type="guest",
+                    actor_id="t",
+                    model="deepseek-flash",
+                    status="completed",
+                    prompt_tokens=100,
+                    cached_prompt_tokens=40,
                 )
             )
             await session.commit()
@@ -131,9 +137,7 @@ def test_cache_hit_trend(api: Api) -> None:
         "start": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
         "end": (datetime.now(UTC) + timedelta(days=1)).isoformat(),
     }
-    resp = api.client.get(
-        "/api/admin/health/cache-hit-trend", headers=_auth(admin), params=params
-    )
+    resp = api.client.get("/api/admin/health/cache-hit-trend", headers=_auth(admin), params=params)
     assert resp.status_code == 200, resp.text
     payload = resp.json()
     assert len(payload) >= 0  # 可能有当天数据

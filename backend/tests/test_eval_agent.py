@@ -11,13 +11,12 @@ from app.eval.agent.dataset import (
     AgentEvalItem,
     EvalSetError,
     ExpectedSpec,
-    HistoryMessage,
     ToolCallSpec,
     dataset_fingerprint,
     fingerprint,
     load_eval_set,
 )
-from app.eval.agent.metrics import AgentQuestionOutcome, aggregate, score_question
+from app.eval.agent.metrics import aggregate, score_question
 from app.eval.agent.runner import (
     DEFAULT_DATASET_DIR,
     ScriptedCaseExecutor,
@@ -30,7 +29,11 @@ def _make_item(
     tool_sequence: list[dict] | None = None,
     task_success: bool | None = True,
 ) -> AgentEvalItem:
-    ts = tool_sequence if tool_sequence is not None else [{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}]
+    ts = (
+        tool_sequence
+        if tool_sequence is not None
+        else [{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}]
+    )
     return AgentEvalItem(
         id=item_id,
         name=item_id,
@@ -38,7 +41,9 @@ def _make_item(
         history=(),
         guest_overrides=None,
         expected=ExpectedSpec(
-            tool_sequence=[ToolCallSpec(name=t["name"], args_contain=t.get("args_contain")) for t in ts],
+            tool_sequence=[
+                ToolCallSpec(name=t["name"], args_contain=t.get("args_contain")) for t in ts
+            ],
             task_success=task_success,
             answer_contains=[],
         ),
@@ -90,13 +95,18 @@ class TestDataset:
             load_eval_set(path)
 
     def test_missing_message(self, tmp_path: Path) -> None:
-        path = _write_dataset(tmp_path, "no_msg.yaml", [{"id": "x", "expected": {"tool_sequence": []}}])
+        path = _write_dataset(
+            tmp_path, "no_msg.yaml", [{"id": "x", "expected": {"tool_sequence": []}}]
+        )
         with pytest.raises(EvalSetError, match="message"):
             load_eval_set(path)
 
     def test_with_history(self, tmp_path: Path) -> None:
         case = _yaml_case()
-        case["history"] = [{"role": "user", "content": "你好"}, {"role": "assistant", "content": "有什么需要帮助的？"}]
+        case["history"] = [
+            {"role": "user", "content": "你好"},
+            {"role": "assistant", "content": "有什么需要帮助的？"},
+        ]
         path = _write_dataset(tmp_path, "hist.yaml", [case])
         items = load_eval_set(path)
         assert len(items[0].history) == 2
@@ -158,13 +168,17 @@ class TestMetrics:
         assert outcome.tool_accuracy == 1.0  # empty expectation = always pass
 
     def test_args_match(self) -> None:
-        item = _make_item(tool_sequence=[{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}])
+        item = _make_item(
+            tool_sequence=[{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}]
+        )
         actual = [{"name": "inquire_room_type", "args": {"room_type": "大床房", "extra": True}}]
         outcome = score_question(item, actual)
         assert outcome.args_match_rate == 1.0
 
     def test_args_mismatch(self) -> None:
-        item = _make_item(tool_sequence=[{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}])
+        item = _make_item(
+            tool_sequence=[{"name": "inquire_room_type", "args_contain": {"room_type": "大床房"}}]
+        )
         actual = [{"name": "inquire_room_type", "args": {"room_type": "标准间"}}]
         outcome = score_question(item, actual)
         assert outcome.args_match_rate == 0.0
@@ -180,7 +194,10 @@ class TestMetrics:
             aggregate([])
 
     def test_aggregate_all_pass(self) -> None:
-        items = [_make_item("a", tool_sequence=[{"name": "tool_a"}]), _make_item("b", tool_sequence=[{"name": "tool_a"}])]
+        items = [
+            _make_item("a", tool_sequence=[{"name": "tool_a"}]),
+            _make_item("b", tool_sequence=[{"name": "tool_a"}]),
+        ]
         outcomes = [
             score_question(items[0], [{"name": "tool_a", "args": {}}], task_success=True),
             score_question(items[1], [{"name": "tool_a", "args": {}}], task_success=True),
@@ -192,13 +209,25 @@ class TestMetrics:
 
     def test_aggregate_by_tag(self) -> None:
         item_a = AgentEvalItem(
-            id="a", name="a", message="m", history=(), guest_overrides=None,
-            expected=ExpectedSpec(tool_sequence=[ToolCallSpec(name="t")], task_success=True, answer_contains=[]),
+            id="a",
+            name="a",
+            message="m",
+            history=(),
+            guest_overrides=None,
+            expected=ExpectedSpec(
+                tool_sequence=[ToolCallSpec(name="t")], task_success=True, answer_contains=[]
+            ),
             tags=("order",),
         )
         item_b = AgentEvalItem(
-            id="b", name="b", message="m", history=(), guest_overrides=None,
-            expected=ExpectedSpec(tool_sequence=[ToolCallSpec(name="t")], task_success=True, answer_contains=[]),
+            id="b",
+            name="b",
+            message="m",
+            history=(),
+            guest_overrides=None,
+            expected=ExpectedSpec(
+                tool_sequence=[ToolCallSpec(name="t")], task_success=True, answer_contains=[]
+            ),
             tags=("checkin",),
         )
         outcomes = [
@@ -248,5 +277,3 @@ class TestRunner:
         for fpath in yaml_files:
             items = load_eval_set(fpath)
             assert len(items) >= 1
-
-

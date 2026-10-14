@@ -89,12 +89,20 @@ class AdminLogService:
         offset = (max(page, 1) - 1) * limit
 
         model_query = self._build_model_query(
-            start=start, end=end, agent_slug=agent_slug, status=status,
-            run_id=run_id, include_deleted=include_deleted,
+            start=start,
+            end=end,
+            agent_slug=agent_slug,
+            status=status,
+            run_id=run_id,
+            include_deleted=include_deleted,
         )
         tool_query = self._build_tool_query(
-            start=start, end=end, agent_slug=agent_slug, status=status,
-            run_id=run_id, include_deleted=include_deleted,
+            start=start,
+            end=end,
+            agent_slug=agent_slug,
+            status=status,
+            run_id=run_id,
+            include_deleted=include_deleted,
         )
 
         from_model: list[LogEntry] = []
@@ -102,18 +110,18 @@ class AdminLogService:
 
         if kind != "tool":
             model_rows: Sequence[ModelAudit] = (
-                await self._session.execute(
-                    model_query.limit(limit + 1).offset(offset)
-                )
-            ).scalars().all()
+                (await self._session.execute(model_query.limit(limit + 1).offset(offset)))
+                .scalars()
+                .all()
+            )
             from_model = [self._to_log_entry(row) for row in model_rows]
 
         if kind != "model":
             tool_rows: Sequence[ToolAudit] = (
-                await self._session.execute(
-                    tool_query.limit(limit + 1).offset(offset)
-                )
-            ).scalars().all()
+                (await self._session.execute(tool_query.limit(limit + 1).offset(offset)))
+                .scalars()
+                .all()
+            )
             from_tool = [self._to_tool_entry(row) for row in tool_rows]
 
         combined = sorted(from_model + from_tool, key=lambda e: e.created_at, reverse=True)
@@ -305,17 +313,13 @@ class AdminLogService:
             return
 
         user_rows = (
-            await self._session.execute(
-                select(User.id, User.username)
-                .where(User.id.in_(user_ids))
-            )
+            await self._session.execute(select(User.id, User.username).where(User.id.in_(user_ids)))
         ).all()
         username_by_user = {str(row.id): row.username for row in user_rows}
 
         guest_rows = (
             await self._session.execute(
-                select(Guest.user_id, Guest.nickname)
-                .where(Guest.user_id.in_(user_ids))
+                select(Guest.user_id, Guest.nickname).where(Guest.user_id.in_(user_ids))
             )
         ).all()
         nickname_by_user: dict[str, str | None] = {
@@ -339,13 +343,17 @@ class AdminLogService:
         limit = min(page_size, MAX_PAGE_SIZE)
         offset = (max(page, 1) - 1) * limit
         rows = (
-            await self._session.execute(
-                select(AdminActionLog)
-                .order_by(AdminActionLog.created_at.desc(), AdminActionLog.id.desc())
-                .limit(limit)
-                .offset(offset)
+            (
+                await self._session.execute(
+                    select(AdminActionLog)
+                    .order_by(AdminActionLog.created_at.desc(), AdminActionLog.id.desc())
+                    .limit(limit)
+                    .offset(offset)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return list(rows)
 
 

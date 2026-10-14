@@ -6,18 +6,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.security import Identity, require_roles
 from app.services.data_pipeline_service import DataPipelineService
-from fastapi import Request
-
 from app.services.task_dispatch import TaskDispatcher
 
 logger = logging.getLogger(__name__)
@@ -28,13 +26,17 @@ pipeline_guard = require_roles("admin", "manager")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 GuardDep = Annotated[Identity, Depends(pipeline_guard)]
+
+
 async def _get_dispatcher(request: Request) -> TaskDispatcher:
-    return request.app.state.task_dispatcher  # type: ignore[no-any-return]
+    return request.app.state.task_dispatcher
+
 
 DispatcherDep = Annotated[TaskDispatcher, Depends(_get_dispatcher)]
 
 
 # ---- Schema ----
+
 
 class RuleCreate(BaseModel):
     name: str = Field(..., max_length=128)
@@ -102,6 +104,7 @@ class TriggerResponse(BaseModel):
 
 
 # ---- 规则 CRUD ----
+
 
 @router.get("/rules", response_model=RuleListResponse)
 async def list_rules(
@@ -187,6 +190,7 @@ async def delete_rule(
 
 # ---- 管道执行 ----
 
+
 @router.post("/rules/{rule_id}/trigger", response_model=TriggerResponse)
 async def trigger_pipeline(
     rule_id: int,
@@ -221,6 +225,7 @@ async def trigger_pipeline_task(
 
 # ---- 运行记录 ----
 
+
 @router.get("/runs", response_model=RunListResponse)
 async def list_runs(
     session: SessionDep,
@@ -251,6 +256,7 @@ async def get_run(
 
 # ---- 统计 ----
 
+
 @router.get("/stats", response_model=PipelineStatsResponse)
 async def get_pipeline_stats(
     session: SessionDep,
@@ -264,9 +270,11 @@ async def get_pipeline_stats(
 
 # ---- 辅助转换 ----
 
+
 def _rule_to_response(rule: object) -> RuleResponse:
     from app.models.data_pipeline import DataCleaningRule
-    r: DataCleaningRule = rule  # type: ignore[annotation]
+
+    r = cast(DataCleaningRule, rule)
     return RuleResponse(
         id=r.id,
         name=r.name,
@@ -283,7 +291,8 @@ def _rule_to_response(rule: object) -> RuleResponse:
 
 def _run_to_response(run: object) -> PipelineRunResponse:
     from app.models.data_pipeline import DataPipelineRun
-    r: DataPipelineRun = run  # type: ignore[annotation]
+
+    r = cast(DataPipelineRun, run)
     return PipelineRunResponse(
         id=str(r.id),
         rule_id=r.rule_id,

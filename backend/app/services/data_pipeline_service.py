@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update, delete, func as sa_func, desc
+from sqlalchemy import CursorResult, delete, desc, select, update
+from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.data_pipeline import DataCleaningRule, DataPipelineRun
@@ -89,7 +91,7 @@ class DataPipelineService:
 
     async def delete_rule(self, rule_id: int) -> bool:
         stmt = delete(DataCleaningRule).where(DataCleaningRule.id == rule_id)
-        result = await self._session.execute(stmt)
+        result = cast(CursorResult[Any], await self._session.execute(stmt))
         return result.rowcount > 0
 
     # ---- 管道触发 ----
@@ -227,28 +229,30 @@ class DataPipelineService:
         stmt = select(DataPipelineRun).where(DataPipelineRun.id == run_id)
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def get_stats(self) -> dict[str, object]:
+    async def get_stats(self) -> dict[str, Any]:
         """获取管道统计概览。"""
-        rows = (await self._session.execute(
-            select(
-                DataPipelineRun.status,
-                sa_func.count(DataPipelineRun.id),
-            ).group_by(DataPipelineRun.status)
-        )).all()
+        rows = (
+            await self._session.execute(
+                select(
+                    DataPipelineRun.status,
+                    sa_func.count(DataPipelineRun.id),
+                ).group_by(DataPipelineRun.status)
+            )
+        ).all()
         status_counts: dict[str, int] = {r[0]: r[1] for r in rows}
         return {
             "total_rules": (
-                await self._session.execute(
-                    select(sa_func.count(DataCleaningRule.id))
-                )
-            ).scalar() or 0,
+                await self._session.execute(select(sa_func.count(DataCleaningRule.id)))
+            ).scalar()
+            or 0,
             "enabled_rules": (
                 await self._session.execute(
                     select(sa_func.count(DataCleaningRule.id)).where(
                         DataCleaningRule.enabled.is_(True)
                     )
                 )
-            ).scalar() or 0,
+            ).scalar()
+            or 0,
             "total_runs": sum(status_counts.values()),
             "status_counts": status_counts,
         }

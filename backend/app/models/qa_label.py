@@ -21,7 +21,8 @@ class QALabel(Base):
         ForeignKey("threads.id", ondelete="CASCADE"), nullable=False
     )
     label: Mapped[str] = mapped_column(String(32), nullable=False)
-    """标签名：resolved / unresolved / handoff_requested / complaint_risk / hallucination_suspected / other"""
+    """标签名：resolved / unresolved / handoff_requested / complaint_risk /
+    hallucination_suspected / other"""
     source: Mapped[str] = mapped_column(String(16), nullable=False)
     """标注来源：auto（qa-auditor 自动）或 manual（人工标注）"""
     confidence: Mapped[float | None] = mapped_column()

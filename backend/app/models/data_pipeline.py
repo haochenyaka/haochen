@@ -6,6 +6,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Float, Integer, String, Text, Uuid, func
@@ -52,9 +53,7 @@ class DataPipelineRun(Base):
     """关联的 durable task ID；null 表示尚未创建 task"""
     trigger: Mapped[str] = mapped_column(String(32), nullable=False)
     """触发方式：manual / scheduled / api"""
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, server_default="pending"
-    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="pending")
     """pending / running / completed / failed"""
     source_table: Mapped[str | None] = mapped_column(String(64))
     """清洗的数据源表名"""
@@ -62,7 +61,7 @@ class DataPipelineRun(Base):
     affected_rows: Mapped[int | None] = mapped_column(Integer)
     error_rows: Mapped[int | None] = mapped_column(Integer)
     duration_seconds: Mapped[float | None] = mapped_column(Float)
-    summary: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     """执行摘要，如{"脱敏字段": ["phone", "id_card"], "脱敏行数": 120}"""
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(

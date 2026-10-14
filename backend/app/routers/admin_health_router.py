@@ -38,13 +38,11 @@ async def resolve_window(
     end: Annotated[datetime | None, Query(description="结束（不含），ISO8601")] = None,
 ) -> ReportWindow:
     resolved_end = _aware(end) if end is not None else datetime.now(UTC)
-    resolved_start = _aware(start) if start is not None else resolved_end - timedelta(
-        days=DEFAULT_REPORT_DAYS
+    resolved_start = (
+        _aware(start) if start is not None else resolved_end - timedelta(days=DEFAULT_REPORT_DAYS)
     )
     if resolved_start >= resolved_end:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="start 必须早于 end"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="start 必须早于 end")
     if resolved_end - resolved_start > timedelta(days=MAX_REPORT_DAYS):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
