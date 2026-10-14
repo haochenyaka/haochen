@@ -16,6 +16,7 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import urllib3
 from minio import Minio
 from minio.error import S3Error
 
@@ -24,6 +25,10 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 _DATA_LAKE_BUCKET = "haochen-datalake"
+
+CONNECT_TIMEOUT_SECONDS = 1.0
+READ_TIMEOUT_SECONDS = 5.0
+HTTP_RETRIES = 1
 
 
 def _date_path(table: str, dt: date, offset: int = 0) -> str:
@@ -55,7 +60,18 @@ class LakeStorage:
         secret_key: str,
         secure: bool,
     ) -> None:
-        self._client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+        # 湖不可达时快速失败：客户端默认重试会耗到 ~30s，把报表降级与管道任务一起拖住。
+        http_client = urllib3.PoolManager(
+            timeout=urllib3.Timeout(connect=CONNECT_TIMEOUT_SECONDS, read=READ_TIMEOUT_SECONDS),
+            retries=urllib3.Retry(total=HTTP_RETRIES, backoff_factor=0.1),
+        )
+        self._client = Minio(
+            endpoint,
+            access_key=access_key,
+            secret_key=secret_key,
+            secure=secure,
+            http_client=http_client,
+        )
         self._bucket = _DATA_LAKE_BUCKET
         self._bucket_ready = False
 

@@ -180,32 +180,32 @@ class ReportService:
     async def _duckdb_query_agg(self, agg_table: str, sql: str) -> list[dict[str, Any]] | None:
         """对数据湖中的预聚合 Parquet 表执行 DuckDB 查询。
 
-        返回 [{col: value, ...}, ...] 或 None（表不存在或查询失败）。
-        失败时静默降级，由调用方走 PostgreSQL 回退路径。
+        返回 [{col: value, ...}, ...] 或 None（表不存在、数据湖不可达或查询失败）。
+        整个探测与读取过程都在兜底范围内：湖不可达时按契约降级，由调用方走 PostgreSQL。
         """
         from app.data_pipeline.lake_storage import LakeStorage
 
-        storage = LakeStorage.from_settings()
-        files = await storage.list_partitions(agg_table)
-        if not files:
-            return None
-
-        local_paths = [str(await storage.read_parquet_to_temp(f)) for f in files]
-
-        def _run() -> list[dict[str, Any]]:
-            con = duckdb.connect()
-            try:
-                con.execute(
-                    f'CREATE OR REPLACE VIEW "{agg_table}" AS '
-                    f"SELECT * FROM read_parquet({local_paths})"
-                )
-                rel = con.execute(sql)
-                columns = [desc[0] for desc in rel.description]
-                return [dict(zip(columns, row, strict=True)) for row in rel.fetchall()]
-            finally:
-                con.close()
-
         try:
+            storage = LakeStorage.from_settings()
+            files = await storage.list_partitions(agg_table)
+            if not files:
+                return None
+
+            local_paths = [str(await storage.read_parquet_to_temp(f)) for f in files]
+
+            def _run() -> list[dict[str, Any]]:
+                con = duckdb.connect()
+                try:
+                    con.execute(
+                        f'CREATE OR REPLACE VIEW "{agg_table}" AS '
+                        f"SELECT * FROM read_parquet({local_paths})"
+                    )
+                    rel = con.execute(sql)
+                    columns = [desc[0] for desc in rel.description]
+                    return [dict(zip(columns, row, strict=True)) for row in rel.fetchall()]
+                finally:
+                    con.close()
+
             return await asyncio.to_thread(_run)
         except Exception:
             logger.debug("DuckDB query on %s failed", agg_table, exc_info=True)

@@ -78,25 +78,8 @@ jobs:
         run: alembic downgrade base
       - name: Migration upgrade head again
         run: alembic upgrade head
-      # 报表/健康面板用例会先探数据湖（MinIO），需 localhost:9000 可达方可降级回 PG 重算。
-      # 官方 minio/minio 默认命令只打印用法即退出，无法作为 service 容器（不能覆盖启动命令），故用 docker run。
-      - name: Start MinIO
-        run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=haochen \
-            -e MINIO_ROOT_PASSWORD=haochen-dev-secret \
-            minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:9000/minio/health/live >/dev/null; then
-              echo "MinIO ready after ${i}s"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "MinIO failed to become ready"
-          docker logs minio
-          exit 1
+      # 不启 MinIO：dockerhub 的 minio/minio 已不可匿名拉取（pull access denied），
+      # 且报表/健康面板用例在数据湖不可达时按契约降级回 PostgreSQL，这里正是跑这条路径。
       - name: Integration tests
         run: pytest -q -m integration
 
