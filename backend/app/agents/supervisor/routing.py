@@ -168,8 +168,10 @@ class SupervisorRouter:
         actor_id: str = "",
         on_usage: UsageSink | None = None,
     ) -> None:
+        # 显式走 tool 调用取结构化输出：`json_schema` 依赖 response_format，部分 OpenAI 兼容
+        # 端点（含 DeepSeek）对其返回 400，会让路由整条退化到关键词兜底而静默失真。
         self._structured = (
-            model.with_structured_output(RouteDecision, include_raw=True)
+            model.with_structured_output(RouteDecision, include_raw=True, method="function_calling")
             if isinstance(model, ChatOpenAI)
             else None
         )
