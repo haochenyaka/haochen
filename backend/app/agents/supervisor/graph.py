@@ -14,7 +14,8 @@
 
 归属与事实：决策节点以 `SUPERVISOR_SLUG` 记录器写路由事实（判定值、判定来源、实际派发
 目标），各子图以自身 slug 派生记录器写模型与工具事实——归属在装配期确定，不依赖运行期
-上下文传递。
+上下文传递。决策本身若调用真实模型（结构化输出），其模型事实同样归到 `SUPERVISOR_SLUG`，
+用量经流水线的旁路口径计入 Run 汇总；该调用不注入记忆/技能/steer（路由提示词只有调度指令）。
 """
 
 from __future__ import annotations
@@ -84,8 +85,13 @@ async def build_supervisor_graph(
         claimed.update(agent_type.tool_ids)
     unclaimed: tuple[str, ...] = tuple(name for name in available if name not in claimed)
 
-    router = SupervisorRouter(model)
     route_recorder = runtime.recorder.with_agent(SUPERVISOR_SLUG)
+    router = SupervisorRouter(
+        model,
+        recorder=route_recorder,
+        actor_id=runtime.actor_id,
+        on_usage=pipeline.record_side_channel_usage,
+    )
     builder: StateGraph[SupervisorState, RuntimeContext, SupervisorState, SupervisorState] = (
         StateGraph(SupervisorState, context_schema=RuntimeContext)
     )
@@ -119,10 +125,13 @@ async def build_supervisor_graph(
             source=outcome.source,
             reason=decision.reason or None,
         )
+        # 路由调用的用量随决策节点写回状态：末次决策（多为 finish）之后没有子图跟进，
+        # 若只由子图写回，这一次决策的用量会随 Run 收敛而丢失。
+        usage_update: dict[str, Any] = {"token_usage": pipeline.token_usage}
         if target is None:
-            return Command(goto=END)
+            return Command(goto=END, update=usage_update)
         dispatched.append(target)
-        return Command(goto=target)
+        return Command(goto=target, update=usage_update)
 
     builder.add_node(
         "supervisor",

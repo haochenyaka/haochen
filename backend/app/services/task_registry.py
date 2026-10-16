@@ -6,13 +6,18 @@
 - 解析按 (task_type, handler_version) 精确匹配：版本不匹配视为未知处理器（fail-closed），
   执行器据此把任务置 failed，不做版本回退、不做静默降级；
 - 领域模块导入失败不抛出，只记录日志并视为未注册（同样失败关闭），避免单个模块
-  的依赖问题拖垮整个 worker 启动。
+  的依赖问题拖垮整个 worker 启动；
+- 注册带「生成期」：`reset_registry()`（测试用）递增生成期，`register_module_handlers`
+  对已缓存但未在当前生成期登记过的模块显式 reload 以重放注册——否则 `importlib` 命中
+  `sys.modules` 缓存、装饰器不重跑，reset 之后解析生产处理器会静默落空。生产期不 reset，
+  生成期恒为 0，不会触发任何 reload。
 """
 
 from __future__ import annotations
 
 import importlib
 import logging
+import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -31,6 +36,7 @@ HANDLER_MODULES: tuple[str, ...] = (
     "app.lock.rotation_task",
     "app.data_pipeline.task_handlers",
     "app.memory.task_handlers",
+    "app.quality.task_handlers",
 )
 
 
@@ -75,6 +81,9 @@ class HandlerSpec:
 
 _REGISTRY: dict[tuple[str, int], HandlerSpec] = {}
 _LOADED_MODULES: set[str] = set()
+# 注册生成期：reset_registry() 递增；记录各模块最近一次重放注册的生成期
+_GENERATION = 0
+_REGISTERED_GENERATION: dict[str, int] = {}
 
 
 def task_handler(
@@ -99,24 +108,34 @@ def task_handler(
             run=fn,
             on_failure=on_failure,
         )
+        _REGISTERED_GENERATION[fn.__module__ or ""] = _GENERATION
         return fn
 
     return _decorator
 
 
 def register_module_handlers(module_name: str) -> int:
-    """导入模块以触发其注册（幂等）；导入失败记为未注册并返回 0。"""
+    """导入模块以触发其注册（幂等）；导入失败记为未注册并返回 0。
+
+    模块已在 `sys.modules` 中但未在当前生成期登记过（`reset_registry()` 之后）时，
+    `importlib.import_module` 命中缓存不会重跑装饰器，故显式 reload 重放注册。
+    """
     if module_name in _LOADED_MODULES:
         return 0
     _LOADED_MODULES.add(module_name)
     try:
-        importlib.import_module(module_name)
+        module = sys.modules.get(module_name)
+        if module is None:
+            importlib.import_module(module_name)
+        elif _REGISTERED_GENERATION.get(module_name) != _GENERATION:
+            importlib.reload(module)
     except ModuleNotFoundError:
         logger.warning("task handler module missing, treated as unregistered: %s", module_name)
         return 0
     except Exception:
         logger.exception("task handler module import failed: %s", module_name)
         return 0
+    _REGISTERED_GENERATION[module_name] = _GENERATION
     return 1
 
 
@@ -137,6 +156,12 @@ def registered_handlers() -> Mapping[tuple[str, int], HandlerSpec]:
 
 
 def reset_registry() -> None:
-    """测试用：清空注册表与导入标记。"""
+    """测试用：清空注册表并递增生成期——下一次解析会重放各领域模块的注册。
+
+    仅清空 `_REGISTRY`/`_LOADED_MODULES` 不足以让已缓存模块重跑装饰器（`importlib`
+    命中 `sys.modules` 缓存），故递增生成期，由 `register_module_handlers` 判定是否 reload。
+    """
+    global _GENERATION
+    _GENERATION += 1
     _REGISTRY.clear()
     _LOADED_MODULES.clear()

@@ -6,6 +6,7 @@ from typing import Any
 
 from app.knowledge.recovery import release_expired_claims_job
 from app.lock.task_handlers import submit_daily_rotation_job
+from app.quality.task_handlers import submit_qa_audit_job
 from app.services.run_dispatch import RUN_JOB_NAME
 from app.services.run_worker import (
     execute_agent_run,
@@ -93,6 +94,7 @@ def test_task_cron_recovery_jobs_registered() -> None:
         "cron:reconcile_expired_tasks_job",
         "cron:release_expired_claims_job",
         "cron:submit_daily_rotation_job",
+        "cron:submit_qa_audit_job",
     }
     assert jobs["cron:repost_pending_tasks_job"].coroutine is repost_pending_tasks_job
     assert jobs["cron:reconcile_expired_tasks_job"].coroutine is reconcile_expired_tasks_job
@@ -106,6 +108,11 @@ def test_task_cron_recovery_jobs_registered() -> None:
     assert rotation.coroutine is submit_daily_rotation_job
     assert rotation.minute == set(range(0, 60, 5))
     assert rotation.second == {0}
+    # 质检跑批：每小时一次（小时级去重键，重启补发不堆积）
+    audit = jobs["cron:submit_qa_audit_job"]
+    assert audit.coroutine is submit_qa_audit_job
+    assert audit.minute == {10}
+    assert audit.second == {0}
 
 
 def test_task_worker_startup_hooks_registered() -> None:

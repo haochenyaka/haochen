@@ -223,11 +223,15 @@ class RunStreamService:
 def _projected_record(
     run: RunStreamView, seq: int, event: str, data: Mapping[str, object]
 ) -> RunEventRecord:
-    """合成事件：id 带 projected 前缀（不是传输游标，不参与续传定位）。"""
+    """合成事件：id 带 projected 前缀（不是传输游标，不参与续传定位）。
+
+    合成事件都是 Run 级事件（回复与终态），故 agent_slug 与 entry_slug 同为 Run 的入口 Agent。
+    """
     payload = {
         "run_id": str(run.run_id),
         "thread_id": str(run.thread_id),
         "agent_slug": run.agent_slug,
+        "entry_slug": run.agent_slug,
         "projected": True,
         **data,
     }

@@ -37,6 +37,7 @@ from app.services.run_worker import RunExecutor
 from tests.integration.db_utils import run_with_session_factory
 from tests.integration.support import (
     RecordingDispatcher,
+    RecordingRunEventBus,
     ScriptedToolChatModel,
     force_stub_model,
     intake_message,
@@ -200,8 +201,9 @@ def test_agent_run_body_replays_history_and_writes_checkpoint(
 def test_supervisor_route_facts_and_sub_agent_attribution(
     runtime_db_url: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """真实 supervisor 图：决策事实落 route_audit，模型事实归属到具体子 Agent。"""
+    """真实 supervisor 图：决策事实落 route_audit，模型事实与事件按子 Agent 归属。"""
     force_stub_model(monkeypatch)
+    bus = RecordingRunEventBus()
 
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         pool, checkpointer = await _open_saver(runtime_db_url)
@@ -210,6 +212,7 @@ def test_supervisor_route_facts_and_sub_agent_attribution(
                 AgentRunBody(checkpointer=checkpointer),
                 dispatcher=RecordingDispatcher(),
                 session_factory=factory,
+                event_bus=bus,
             )
             async with factory() as session:
                 intake = await intake_message(
@@ -240,6 +243,10 @@ def test_supervisor_route_facts_and_sub_agent_attribution(
                     for row in routes
                 ],
                 "model_slugs": [row.agent_slug for row in audits],
+                "events": [
+                    (record.event, record.data.get("agent_slug"), record.data.get("entry_slug"))
+                    for record in bus.records(intake.run_id)
+                ],
             }
         finally:
             await pool.close()
@@ -263,6 +270,14 @@ def test_supervisor_route_facts_and_sub_agent_attribution(
     assert result["model_slugs"]
     assert set(result["model_slugs"]) <= sub_agent_slugs
     assert FrontDeskAgent.slug not in result["model_slugs"]
+
+    # 事件归属：子图派生的增量事件按实际执行者记，Run 级事件仍是入口
+    events = result["events"]
+    assert events
+    assert {entry for *_, entry in events} == {FrontDeskAgent.slug}
+    delta_slugs = {slug for event, slug, _ in events if event == "message.delta"}
+    # 增量事件的归属与实际派发过的子 Agent 一一对应
+    assert delta_slugs == {SUB_AGENT_TYPES[route].slug for route in dispatched}
 
 
 def test_checkpoint_tables_are_migration_managed(runtime_db_url: str) -> None:

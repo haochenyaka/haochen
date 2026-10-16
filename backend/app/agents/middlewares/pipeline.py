@@ -221,6 +221,12 @@ class MiddlewarePipeline:
             return station.summary()
         return None
 
+    def record_side_channel_usage(self, reply: AIMessage) -> None:
+        """旁路模型调用（不经流水线）的用量计入 Run 总量：supervisor 路由决策等。"""
+        station = self._by_key.get("token_usage")
+        if isinstance(station, TokenUsageStation) and station.enabled:
+            station.record_usage(reply)
+
     @property
     def summarization_events(self) -> list[dict[str, Any]]:
         station = self._by_key.get("summarization")

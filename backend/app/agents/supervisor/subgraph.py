@@ -48,10 +48,16 @@ def build_loop_subgraph(
 ) -> CompiledStateGraph[Any, Any, Any, Any]:
     """装配一个"模型直答 + 工具回环"子图：无可见工具时直接单轮作答。
 
-    agent_slug 为本子图的审计归属：给出时按它派生记录器，模型与工具事实据此归属到具体子
-    Agent；流水线仍为调用方共享的单例，token 用量与工位行为不受影响。
+    agent_slug 为本子图的审计与事件归属：给出时按它派生记录器与事件发射器视图，模型与工具
+    事实、以及 message.delta / tool.call / tool.result 事件的 agent_slug 均归到具体子 Agent；
+    流水线仍为调用方共享的单例，token 用量与工位行为不受影响。
     """
     recorder = runtime.recorder.with_agent(agent_slug) if agent_slug else runtime.recorder
+    events = (
+        runtime.events.with_agent(agent_slug)
+        if agent_slug and runtime.events is not None
+        else runtime.events
+    )
     visible_tools = tuple(tools)
     effective_prompt = "\n\n".join(part for part in (system_prompt, pipeline.skill_prompt) if part)
 
@@ -64,7 +70,7 @@ def build_loop_subgraph(
             )
         )
         bound_model = bind_tools(model, request.tools)
-        on_delta = runtime.events.message_delta if runtime.events is not None else None
+        on_delta = events.message_delta if events is not None else None
         reply = await pipeline.invoke_model(
             request,
             base=partial(
@@ -96,7 +102,7 @@ def build_loop_subgraph(
             tools=visible_tools,
             pipeline=pipeline,
             recorder=recorder,
-            events=runtime.events,
+            events=events,
         )
 
         async def run_tools(state: LoopState) -> dict[str, Any]:

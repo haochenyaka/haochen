@@ -54,6 +54,11 @@ graph TD;
   残留；上限见 `routing.MAX_DISPATCHES`。
 - 决策以 LLM 结构化输出为主，失败或不可用时落关键词兜底（`routing.SupervisorRouter`）。
 - 授权感知：决策目标在当前资源快照下无可见工具、而其他子 Agent 有工具时，改派后者。
+- 事实留痕：每次决策先落 `route_audit`（判定值 / 判定来源 llm|keyword / 实际派发目标，收尾时
+  派发目标为 NULL），归属 `agent_slug='supervisor'`；决策若调用真实模型（结构化输出），该模型
+  事实同样归到 supervisor 并计入 Run 用量（`on_usage` 旁路累计），路由提示词不经流水线
+  （不注入记忆 / 技能 / steer）。
+- 事件归属：子图内发射的事件 `agent_slug` 归到具体子 Agent，`entry_slug` 恒为 Run 入口 Agent。
 - 对外契约不变：图入口仍是 `AgentRunBody` 按 slug 取编译图，`chat_router` / SSE / Run 执行器无感。
 
 ## 重新生成

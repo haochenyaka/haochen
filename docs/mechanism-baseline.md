@@ -163,7 +163,7 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 | 项 | 内容 |
 | --- | --- |
 | 机制要点 | 事件流只做**投影**，不做事实来源：消息、审计与 Run 终态以 PostgreSQL 为准，Redis Stream 按 Run 隔离承载事件（固定 TTL + 长度上限，是短时缓存与断线续传缓冲，不是存储）；事件在对应事实提交之后发射（message.completed 在消息提交后、终态事件在终态提交后），发布失败只告警、不影响 Run 与事实落库；读侧先按 Last-Event-ID 回放积压，再阻塞跟随，每轮跟随之后复核数据库 Run 状态——事件缺失（Redis 降级、租约被 reconciler 收敛、订阅晚于运行结束）时按数据库合成 message.completed 与终态事件后收流；心跳注释保活；订阅前做 Run 归属校验（不存在 404、越权 403） |
-| 事件协议 | run.started、message.delta、tool.call、tool.result、message.completed、run.completed、run.failed、run.cancelled、handoff.requested、interrupt；统一包络 run_id / thread_id / agent_slug / seq（seq 只用于消费侧排序参考，续传定位以传输游标为准）；终态事件与 Run 终态一一对应（run.cancelled 是取消终态的投影位，取消意图仍先落库 `cancel_requested`，Redis 只做加速感知）；handoff.requested 在 P1 只保留事件位（业务转人工随 P7.8 接入）；interrupt 是审批等待事件位，等待回答/审批的 resume 语义随 P2+ 补全 |
+| 事件协议 | run.started、message.delta、tool.call、tool.result、message.completed、run.completed、run.failed、run.cancelled、handoff.requested、interrupt；统一包络 run_id / thread_id / agent_slug / entry_slug / seq（`agent_slug` 为实际执行者，supervisor 派发到子图后事件归到具体子 Agent；`entry_slug` 为 Run 入口 Agent，Run 级合成事件二者相等；seq 只用于消费侧排序参考，续传定位以传输游标为准）；终态事件与 Run 终态一一对应（run.cancelled 是取消终态的投影位，取消意图仍先落库 `cancel_requested`，Redis 只做加速感知）；handoff.requested 在 P1 只保留事件位（业务转人工随 P7.8 接入）；interrupt 是审批等待事件位，等待回答/审批的 resume 语义随 P2+ 补全 |
 | 酒店域增量 | C 端小程序按 run_id 订阅流式回复；管理端会话监控（P7）复用同一事件协议；取消事件位与转人工事件位在业务接入前不产生生产方 |
 | 落地位置 | app/services/run_event_bus.py（总线：Redis Stream 实现 + 空实现降级）、app/services/run_events.py（协议与发射器）、app/services/run_stream.py（SSE 投影）、app/routers/chat_router.py（GET /api/guest/chat/stream） |
 | 阶段 | P1（验收主张 A1 的推送链路） |
@@ -360,4 +360,4 @@ P4 三项目标码全链路验证：
 
 1. CredentialGuard 与 ToolGuard 的挂点已在流水线中固定（第 3 道、第 9 道）并分别按 P4.4/P4.5 落地；拦截点已由真实 Run 集成测试复验（工具回包与助手消息的明文在进入持久化与记忆之前被打码；同参副作用不二次执行）。Steer 仍为空实现占位（第 1 道，默认关闭），待业务需要时启用。
 2. 微信服务通知（订阅消息）通道的模板、频率与触达率属外部能力，已在[外部系统接口契约 v0](./contracts/external-systems-v0.md) §7 登记为未验证项；P0.2 预研结论见该文 §9-6（需人工兜底，主通道为订单页/站内消息）。下发链路已于 P4-T6d 落地（契约 §4.4：唯一调用点、best-effort、事件留痕、重放不重复触达），模拟器已接收验证；真实模板字段映射与触达率待 P9 真机实测。
-3. qa-auditor 的质检跑批触发方式（定时 Durable Task 扫描增量会话 vs 事件驱动）在 P7 设计时定稿。
+3. qa-auditor 的质检跑批触发方式：**已定稿为定时 Durable Task**（`qa.audit` v1，task worker 小时级 cron + 小时级去重键）扫描增量会话，管理端 `GET /admin/quality/audit` 保留同步触发；`qa-auditor` 登记为 Agent 但 `chat_entry=False`，接入侧在建 Run 之前拒绝客人指定该 slug。

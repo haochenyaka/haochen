@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 
+from app.agents.base import AgentPackageError
 from app.agents.buildin.front_desk.agent import FrontDeskContext
+from app.agents.buildin.qa_auditor.agent import QaAuditorAgent, QaAuditorContext
 from app.agents.prompts import PROMPT_DOC_MAX_BYTES, load_prompt_docs
 from app.agents.registry import (
     AgentRegistryError,
@@ -48,6 +51,33 @@ def test_list_agents_is_sorted_by_slug() -> None:
 def test_get_agent_rejects_unknown_slug() -> None:
     with pytest.raises(AgentRegistryError, match="missing-agent"):
         get_agent("missing-agent")
+
+
+def test_qa_auditor_registered_as_non_chat_entry() -> None:
+    agents = discover_agents(refresh=True)
+    auditor = agents["qa-auditor"]
+    assert type(auditor) is QaAuditorAgent
+    assert auditor.context_schema is QaAuditorContext
+    assert auditor.chat_entry is False
+    # 其余内置 Agent 仍是客人可选入口（守卫只拦非入口 Agent）
+    assert all(agent.chat_entry for slug, agent in agents.items() if slug != "qa-auditor")
+
+
+def test_qa_auditor_exposes_scan_config_items() -> None:
+    items = {item.key: item for item in QaAuditorContext.get_configurable_items()}
+    assert set(items) == {"scan_window_hours", "stale_days", "low_recall_threshold"}
+    assert items["scan_window_hours"].default == 24
+    assert items["scan_window_hours"].kind == "number"
+    assert items["stale_days"].default == 180
+    assert items["low_recall_threshold"].default == 0.7
+
+
+def test_qa_auditor_build_graph_has_no_chat_entry() -> None:
+    async def _build() -> None:
+        await QaAuditorAgent().build_graph(object())  # type: ignore[arg-type]
+
+    with pytest.raises(AgentPackageError, match="qa.audit"):
+        asyncio.run(_build())
 
 
 def test_build_registry_rejects_duplicate_slug(

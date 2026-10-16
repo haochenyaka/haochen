@@ -103,22 +103,26 @@
   ```
   保留单一对外入口（chat），`chat_router`/SSE/`run_worker`/`run_body` 无感。
 - [x] **P1.2 共享中间件流水线**：抽 `build_middleware_pipeline` 为共用工厂（当前内联在 `front_desk/agent.py:93`）；11 道工位对子图统一生效。✅ 已交付（工厂落在 `app/agents/supervisor/assembly.py:build_agent_pipeline`，supervisor 与各子图共用）。
-- [x] **P1.3 子 Agent 实现清单**：✅ 已交付 4 个必需子 Agent（`front-desk-consult`/`front-desk-order`/`room-service`/`handoff`）；最后一行的后台质检 `qa-auditor` 为**可选**项，未做。
+- [x] **P1.3 子 Agent 实现清单**：✅ 已交付 4 个必需子 Agent（`front-desk-consult`/`front-desk-order`/`room-service`/`handoff`）+ 后台质检 `qa-auditor`（登记为后台 Agent、Durable Task 驱动、无聊天入口）。
   | 子 Agent | slug | 职责 | 工具来源 |
   | --- | --- | --- | --- |
   | 前台咨询 | `front-desk-consult` | 知识问答、房型、时间 | `knowledge.py` / `system.py` |
   | 订单 | `front-desk-order` | 预订/改期/续订/取消/发票 | `orders.py` |
   | 客房服务 | `room-service` | 清洁/送物/机器人派发 | `room_service.py` |
   | 转人工 | `handoff` | 投诉/资金/紧急 → 工单 | `conversation_service` handoff |
-  | 后台质检（可选） | `qa-auditor` | 后台跑批质检，不入 chat 图 | `qa_auditor_service.py` |
+  | 后台质检 | `qa-auditor` | 后台跑批质检，不入 chat 图（`chat_entry=False`） | `qa_auditor_service.py` |
 - [x] **P1.4 记忆写入链路**（承接 P0.2）：✅ 已交付。新增 `app/memory/`（`extraction` / `service` / `task_handlers`）。Run 以 completed 收敛时 `RunExecutor._finalize` **同事务**提交 `memory.extract` 后台任务、提交后投递到 task 队列；处理器复核 Run 终态 → 找 Guest → 读对话 → LLM 结构化抽取 → 规则校验（分类白名单/长度/敏感明文/去重/上限）→ 写 `GuestMemory`（`source="auto:memory.extract"`）。默认关（`memory_extract_enabled=False`，无密钥 no-op）。测试：单测 9 例 + 集成 4 例。
-- [x] **P1.5 注册表与配置**：子包自动注册（`app/agents/toolkits/registry.py:41` 已支持）+ slug 命名 + 管理端列表展示。✅ 已交付并实测：`discover_agents()` 返回 5 个 slug（`front-desk` + 4 子 Agent），各带 `config_items`；`admin_agent_config_router` 的 `list_agents` → 前端 `AgentConfigView.vue` 动态渲染（无硬编码 slug 过滤）。管理端为扁平列表，未按 supervisor/子 Agent 分组（非验收项）。
+- [x] **P1.5 注册表与配置**：子包自动注册（`app/agents/toolkits/registry.py:41` 已支持）+ slug 命名 + 管理端列表展示。✅ 已交付并实测：`discover_agents()` 返回 6 个 slug（`front-desk` + 4 子 Agent + `qa-auditor`），各带 `config_items`；`admin_agent_config_router` 的 `list_agents` → 前端 `AgentConfigView.vue` 动态渲染（无硬编码 slug 过滤）。管理端为扁平列表，未按 supervisor/子 Agent 分组（非验收项）。
 
 **验收**：可 mermaid 出图的多层图（✅ `docs/agent-topology.md`，`test_supervisor_graph_shape.py` 做漂移守卫）；端到端复合请求（「我要订房 + 顺便叫一份早餐到房间」）被 supervisor 正确拆分到 order + service（✅ 真实编译图 e2e：`tests/integration/test_agent_runtime.py::test_supervisor_route_facts_and_sub_agent_attribution`）；审计事实里能看到路由决策与子 Agent 归属（✅ 已达成，见下）。
 
 **P1 审计归属交付**（承接验收第三项）：新增审计事实表 `route_audit`（迁移 `20261014_0023`，`down_revision=20261013_0022`），字段 `decided_route` / `dispatched_route` / `source`（llm|keyword）/ `reason` / `agent_slug='supervisor'`；supervisor 决策节点在派发前落一条，判定值与授权改派后的实际派发目标都可复盘（收尾时 `dispatched_route` 为 NULL）。子 Agent 归属改为**逐子图派生记录器**（`AuditRecorder.with_agent(slug)`，`build_loop_subgraph(agent_slug=...)` 取 `LoopSubAgent.slug`）：模型与工具事实按实际执行的子 Agent 记 slug（不再一律记入口 slug `front-desk`）；共享流水线仍是单例，token 用量与工位行为不变。测试：单测 +1（归属派生）、真实图集成 +1（路由事实与归属）。
 
-**风险 / 待定**：子 Agent 粒度是否按上表；supervisor 决策用 LLM 结构化输出 vs 规则兜底（建议 LLM 为主 + 关键词兜底）。
+**P1 归属与计量补全**（收口两处已登记边界）：① **SSE 事件包络**——`agent_slug` 语义改为**实际执行者**，新增 `entry_slug` 保留入口 Agent：子图内发出的事件（`message.delta` / `tool.call` / `tool.result`）归到具体子 Agent，Run 级合成事件二者相等；派生视图 `RunEventEmitter.with_agent(slug)` 共享同一 `seq` 游标与首 token 埋点，归属随装配期确定（`docs/mechanism-baseline.md` §2 事件协议行已同步）。② **supervisor 路由的 LLM 调用**——结构化输出改带 `include_raw=True` 取回原始消息，按 `AuditRecorder.with_agent('supervisor')` 写 model_audit（成功记用量、失败留痕），用量经 `MiddlewarePipeline.record_side_channel_usage` 并入 Run 汇总；该调用不经流水线（不注入记忆 / 技能 / steer），解析失败仍落关键词兜底但用量照记。测试：单测 +4（事件派生器归属与共享 seq；路由审计成功 / 解析失败 / 调用失败 / 未接线）、真实图集成断言事件归属。
+
+**风险 / 待定**：子 Agent 粒度是否按上表（已按上表定稿）；supervisor 决策用 LLM 结构化输出 vs 规则兜底——**已定稿为「LLM 为主 + 关键词兜底」**，且 LLM 路径已接入审计与用量计量。
+
+**后台质检 Agent 交付**（`qa-auditor`，承接 D9「独立后台 Agent，不入 chat 图」）：登记为第 6 个内置 Agent（`app/agents/buildin/qa_auditor/`），自带可配置项（扫描窗口 / 文档过期阈值 / 低召回判定阈值），配置由跑批任务读取后构造 `QaAuditorService`。运行由 **Durable Task `qa.audit` v1** 驱动（`app/quality/task_handlers.py`）：task worker **小时级 cron** 提交（小时级去重键，重启补发不堆积），管理端 `GET /admin/quality/audit` 仍为**同步触发**（不建任务，直接跑一轮），两者共用同一服务。**新增接入侧边界 `chat_entry`**：`BaseAgent.chat_entry`（默认 `True`）标记非聊天入口 Agent；`qa-auditor` 置 `False`，`chat_router` 在建 Run 之前即拒绝客人指定该 slug（400），避免建出无可用图的 Run——未注册 slug 不做此判定，仍走既有路径。跑批失败不自动重放（标注幂等，下次调度补齐）。测试：Agent 注册/配置/无图 3 例、任务注册与去重键 4 例、cron 契约 1 例；集成 `qa.audit` 提交→执行→标注落库 + 同键去重 + 接入侧拒绝。
 
 ---
 
@@ -188,12 +192,13 @@
 ① ✅ 查 ruff 版本（已查实：非漂移，必须 format）
 ② ✅ 收尾 cleanup PR：ruff check + ruff format + mypy（均绿）→ 已提交 `86a6494`
 ③ ✅ 开 P0 的 PR #2 → CI 6/6 全绿 → 已合入 main（merge commit `37a97ce`）
-④ ▶ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成，当前仍未提交）→ 再定 P1 之后的收尾
+④ ✅ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成）→ 已提交 `c58ce91`，rebase 到 `main`(`37a97ce`) 后强推；**PR 未创建**（本机无 `gh`/token，待人工开）
+   └ 本轮收尾：SSE 事件包络按执行者归属（✅ 已完成）、supervisor 路由调用接审计与用量（✅ 已完成）、`qa-auditor` 登记为后台 Agent 并 Task 化（✅ 已完成），P1 全部收口
    └ 可并行：P2.1 真执行器 + P2.2 工具名对齐测试（不依赖 P1）
 ⑤ P1 完成 → P2 全量 → P3 → P4
 ```
 
-**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。当前真正待办只有一件：**P1 分支尚未提交**（`p1-multi-agent`，验收已全达成）。其余（Phase 1–4 内容）都是排队等前一个完成的「内容工作」，不是被卡住。
+**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 分支已提交（`c58ce91`）并 rebase + 强推，**PR 待人工创建**；三处收尾（SSE 事件归属、路由调用审计与用量、后台质检 Agent `qa-auditor`）均已收口，**P1 全部完成**。其余（Phase 1–4 内容）都是排队等前一个完成的「内容工作」，不是被卡住。
 
 ---
 

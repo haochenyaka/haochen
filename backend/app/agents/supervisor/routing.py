@@ -4,6 +4,10 @@
 stub 与测试替身不具备结构化输出能力（且常按调用序列返回，不宜占用），因此只走关键词
 兜底——默认落到咨询子 Agent，与接入 supervisor 之前的单 Agent 行为保持一致。
 
+结构化调用本身也是一次模型调用，同样要留痕与计量：给出 recorder 时写 model_audit
+（成功记用量、失败留痕），`on_usage` 把用量计入 Run 总量。路由提示词只含调度指令与对话，
+不经中间件流水线（不注入记忆、技能与 steer），故用量以旁路口径独立累计。
+
 关键词兜底也承担复合请求的拆分：首轮无命中则派发默认子 Agent；已派发过的路由不再重复，
 仍在文本里命中未处理的路由（如"订房" + "早餐送到"）时继续派发，直到无可派发目标收尾。
 """
@@ -11,18 +15,27 @@ stub 与测试替身不具备结构化输出能力（且常按调用序列返回
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from app.agents.models import message_text
+from app.agents.models import (
+    audit_model_failure,
+    audit_model_success,
+    message_text,
+    model_label,
+)
+from app.services.audit_service import AuditRecorder, monotonic_ms
 
 logger = logging.getLogger(__name__)
+
+UsageSink = Callable[[AIMessage], None]
+"""旁路用量接收口：接收模型原始返回，把用量计入 Run 总量。"""
 
 RouteName = Literal["consult", "order", "room_service", "handoff", "finish"]
 
@@ -141,28 +154,82 @@ def latest_user_text(messages: Sequence[BaseMessage]) -> str:
 
 
 class SupervisorRouter:
-    """路由决策器：结构化输出优先，失败或不可用时落关键词兜底。"""
+    """路由决策器：结构化输出优先，失败或不可用时落关键词兜底。
 
-    def __init__(self, model: BaseChatModel) -> None:
+    结构化调用按调用方派生的归属留痕：recorder 记 model_audit（成功记用量、失败留痕），
+    on_usage 把同一次调用的用量并入 Run 总量；二者缺省不接线（单测只验路由行为时）。
+    """
+
+    def __init__(
+        self,
+        model: BaseChatModel,
+        *,
+        recorder: AuditRecorder | None = None,
+        actor_id: str = "",
+        on_usage: UsageSink | None = None,
+    ) -> None:
         self._structured = (
-            model.with_structured_output(RouteDecision) if isinstance(model, ChatOpenAI) else None
+            model.with_structured_output(RouteDecision, include_raw=True)
+            if isinstance(model, ChatOpenAI)
+            else None
         )
+        self._label = model_label(model)
+        self._recorder = recorder
+        self._actor_id = actor_id
+        self._on_usage = on_usage
 
     async def decide(
         self, messages: Sequence[BaseMessage], *, handled: Sequence[str] = ()
     ) -> RouteOutcome:
         """决定下一步派发目标；handled 为本 Run 已派发过的路由。"""
         if self._structured is not None:
+            started = monotonic_ms()
             try:
-                decision = await self._structured.ainvoke(
+                result = await self._structured.ainvoke(
                     [SystemMessage(content=_instruction(handled)), *messages]
                 )
             except Exception as exc:  # 结构化输出失败不阻断 Run：落关键词兜底
+                await self._record_failure(exc, started=started)
                 logger.warning("supervisor 结构化路由失败，落关键词兜底：%s", exc)
             else:
-                if isinstance(decision, RouteDecision):
+                decision = await self._record_result(result, started=started)
+                if decision is not None:
                     return RouteOutcome(decision=decision, source="llm")
+                logger.warning("supervisor 结构化输出未产出决策，落关键词兜底")
         return RouteOutcome(decision=self._fallback(messages, handled=handled), source="keyword")
+
+    async def _record_result(self, result: Any, *, started: int) -> RouteDecision | None:
+        """按结构化输出结果留痕：raw 记用量与旁路计数，parsed（解析成功时）作为决策。
+
+        `include_raw=True` 的返回为 {raw, parsed, parsing_error}：解析失败时 parsed 为 None，
+        但模型调用已发生——用量照记，仅决策回落关键词。
+        """
+        payload = result if isinstance(result, Mapping) else {}
+        raw = payload.get("raw")
+        if isinstance(raw, AIMessage):
+            if self._recorder is not None:
+                await audit_model_success(
+                    raw,
+                    recorder=self._recorder,
+                    actor_id=self._actor_id,
+                    model=self._label,
+                    duration_ms=monotonic_ms() - started,
+                )
+            if self._on_usage is not None:
+                self._on_usage(raw)
+        parsed = payload.get("parsed")
+        return parsed if isinstance(parsed, RouteDecision) else None
+
+    async def _record_failure(self, error: BaseException, *, started: int) -> None:
+        if self._recorder is None:
+            return
+        await audit_model_failure(
+            error,
+            recorder=self._recorder,
+            actor_id=self._actor_id,
+            model=self._label,
+            duration_ms=monotonic_ms() - started,
+        )
 
     def _fallback(
         self, messages: Sequence[BaseMessage], *, handled: Sequence[str]
@@ -198,6 +265,7 @@ __all__ = [
     "RouteName",
     "RouteOutcome",
     "SupervisorRouter",
+    "UsageSink",
     "keyword_route",
     "latest_user_text",
     "matching_routes",
