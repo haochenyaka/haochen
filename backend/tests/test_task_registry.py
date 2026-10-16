@@ -85,5 +85,7 @@ def test_registered_handlers_snapshot() -> None:
     async def _b(ctx: TaskContext) -> None:
         return None
 
-    assert set(registered_handlers()) == {("demo.a", 1), ("demo.a", 2)}
-    assert registered_handlers() is not registered_handlers()
+    snapshot = registered_handlers()
+    # reset 后首次解析会重放各领域模块，注册表同时含真实处理器与本用例的两个版本
+    assert {("demo.a", 1), ("demo.a", 2)} <= set(snapshot)
+    assert snapshot is not registered_handlers()

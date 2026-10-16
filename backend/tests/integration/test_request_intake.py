@@ -256,3 +256,15 @@ def test_dispatch_failure_keeps_run_pending(api: Api) -> None:
     run = _fetch_run(api.db_url, run_id)
     assert run is not None and run.status == "pending"
     assert api.dispatcher.committed_statuses == ["pending"]
+
+
+def test_non_chat_entry_agent_rejected_before_run(api: Api) -> None:
+    """非聊天入口 Agent（qa-auditor）在建 Run 之前被接入侧拒绝，不落 Run、不投递。"""
+    response = api.client.post(
+        "/api/guest/chat/messages",
+        json={"content": {"text": "帮我质检一下"}, "agent_slug": "qa-auditor"},
+        headers=api.headers,
+    )
+    assert response.status_code == 400
+    assert "qa-auditor" in response.json()["detail"]
+    assert api.dispatcher.calls == []

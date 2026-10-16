@@ -21,6 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.registry import AgentRegistryError, get_agent
 from app.db import SessionFactory, get_session
 from app.models.runtime import User
 from app.repositories import AUDIT_READ_LIMIT, UserRepository
@@ -202,6 +203,22 @@ def _raise_http(exc: QueueServiceError | ConversationServiceError) -> NoReturn:
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="接入用例异常")
 
 
+def _ensure_chat_entry(agent_slug: str) -> None:
+    """非聊天入口的 Agent（如离线质检员）不允许客人建 Run：接入侧建 Run 之前直接拒绝。
+
+    未注册 slug 不做判定，仍交运行期按既有路径处理（不扩大本次改动的行为面）。
+    """
+    try:
+        agent = get_agent(agent_slug)
+    except AgentRegistryError:
+        return
+    if not agent.chat_entry:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{agent_slug} 不是聊天入口 Agent",
+        )
+
+
 @router.post("/messages", response_model=SubmitMessageResponse, status_code=status.HTTP_201_CREATED)
 async def submit_message(
     body: SubmitMessageBody,
@@ -210,6 +227,7 @@ async def submit_message(
     user: Annotated[User, Depends(get_current_guest)],
     dispatcher: Annotated[RunDispatcher, Depends(get_run_dispatcher)],
 ) -> SubmitMessageResponse:
+    _ensure_chat_entry(body.agent_slug)
     service = AgentRequestQueueService(session)
     try:
         submission = await service.submit_message(

@@ -129,6 +129,43 @@ def test_emitter_envelope_seq_and_protocol_methods() -> None:
     assert emitter.seq == len(bus.published)
 
 
+def test_emitter_with_agent_scopes_slug_and_shares_run_state() -> None:
+    """派生视图只改事件归属：序号游标与首 token 埋点仍按 Run 共用一份。"""
+    calls: list[int] = []
+
+    async def _hook() -> None:
+        calls.append(1)
+
+    bus = RecordingBus()
+    root = RunEventEmitter(
+        run_id=RUN_ID,
+        thread_id=THREAD_ID,
+        agent_slug="front-desk",
+        bus=bus,
+        on_first_token=_hook,
+    )
+    scoped = root.with_agent("front-desk-order")
+
+    async def _emit() -> None:
+        await root.run_started()
+        await scoped.message_delta("为您预订")
+        await scoped.tool_call(tool="create_order", call_id="c1", args={})
+        await root.message_completed(text="回复")
+
+    run(_emit())
+
+    assert [(item["data"]["agent_slug"], item["data"]["entry_slug"]) for item in bus.published] == [
+        ("front-desk", "front-desk"),
+        ("front-desk-order", "front-desk"),
+        ("front-desk-order", "front-desk"),
+        ("front-desk", "front-desk"),
+    ]
+    # seq 由 Run 级游标统一发放：视图各自从 1 开始会让消费侧排序错乱
+    assert [item["data"]["seq"] for item in bus.published] == [1, 2, 3, 4]
+    assert root.seq == scoped.seq == 4
+    assert len(calls) == 1  # 子视图的增量不重复触发首 token 埋点
+
+
 def test_emitter_truncates_error_and_maps_failure_status() -> None:
     bus = RecordingBus()
     emitter = RunEventEmitter(run_id=RUN_ID, thread_id=THREAD_ID, agent_slug="front-desk", bus=bus)

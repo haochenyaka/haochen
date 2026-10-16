@@ -22,7 +22,7 @@ from app.repositories import KnowledgeBaseRepository
 
 logger = logging.getLogger(__name__)
 
-SCOPE_BY_AGENT: dict[str, str] = {"front-desk": "guest"}
+SCOPE_BY_AGENT: dict[str, str] = {"front-desk": "guest", "front-desk-consult": "guest"}
 """Agent → 可见范围：客人侧 Agent 只能检索 guest 范围内的知识库。"""
 
 MAX_TOP_N = 10

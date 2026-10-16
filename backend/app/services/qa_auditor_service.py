@@ -1,7 +1,8 @@
 """qa-auditor 质检服务：离线跑批，消费对话数据产出标签与质量信号。
 
 不变量：
-- qa-auditor 以 Durable Task 驱动，扫描增量会话，无重复标注；
+- qa-auditor 以 Durable Task 驱动（`qa.audit`），扫描增量会话，无重复标注；
+- 扫描窗口与阈值由管理端 qa-auditor 配置提供，任务读取后按值构造本服务；
 - 标注结果写 QALabel 表（source='auto'），可被人工复核覆盖；
 - 风险告警以 admin_action_log 留痕（P7.5 日志模块）；
 - 标注不阻断业务，失败不重试（下次跑批补齐）。
@@ -33,10 +34,24 @@ LOW_RECALL_THRESHOLD = 0.7
 
 
 class QaAuditorService:
-    """质检服务：自动标注扫描 + 质量信号收集。"""
+    """质检服务：自动标注扫描 + 质量信号收集。
 
-    def __init__(self, session: AsyncSession) -> None:
+    扫描窗口与阈值可配（管理端 qa-auditor 配置）：`qa.audit` 任务读取配置后按值构造；
+    缺省取模块默认值，行为与管理端可配之前一致。
+    """
+
+    def __init__(
+        self,
+        session: AsyncSession,
+        *,
+        scan_window_hours: int = SCAN_WINDOW_HOURS,
+        stale_days: int = STALE_DAYS,
+        low_recall_threshold: float = LOW_RECALL_THRESHOLD,
+    ) -> None:
         self._session = session
+        self._scan_window_hours = scan_window_hours
+        self._stale_days = stale_days
+        self._low_recall_threshold = low_recall_threshold
 
     async def auto_label_recent_threads(self) -> int:
         """扫描最近线程并自动标注，返回新标注数。
@@ -48,7 +63,7 @@ class QaAuditorService:
         4. 合并去重，写入 QALabel。
         """
         now = datetime.now(UTC)
-        window_start = now - timedelta(hours=SCAN_WINDOW_HOURS)
+        window_start = now - timedelta(hours=self._scan_window_hours)
         labeled = 0
 
         # 1. 点踩线程 → unresolved
@@ -58,7 +73,7 @@ class QaAuditorService:
                 thread_id=thread_id,
                 label="unresolved",
                 confidence=0.8,
-                evidence={"source": "downvote", "scan_window_hours": SCAN_WINDOW_HOURS},
+                evidence={"source": "downvote", "scan_window_hours": self._scan_window_hours},
             ):
                 labeled += 1
 
@@ -69,7 +84,10 @@ class QaAuditorService:
                 thread_id=thread_id,
                 label="handoff_requested",
                 confidence=0.9,
-                evidence={"source": "handoff_request", "scan_window_hours": SCAN_WINDOW_HOURS},
+                evidence={
+                    "source": "handoff_request",
+                    "scan_window_hours": self._scan_window_hours,
+                },
             ):
                 labeled += 1
 
@@ -80,7 +98,7 @@ class QaAuditorService:
                 thread_id=thread_id,
                 label="complaint_risk",
                 confidence=0.7,
-                evidence={"source": "keyword_match", "scan_window_hours": SCAN_WINDOW_HOURS},
+                evidence={"source": "keyword_match", "scan_window_hours": self._scan_window_hours},
             ):
                 labeled += 1
 
@@ -88,7 +106,7 @@ class QaAuditorService:
 
     async def detect_stale_documents(self) -> list[dict[str, object]]:
         """检测过期文档：超过 STALE_DAYS 未更新的 indexed 文档。"""
-        cutoff = datetime.now(UTC) - timedelta(days=STALE_DAYS)
+        cutoff = datetime.now(UTC) - timedelta(days=self._stale_days)
         stmt = (
             select(KbDocument)
             .where(
@@ -118,7 +136,7 @@ class QaAuditorService:
                 continue
             metrics = report.metrics
             recall = float(metrics.get("recall_at_k", 1.0))
-            if recall < LOW_RECALL_THRESHOLD:
+            if recall < self._low_recall_threshold:
                 results.append(
                     {
                         "report_id": report.id,
@@ -135,7 +153,7 @@ class QaAuditorService:
         将点踩消息的问题文本聚类，生成 FAQ 草稿建议。
         """
         now = datetime.now(UTC)
-        window_start = now - timedelta(hours=SCAN_WINDOW_HOURS)
+        window_start = now - timedelta(hours=self._scan_window_hours)
 
         # 查找点踩消息及其关联的助手消息
         stmt = text("""

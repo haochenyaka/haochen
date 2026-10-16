@@ -28,6 +28,11 @@ class BaseAgent(ABC):
     name: str = ""
     description: str = ""
     context_schema: type[BaseContext] | None = None
+    chat_entry: ClassVar[bool] = True
+    """是否为客人可选的聊天入口：False 表示该 Agent 只经后台任务/管理端使用（如 qa-auditor），
+    接入侧据此在建 Run 之前拒绝非入口 slug，避免建出无可用图的 Run。"""
+    default_system_prompt: ClassVar[str] = ""
+    """默认系统提示词：管理端未覆盖时的提示词基线（子 Agent 由 own AGENTS.md 补充）。"""
     tool_ids: ClassVar[tuple[str, ...]] = ()
     """本 Agent 声明的工具意图（P1 代码声明；P2 起由配置表单提供并经授权归一化）。"""
     knowledge_base_ids: ClassVar[tuple[str, ...]] = ()

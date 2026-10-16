@@ -47,6 +47,33 @@ class ModelAudit(Base):
     )
 
 
+class RouteAudit(Base):
+    """路由决策审计事实：supervisor 每次决策的判定值、判定来源与最终派发目标。
+
+    `decided_route` 是决策原值，`dispatched_route` 是授权感知改派后的实际派发目标（收尾或
+    无可派发时为 NULL）；两者不一致即说明发生过改派。
+    """
+
+    __tablename__ = "route_audit"
+    __table_args__ = (
+        UniqueConstraint("run_id", "seq", name="uq_route_audit_run_seq"),
+        Index("ix_route_audit_agent_created_at", "agent_slug", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    seq: Mapped[int] = mapped_column(Integer, nullable=False)
+    agent_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    decided_route: Mapped[str] = mapped_column(String(32), nullable=False)
+    dispatched_route: Mapped[str | None] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class ToolAudit(Base):
     """工具调用审计事实：args_digest 为打码后的入参，密码类字段不落明文。"""
 

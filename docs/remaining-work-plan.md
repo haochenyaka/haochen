@@ -1,0 +1,213 @@
+# HaoChen 剩余工作计划（Remaining Work Plan）
+
+状态：跟踪表（living document）
+日期：2026-10-16
+上游：[remediation-plan.md](./remediation-plan.md)（改造总方案）· [remediation-p0-plan.md](./remediation-p0-plan.md)（P0 PR 级方案）· [development-plan.md](./development-plan.md)（原建设计划 P0–P9）
+
+> **编号澄清（勿串）**：本项目有两套「P 编号」。
+> - `development-plan.md` 的 **P0–P9**：最初的建设计划，**已全部完成**（验收矩阵 7 条主张全绿）。
+> - `remediation-plan.md` 的 **Phase 0–4**：改造计划，即本文件的 P0/P1/P2/P3/P4。
+>
+> 本文件只管**改造计划**的剩余工作。
+
+---
+
+## 0. 一页速览
+
+```
+现在手上 ──→ 硬门槛 ──→ Phase 1 ──→ Phase 2 ──→ Phase 3 ──→ Phase 4
+   ↑
+原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
+—— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
+当前真正的"手上事"：P1 分支尚未提交（验收已全达成）
+```
+
+| 层 | 事项数 | 能否立刻推进 |
+| --- | --- | --- |
+| 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
+| 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | 排队 |
+| 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
+
+---
+
+## 第一层　现在手上未收尾的（可立刻做完）
+
+| # | 事项 | 状态 | 细节 |
+| --- | --- | --- | --- |
+| 1 | **类型/lint 债务清理** | ✅ 已提交 `86a6494`（92 文件），随 PR #2 合入 main | **已完成**：`ruff check` 全绿、`ruff format` 全量（315 文件）、E501 7 处、**mypy 78 → 0**；另修 4 个真 bug（见下方清单）。验证：三项检查绿，单测 264 passed、集成 306 passed |
+| 2 | **查 ruff 版本不一致** | ✅ 已查实（**原假设不成立**） | 实测 ruff 0.8.6→88 文件、0.9/0.11/0.14/0.16→85 文件，干净 `main` 亦 90 文件红——**代码从未格式化过**，与版本无关（CI 的 format 步骤自首次提交就存在且未锁版本，故一直红）。结论：**必须格式化**（已完成），锁版本无意义 |
+| 3 | **`remediation-p0-plan.md:73` 的过期 ⬜** | ✅ 已清（改为 ✅） | PR-0.1 的「验收矩阵增行」原标着待补，实际 A7 已补进 `acceptance-matrix.md`；仅标记未更新 |
+
+**该分支改动（92 文件 / +1039 −716，已提交 `86a6494`）**，分三类：
+
+1. **全库格式化**：`ruff format` 覆盖 backend 315 文件（含原先列为 19 个的那些）；
+2. **类型修复**：`mypy 78 → 0`，根因是把动态 JSONB 列的 `dict[str, object]` 收敛为 `dict[str, Any]`（模型列 + helper 签名），一次性消掉约 55 处级联报错；
+3. **真 bug 修复（4 个）**：
+   - `data_pipeline/task_handlers.py`：`pq` 未导入（F821）+ `buf` 死代码；`build_aggregates(_ctx)` 参数名与 `TaskHandlerFn` 协议不匹配；
+   - `services/langfuse_service.py`：`ssl_ca_certs` 是 v2/v4 都非法的参数 → Langfuse 长期**静默失效**（异常被吞），并锁 `langfuse>=2.55,<3`；
+   - `eval/agent/metrics.py`：对 Optional 的 `item.expected` 直接取 `.tool_sequence` / `.task_success`；
+   - `services/datalake_query_service.py`：`DuckPyConnection` 拼写错误（应为 `duckdb.DuckDBPyConnection`）。
+
+另：`.github/workflows/ci.yml` 亦在本分支改动内 —— 集成 job **不启 MinIO**（`minio/minio` 已不可匿名拉取），报表/健康面板用例改走「数据湖不可达即按契约降级回 PostgreSQL」路径（见第二层 #5）。
+
+---
+
+## 第二层　三个硬门槛（挡住 P1/P2；#4/#5 已解除，#6 待拍板）
+
+| # | 门槛 | 现状 | 挡住什么 | 解决动作 |
+| --- | --- | --- | --- | --- |
+| 4 | **P0 未合进 main** | ✅ **已解除（2026-10-16）**：`p0-remediation` 快进到 `2e4578e` → 开 **PR #2** → review → **已合入 main**（merge commit `37a97ce`，17 commit） | ——（已解锁） | —— |
+| 5 | **CI 不可能绿** | ✅ **已解除（2026-10-16）**：lint/format/mypy 三项绿；集成 job **不启 MinIO**（dockerhub 拒绝匿名拉取），数据湖/健康面板用例走「不可达即按契约降级回 PostgreSQL」；另**揪出并修复 D7 备份演练自伤共享库**——DROP 掉 `rooms/orders/messages/agent_runs` 后对已删表查行数 → 断言抛错 → `pg_restore` 从未执行 → 会话级共享临时库永久缺表 → 连锁 **66 failed**（修后 CI **6/6 全绿**，integration 304 passed / 3 skipped） | ——（已解锁） | —— |
+| 6 | **改造方案仍是 draft** | `remediation-plan.md` 头部标「待评审」，§5 有 4 个未拍板决策 | 影响 Phase 3/4 的形态选择 | 拍板下表 4 个决策 |
+
+### 未拍板决策（`remediation-plan.md §5`）
+
+| 编号 | 决策点 | 为什么需要拍板 | 建议 |
+| --- | --- | --- | --- |
+| D4 | Langfuse 云端 vs 自建 | 客人对话含手机号/订单，外发第三方云有 PIPL 出境风险 | **自建**（compose 加 langfuse 服务） |
+| D6 | 评测集规模上限 | 人工审核成本 | Agent **50+** / KB **150+** |
+| D8 | BGE 服务部署位置 | 决定 CPU/GPU 与 compose 形态 | 与后端**同 compose**，CPU 起步、GPU 可选 |
+| D9 | 质检 Agent 是否入图 | 决定是否多一个后台 Agent | **独立后台 Agent**，不入 chat 图 |
+
+### P0 已完成内容（本轮改造，供对照）
+
+| PR | 内容 | 状态 |
+| --- | --- | --- |
+| PR-0.1 | 接通管理端配置链路（`system_prompt`/`model`/`temperature`/`enabled_*` 运行时生效） | ✅ |
+| PR-0.2 | 接通长期记忆工位（**只做读+注入**，写入划给 P1.4） | ✅ |
+| PR-0.3 | 敏感类别扩默认 + 手机号/身份证「中间打码」（`138****5678`） | ✅ |
+| PR-0.4 | 自研中间件理由文档化（`mechanism-baseline.md §3.1`，纯文档） | ✅ |
+| PR-0.5a | steer 工位补真（配置驱动、默认关；取消+接力） | ✅ |
+| PR-0.5b | tool_approval 接 `interrupt`/`resume`（危险工具挂起等审批） | ✅ |
+| 收尾 | 评分 bug 修复（补 `guest_score`/`guest_comment`/`rated_at` 列 + 写入链路） | ✅ |
+| 收尾 | 测试基建债（TRUNCATE 隔离 + Redis 限流隔离；集成套件 44 failed → 302 passed） | ✅ |
+
+---
+
+## 第三层　四个改造阶段
+
+### Phase 1 — 多智能体运行时（Supervisor + 子 Agent）
+
+**依赖**：P0 先合进 main（✅ 2026-10-16 已合入 `main`）。**简历最核心的一块。**
+
+- [x] **P1.1 Agent 拓扑**：LangGraph supervisor。✅ 已交付（`app/agents/supervisor/`；多层图 `docs/agent-topology.md` 由编译图渲染，`tests/test_supervisor_graph_shape.py` 做漂移守卫）。
+  ```
+  START → supervisor（决策节点）
+            ├─→ consult_agent（前台咨询子图：KB + 房型 + 时间）
+            ├─→ service_agent（客房服务子图：清洁/送物 → 任务派发）
+            ├─→ order_agent（订单子图：预订/改期/续订/取消/发票）
+            └─→ handoff（投诉/资金/紧急 → 转人工，复用现有 handoff 链路）
+                   └─→ END
+         supervisor ←── 各子图返回后回到 supervisor 汇总
+  ```
+  保留单一对外入口（chat），`chat_router`/SSE/`run_worker`/`run_body` 无感。
+- [x] **P1.2 共享中间件流水线**：抽 `build_middleware_pipeline` 为共用工厂（当前内联在 `front_desk/agent.py:93`）；11 道工位对子图统一生效。✅ 已交付（工厂落在 `app/agents/supervisor/assembly.py:build_agent_pipeline`，supervisor 与各子图共用）。
+- [x] **P1.3 子 Agent 实现清单**：✅ 已交付 4 个必需子 Agent（`front-desk-consult`/`front-desk-order`/`room-service`/`handoff`）+ 后台质检 `qa-auditor`（登记为后台 Agent、Durable Task 驱动、无聊天入口）。
+  | 子 Agent | slug | 职责 | 工具来源 |
+  | --- | --- | --- | --- |
+  | 前台咨询 | `front-desk-consult` | 知识问答、房型、时间 | `knowledge.py` / `system.py` |
+  | 订单 | `front-desk-order` | 预订/改期/续订/取消/发票 | `orders.py` |
+  | 客房服务 | `room-service` | 清洁/送物/机器人派发 | `room_service.py` |
+  | 转人工 | `handoff` | 投诉/资金/紧急 → 工单 | `conversation_service` handoff |
+  | 后台质检 | `qa-auditor` | 后台跑批质检，不入 chat 图（`chat_entry=False`） | `qa_auditor_service.py` |
+- [x] **P1.4 记忆写入链路**（承接 P0.2）：✅ 已交付。新增 `app/memory/`（`extraction` / `service` / `task_handlers`）。Run 以 completed 收敛时 `RunExecutor._finalize` **同事务**提交 `memory.extract` 后台任务、提交后投递到 task 队列；处理器复核 Run 终态 → 找 Guest → 读对话 → LLM 结构化抽取 → 规则校验（分类白名单/长度/敏感明文/去重/上限）→ 写 `GuestMemory`（`source="auto:memory.extract"`）。默认关（`memory_extract_enabled=False`，无密钥 no-op）。测试：单测 9 例 + 集成 4 例。
+- [x] **P1.5 注册表与配置**：子包自动注册（`app/agents/toolkits/registry.py:41` 已支持）+ slug 命名 + 管理端列表展示。✅ 已交付并实测：`discover_agents()` 返回 6 个 slug（`front-desk` + 4 子 Agent + `qa-auditor`），各带 `config_items`；`admin_agent_config_router` 的 `list_agents` → 前端 `AgentConfigView.vue` 动态渲染（无硬编码 slug 过滤）。管理端为扁平列表，未按 supervisor/子 Agent 分组（非验收项）。
+
+**验收**：可 mermaid 出图的多层图（✅ `docs/agent-topology.md`，`test_supervisor_graph_shape.py` 做漂移守卫）；端到端复合请求（「我要订房 + 顺便叫一份早餐到房间」）被 supervisor 正确拆分到 order + service（✅ 真实编译图 e2e：`tests/integration/test_agent_runtime.py::test_supervisor_route_facts_and_sub_agent_attribution`）；审计事实里能看到路由决策与子 Agent 归属（✅ 已达成，见下）。
+
+**P1 审计归属交付**（承接验收第三项）：新增审计事实表 `route_audit`（迁移 `20261014_0023`，`down_revision=20261013_0022`），字段 `decided_route` / `dispatched_route` / `source`（llm|keyword）/ `reason` / `agent_slug='supervisor'`；supervisor 决策节点在派发前落一条，判定值与授权改派后的实际派发目标都可复盘（收尾时 `dispatched_route` 为 NULL）。子 Agent 归属改为**逐子图派生记录器**（`AuditRecorder.with_agent(slug)`，`build_loop_subgraph(agent_slug=...)` 取 `LoopSubAgent.slug`）：模型与工具事实按实际执行的子 Agent 记 slug（不再一律记入口 slug `front-desk`）；共享流水线仍是单例，token 用量与工位行为不变。测试：单测 +1（归属派生）、真实图集成 +1（路由事实与归属）。
+
+**P1 归属与计量补全**（收口两处已登记边界）：① **SSE 事件包络**——`agent_slug` 语义改为**实际执行者**，新增 `entry_slug` 保留入口 Agent：子图内发出的事件（`message.delta` / `tool.call` / `tool.result`）归到具体子 Agent，Run 级合成事件二者相等；派生视图 `RunEventEmitter.with_agent(slug)` 共享同一 `seq` 游标与首 token 埋点，归属随装配期确定（`docs/mechanism-baseline.md` §2 事件协议行已同步）。② **supervisor 路由的 LLM 调用**——结构化输出改带 `include_raw=True` 取回原始消息，按 `AuditRecorder.with_agent('supervisor')` 写 model_audit（成功记用量、失败留痕），用量经 `MiddlewarePipeline.record_side_channel_usage` 并入 Run 汇总；该调用不经流水线（不注入记忆 / 技能 / steer），解析失败仍落关键词兜底但用量照记。测试：单测 +4（事件派生器归属与共享 seq；路由审计成功 / 解析失败 / 调用失败 / 未接线）、真实图集成断言事件归属。
+
+**风险 / 待定**：子 Agent 粒度是否按上表（已按上表定稿）；supervisor 决策用 LLM 结构化输出 vs 规则兜底——**已定稿为「LLM 为主 + 关键词兜底」**，且 LLM 路径已接入审计与用量计量。
+
+**后台质检 Agent 交付**（`qa-auditor`，承接 D9「独立后台 Agent，不入 chat 图」）：登记为第 6 个内置 Agent（`app/agents/buildin/qa_auditor/`），自带可配置项（扫描窗口 / 文档过期阈值 / 低召回判定阈值），配置由跑批任务读取后构造 `QaAuditorService`。运行由 **Durable Task `qa.audit` v1** 驱动（`app/quality/task_handlers.py`）：task worker **小时级 cron** 提交（小时级去重键，重启补发不堆积），管理端 `GET /admin/quality/audit` 仍为**同步触发**（不建任务，直接跑一轮），两者共用同一服务。**新增接入侧边界 `chat_entry`**：`BaseAgent.chat_entry`（默认 `True`）标记非聊天入口 Agent；`qa-auditor` 置 `False`，`chat_router` 在建 Run 之前即拒绝客人指定该 slug（400），避免建出无可用图的 Run——未注册 slug 不做此判定，仍走既有路径。跑批失败不自动重放（标注幂等，下次调度补齐）。测试：Agent 注册/配置/无图 3 例、任务注册与去重键 4 例、cron 契约 1 例；集成 `qa.audit` 提交→执行→标注落库 + 同键去重 + 接入侧拒绝。
+
+---
+
+### Phase 2 — 评测体系真跑通
+
+**依赖**：P1 完成（数据集工具链校准依赖 Agent 拓扑）。**可提前做**：P2.1 + P2.2 的工具名对齐测试。
+
+- [ ] **P2.1 真实执行器**：新增 `RealCaseExecutor`：调真实编译图（同 `run_body` 路径），返回实际工具调用序列与任务成功标志。`runner.py:138` 的 `ScriptedCaseExecutor` 仅留给测试；生产入口 `admin_eval_agent_router.py:126` 注入 `RealCaseExecutor`。
+- [ ] **P2.2 数据集重建（LLM 生成 + 人工审核）**：
+  - Agent 评测集 **8 → 50+ 条**（订房/改期/取消/发票/客房服务/转人工/多轮/边界）。
+  - KB 评测集 **73 → 150+ 条**，gold 从**标题级升级到 chunk 级**。
+  - 生成流程：LLM 生成候选 → 导出 Excel/MD 供人工逐条审核 → 入库。
+  - **对齐工具名**：`orders.yaml:12` 的 `inquire_room_type` → `list_room_types`；`checkin.yaml` 的 `check_in` → `get_checkin_info`；`dispatch.yaml` 的 `dispatch_cleaning` → `request_room_clean`。加防漂移测试 `test_eval_dataset_tools_registered`（期望工具名必须存在于 `default_registry().names()`）。
+- [ ] **P2.3 LLM-as-judge 真实现**：`eval/agent/judge.py` 当前是占位（恒返回 None）。要点：实现相关性/事实性/语气/边界遵守评分（0-1 + 理由）；**judge 与生成用不同模型或不同温度**降自评偏差；加 self-consistency（多次采样取中位）；抽 10-20 条人工标注作校准集，报告 Cohen's kappa。
+- [ ] **P2.4 指标诚实化**：KB 报告以 `primary_top1_rate` + **chunk 级 recall** 为主指标，`recall@10` 降为参考；README 数字全部换「真实 embedding + 真实 rerank + chunk 级 gold」下的重测值（**须等 Phase 3 完成才能回填**）。
+
+**验收**：`pytest -m eval` 真跑通；报告落库且可复现（`runner.py` 已有 fingerprint 机制）；README 评测段落每个数字都能追到一份报告。
+
+---
+
+### Phase 3 — 检索真实性
+
+**根因**：`MODEL_BASE_URL=https://api.deepseek.com/v1` 只有 chat 端点，DeepSeek **不提供 embedding / rerank** → 生产配置下 `build_embedding_provider()`（`knowledge/embedding.py:142`）与 `build_reranker()`（`knowledge/rerank.py:197`）必然落回 dev 实现（这正是 `kb-baseline.json` 里 `"embedding": "dev-deterministic:64"`、`"reranker": "keyword"` 的原因）。
+
+- [ ] **P3.1 真实 embedding + rerank（本地 BGE-M3 + bge-reranker-v2-m3）**：
+  - BGE 服务选型：`text-embeddings-inference`(TEI) 或 `Infinity`，暴露 `/embeddings`（兼容 OpenAI）与 `/rerank`。
+  - rerank 需新端点 `/rerank`；现有 `LlmReranker`（`rerank.py:81`）走 chat completions 打分，**不是 cross-encoder** → 新增 `HttpReranker`（POST `/rerank`），保留 `LlmReranker` 作降级。
+  - **配置拆分（本阶段必须改）**：当前 `MODEL_BASE_URL`/`MODEL_API_KEY` 同时被 chat/embedding/rerank 复用 → 拆出 `EMBEDDING_BASE_URL` / `RERANK_BASE_URL`。
+  - 模型维度：`BAAI/bge-m3`（1024 维）；`ChunkVectorStore` 集合名按 identity 命名（`milvus_store.py:58`），换 provider 会生成新集合，需一次**全量重建**。
+  - 部署：`deploy/docker-compose.yml` 新增 `bge` 服务；`api`/`worker`/`task-worker` 注入新 URL。
+  - 索引重建：复用 `knowledge/task_handlers.py` + `recovery.py`，补「全量重建」命令 + 幂等校验（重建后 recall 不劣化才切换）。
+- [ ] **P3.2 Neo4j 真多跳推理**：现状（`knowledge/graph.py`）只有一跳（`room_type_overview` / `recommend_nearby`）。补多跳组合推理（如「带投影的房型附近 500m 内有早餐的店」= `RoomType -HAS_AMENITY-> Amenity` + `Hotel -NEARBY-> Place`），并把图检索结果作为 KB 召回的**补充腿**（当前图与 KB 检索未合流）。
+- [ ] **P3.3 DuckDB 数据湖真分析**：「提速 10-100x」无基准 → 补真实业务问题驱动（如「各房型月度入住率与客单价」）+ 可复现 benchmark 脚本（PG 直查 vs 预聚合），数字写进 README 时标注数据规模。
+
+**验收**：`docs/eval/kb-baseline.json` 为真实 provider 结果（`retrieval_config` 显示 `bge-m3:1024` + `bge-reranker-v2-m3`）；图谱/数据湖各有测试与基准。
+
+---
+
+### Phase 4 — 生产面
+
+- [ ] **P4.1 外部系统（只能到模拟器的诚实处理）**：无法真接微信/门锁/机器人 → 如实叙述「含 device-sim 契约模拟器（故障注入），为真机联调预留契约」；`docs/contracts/external-systems-v0.md` 补「真实厂商对接 checklist」（微信支付 v3 证书签名、门锁协议差异、设备离线处置）；补门锁/机器人失败的人工兜底预案（半夜开不了门的 on-call 流程）。
+- [ ] **P4.2 安全加固**：`config.py` 去掉默认弱口令（`database_url`/`neo4j_password`/`lock_master_key` 生产必须显式提供，缺失即启动失败）；`docker-compose.yml` 生产 profile 不把 PG/Redis/Neo4j/MinIO 暴露到宿主；加反向代理 + TLS；限流加 per-user / per-tenant 配额（现按 IP）；`cors_origins` 默认 `["*"]` → 生产收紧。
+- [ ] **P4.3 可观测与告警**：Langfuse 支持 self-host 或**强制脱敏后再外发**；告警规则（Run 卡死、租约过期率、SSE 断流、DB 连接池耗尽）；SLO + on-call 手册。
+- [ ] **P4.4 可靠性与容量**：checkpoint 连接池固定 4（`runtime.py:40-42`）→ 可配置；长会话静默截断（`run_body.py:105` `limit=200`）→ 显式告警 + 接入摘要（当前摘要阈值 10 万 token 几乎不触发）；审计「每次调用单开事务」（`audit_service.py`）→ 批量/复用连接。
+- [ ] **P4.5 备份与合规**：备份定时 + 异地 + 恢复演练纳入 CI（`deploy/backup.sh` / `restore.sh` 已存在）；PIPL 告知同意、最小必要、出境；客人身份/证件/人脸字段的存储与脱敏方案（**当前完全空白**）。
+
+**验收**：一份「上线就绪 checklist」，逐条有证据。
+
+---
+
+## 第四层　零散欠账与已知问题
+
+| # | 事项 | 来源 / 证据 | 备注 |
+| --- | --- | --- | --- |
+| 7 | **`test_room_service` 全局注册表串扰** | `remediation-p0-plan.md:90` 明标「未修」 | `lock_rotation`/`room_service` 共享模块级 lock-task-handler 注册表（`importlib.reload` + 模块级 `LockClient` 注入）致替身状态串扰；需改测试夹具，独立于本轮改动 |
+| 8 | **PR-0.5b 三个已知边界** | `remediation-p0-plan.md:260-263` | 单审批/单 interrupt、执行体可重入、崩溃安全——多审批留后续 |
+| 9 | **`qa_auditor_service.py:174` 标题相似度是占位** | 代码注释「按标题关键词简单分组」 | 冲突检测的相似度算法待补 |
+| 10 | **`graph_seed.py` 周边地点是虚构样例** | 代码注释「正式上线前必须替换」 | Neo4j 种子数据 |
+| 11 | **`knowledge/seed.py` 知识库是占位内容** | `KB_DESCRIPTION = "样例知识库…替换为真实资料后重新上传"` | 需换真实酒店资料 |
+| 12 | **`vision_api` 是 mock** | `vision_api/__init__.py:1` — 人脸/工牌/工服**恒返回通过**，真实视觉服务留 P9 | 与 `remediation-plan.md` 第 14 项同源，属**已接受的现状**（第 0 节 D-P4：外部系统只有模拟器） |
+
+---
+
+## 5. 建议执行顺序
+
+```
+① ✅ 查 ruff 版本（已查实：非漂移，必须 format）
+② ✅ 收尾 cleanup PR：ruff check + ruff format + mypy（均绿）→ 已提交 `86a6494`
+③ ✅ 开 P0 的 PR #2 → CI 6/6 全绿 → 已合入 main（merge commit `37a97ce`）
+④ ✅ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成）→ 已提交 `c58ce91`，rebase 到 `main`(`37a97ce`) 后强推；**PR 未创建**（本机无 `gh`/token，待人工开）
+   └ 本轮收尾：SSE 事件包络按执行者归属（✅ 已完成）、supervisor 路由调用接审计与用量（✅ 已完成）、`qa-auditor` 登记为后台 Agent 并 Task 化（✅ 已完成），P1 全部收口
+   └ 可并行：P2.1 真执行器 + P2.2 工具名对齐测试（不依赖 P1）
+⑤ P1 完成 → P2 全量 → P3 → P4
+```
+
+**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 分支已提交（`c58ce91`）并 rebase + 强推，**PR 待人工创建**；三处收尾（SSE 事件归属、路由调用审计与用量、后台质检 Agent `qa-auditor`）均已收口，**P1 全部完成**。其余（Phase 1–4 内容）都是排队等前一个完成的「内容工作」，不是被卡住。
+
+---
+
+## 6. 里程碑对照（`remediation-plan.md §6`）
+
+| 里程碑 | 交付物 | 可讲的一句话 |
+| --- | --- | --- |
+| M0（Phase 0）✅ | 配置链路/记忆/脱敏接线 + 测试 | 「管理端配置真的生效、记忆真的注入、隐私脱敏覆盖手机号证件号」 |
+| M1（Phase 1） | Supervisor + 4 子 Agent 图 | 「真·多智能体：supervisor 路由 + LangGraph 子图协作」 |
+| M2（Phase 2） | 真执行器 + 50/150 条评测集 + 真 judge | 「评测能自证：50+ 条用例、chunk 级 gold、judge 经人工校准」 |
+| M3（Phase 3） | 真实 embedding/rerank + 图多跳 + 数据湖基准 | 「检索走真实向量+重排，图谱做多跳推理，数据湖有基准数字」 |
+| M4（Phase 4） | 安全/观测/备份/合规 checklist | 「从 demo 到生产就绪的差距清单与逐条证据」 |

@@ -20,6 +20,7 @@ from app.agents import close_shared_checkpointer
 from app.config import get_settings
 from app.knowledge.recovery import release_expired_claims_job
 from app.lock.task_handlers import submit_daily_rotation_job
+from app.quality.task_handlers import submit_qa_audit_job
 from app.services.run_dispatch import ArqRunDispatcher
 from app.services.run_event_bus import create_run_event_bus
 from app.services.run_worker import (
@@ -64,6 +65,8 @@ WORKER_LOG_CONFIG: dict[str, Any] = _build_log_config()
 async def startup(ctx: dict[str, Any]) -> None:
     dispatcher = ArqRunDispatcher(ctx["redis"])
     ctx["run_dispatcher"] = dispatcher
+    # 终态后的记忆抽取任务投递口：独立连接池，默认队列指向 task worker 的专属队列
+    ctx["task_dispatcher"] = await ArqTaskDispatcher.create()
     ctx["run_event_bus"] = await create_run_event_bus()
     try:
         reposted = await repost_pending_runs(dispatcher)
@@ -97,6 +100,9 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     bus = ctx.get("run_event_bus")
     if bus is not None:
         await bus.aclose()
+    task_dispatcher = ctx.get("task_dispatcher")
+    if task_dispatcher is not None:
+        await task_dispatcher.aclose()
     await close_shared_checkpointer()
     logger.info("worker stopped")
 
@@ -142,6 +148,8 @@ class TaskWorkerSettings:
         cron(release_expired_claims_job, second={25}),
         # 每日轮换：全天每 5 分钟探测，酒店本地 00:05 起提交当日任务（去重键保证一天一次）
         cron(submit_daily_rotation_job, minute=set(range(0, 60, 5)), second={0}),
+        # 质检跑批：每小时提交一次（小时级去重键，重启补发不堆积）
+        cron(submit_qa_audit_job, minute={10}, second={0}),
     ]
     on_startup = task_startup
     on_shutdown = task_shutdown

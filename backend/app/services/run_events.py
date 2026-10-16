@@ -56,11 +56,25 @@ def format_sse_event(record: RunEventRecord) -> str:
     return f"id: {record.id}\nevent: {record.event}\ndata: {payload}\n\n"
 
 
+class _RunEventState:
+    """派生视图共享的运行事件状态：序号游标与首 token 埋点各 Run 只一份。"""
+
+    __slots__ = ("seq", "first_token_recorded")
+
+    def __init__(self) -> None:
+        self.seq = 0
+        self.first_token_recorded = False
+
+
 class RunEventEmitter:
-    """每 Run 一个发射器：统一包络（run_id/thread_id/agent_slug/seq），失败不影响运行。
+    """每 Run 一个发射器：统一包络（run_id/thread_id/agent_slug/entry_slug/seq），失败不影响运行。
 
     seq 为发射器内自增序号（同一 Run 的重试尝试各自从 1 开始），只用于消费侧排序参考；
     断线续传以传输游标（RunEventRecord.id）为准。
+
+    agent_slug 是事件实际产生者的归属：Run 级事件为入口 Agent，子 Agent 子图用
+    `with_agent` 派生的视图发射，归属随之变为实际执行的子 Agent。entry_slug 恒为 Run 的
+    入口 Agent，便于消费侧区分「谁在回答」与「哪个 Run」。
     """
 
     def __init__(
@@ -71,29 +85,48 @@ class RunEventEmitter:
         agent_slug: str,
         bus: RunEventBus | None = None,
         on_first_token: Callable[[], Awaitable[None]] | None = None,
+        entry_slug: str | None = None,
+        state: _RunEventState | None = None,
     ) -> None:
         self._run_id = run_id
         self._thread_id = thread_id
         self._agent_slug = agent_slug
+        self._entry_slug = agent_slug if entry_slug is None else entry_slug
         self._bus = bus
         self._on_first_token = on_first_token
-        self._first_token_recorded = False
-        self._seq = 0
+        self._state = _RunEventState() if state is None else state
+
+    def with_agent(self, agent_slug: str) -> RunEventEmitter:
+        """派生归属不同的发射器视图：共享序号游标、总线与首 token 埋点，只改事件归属。
+
+        子 Agent 子图按本视图发射，事件里的 agent_slug 才是实际执行者（与
+        `AuditRecorder.with_agent` 同构）。entry_slug 与 state 属内部传递参数，调用方不传。
+        """
+        return RunEventEmitter(
+            run_id=self._run_id,
+            thread_id=self._thread_id,
+            agent_slug=agent_slug,
+            bus=self._bus,
+            on_first_token=self._on_first_token,
+            entry_slug=self._entry_slug,
+            state=self._state,
+        )
 
     @property
     def seq(self) -> int:
-        return self._seq
+        return self._state.seq
 
     async def emit(self, event_type: str, **data: Any) -> None:
         """发射事件；发布失败只告警（投影可缺失，运行与事实落库不受影响）。"""
-        self._seq += 1
+        self._state.seq += 1
         if self._bus is None:
             return
         payload = {
             "run_id": str(self._run_id),
             "thread_id": str(self._thread_id),
             "agent_slug": self._agent_slug,
-            "seq": self._seq,
+            "entry_slug": self._entry_slug,
+            "seq": self._state.seq,
             **data,
         }
         try:
@@ -115,10 +148,10 @@ class RunEventEmitter:
 
     async def _record_first_token(self) -> None:
         """首个增量到达时触发一次首 token 埋点（TTFT）；失败只告警，不影响运行与投影。"""
-        if self._first_token_recorded or self._on_first_token is None:
-            self._first_token_recorded = True
+        if self._state.first_token_recorded or self._on_first_token is None:
+            self._state.first_token_recorded = True
             return
-        self._first_token_recorded = True
+        self._state.first_token_recorded = True
         try:
             await self._on_first_token()
         except Exception:

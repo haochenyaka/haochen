@@ -14,9 +14,11 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.audit import ModelAudit, ToolAudit
+from app.models.audit import ModelAudit, RouteAudit, ToolAudit
 from app.models.runtime import AgentRun
 from app.repositories.support import affected_rows
+
+AuditModel = type[ModelAudit] | type[ToolAudit] | type[RouteAudit]
 
 AUDIT_READ_LIMIT = 500
 
@@ -53,7 +55,7 @@ class AuditRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def _next_seq(self, model: type[ModelAudit] | type[ToolAudit], run_key: str) -> int:
+    async def _next_seq(self, model: AuditModel, run_key: str) -> int:
         stmt = select(func.coalesce(func.max(model.seq), 0) + 1).where(model.run_id == run_key)
         return int((await self._session.execute(stmt)).scalar_one())
 
@@ -122,6 +124,40 @@ class AuditRepository:
         self._session.add(audit)
         await self._session.flush()
         return audit
+
+    async def append_route(
+        self,
+        *,
+        run_id: UUID | str,
+        agent_slug: str,
+        decided_route: str,
+        source: str,
+        seq: int | None = None,
+        dispatched_route: str | None = None,
+        reason: str | None = None,
+    ) -> RouteAudit:
+        run_key = str(run_id)
+        audit = RouteAudit(
+            run_id=run_key,
+            seq=seq if seq is not None else await self._next_seq(RouteAudit, run_key),
+            agent_slug=agent_slug,
+            decided_route=decided_route,
+            dispatched_route=dispatched_route,
+            source=source,
+            reason=reason,
+        )
+        self._session.add(audit)
+        await self._session.flush()
+        return audit
+
+    async def list_routes(self, run_id: UUID | str) -> list[RouteAudit]:
+        """某 Run 的路由决策事实，按 seq 升序（决策先后即派发先后）。"""
+        stmt = (
+            select(RouteAudit)
+            .where(RouteAudit.run_id == str(run_id), RouteAudit.deleted_at.is_(None))
+            .order_by(RouteAudit.seq)
+        )
+        return list((await self._session.execute(stmt)).scalars())
 
     async def mark_run_reconciled(self, run_id: UUID | str) -> int:
         """终态 State 对账证明：标记该 run 的模型审计行已对齐终态。"""

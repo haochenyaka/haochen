@@ -208,6 +208,50 @@ class _DeltaCallback(AsyncCallbackHandler):
         await self._sink(text)
 
 
+async def audit_model_failure(
+    error: BaseException,
+    *,
+    recorder: AuditRecorder,
+    actor_id: str,
+    model: str,
+    duration_ms: int | None = None,
+) -> None:
+    """写一次失败模型调用的审计事实：与流水线共用同一写入口径。"""
+    await recorder.model_call(
+        actor_type="system",
+        actor_id=actor_id,
+        model=model,
+        status=MODEL_STATUS_FAILED,
+        error=f"{type(error).__name__}: {error}",
+        duration_ms=duration_ms,
+    )
+
+
+async def audit_model_success(
+    reply: AIMessage,
+    *,
+    recorder: AuditRecorder,
+    actor_id: str,
+    model: str,
+    duration_ms: int | None = None,
+    retrieval_refs: list[dict[str, object]] | None = None,
+) -> ModelUsage:
+    """写一次成功模型调用的审计事实并返回用量：与流水线共用同一写入口径。"""
+    usage = extract_usage(reply)
+    await recorder.model_call(
+        actor_type="system",
+        actor_id=actor_id,
+        model=model,
+        status=MODEL_STATUS_COMPLETED,
+        duration_ms=duration_ms,
+        prompt_tokens=usage.prompt_tokens,
+        cached_prompt_tokens=usage.cached_prompt_tokens,
+        completion_tokens=usage.completion_tokens,
+        retrieval_refs=retrieval_refs,
+    )
+    return usage
+
+
 async def invoke_with_audit(
     model: BaseChatModel | Runnable[Any, Any],
     messages: Sequence[BaseMessage],
@@ -234,27 +278,22 @@ async def invoke_with_audit(
     try:
         reply = await model.ainvoke(list(messages), config=call_config)
     except Exception as exc:
-        await recorder.model_call(
-            actor_type="system",
+        await audit_model_failure(
+            exc,
+            recorder=recorder,
             actor_id=actor_id,
             model=label,
-            status=MODEL_STATUS_FAILED,
-            error=f"{type(exc).__name__}: {exc}",
             duration_ms=monotonic_ms() - started,
         )
         raise
     if not isinstance(reply, AIMessage):
         raise ModelConfigError(f"模型返回类型异常：{type(reply).__name__}")
-    usage = extract_usage(reply)
-    await recorder.model_call(
-        actor_type="system",
+    await audit_model_success(
+        reply,
+        recorder=recorder,
         actor_id=actor_id,
         model=label,
-        status=MODEL_STATUS_COMPLETED,
         duration_ms=monotonic_ms() - started,
-        prompt_tokens=usage.prompt_tokens,
-        cached_prompt_tokens=usage.cached_prompt_tokens,
-        completion_tokens=usage.completion_tokens,
         retrieval_refs=(retrieval_refs() or None) if retrieval_refs is not None else None,
     )
     if delta_callback is not None:

@@ -70,7 +70,7 @@
 
 ### 验收
 - 管理端改 `temperature` → 下次 Run 生效，有测试证据。 ✅
-- `docs/acceptance-matrix.md` 增行。 ⬜（待补）
+- `docs/acceptance-matrix.md` 增行。 ✅（A7 已补入 `acceptance-matrix.md`）
 
 ### 风险 / 依赖
 - 低。独立可先做。**是 PR-0.2 / PR-0.5a 的前置**（它们从 middleware 段读开关）。
