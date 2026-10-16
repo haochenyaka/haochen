@@ -127,6 +127,44 @@ class TestDataset:
         items = load_eval_set(path)
         assert items[0].guest_overrides == {"name": "张三"}
 
+    def test_multi_turn_declares_turns_only(self, tmp_path: Path) -> None:
+        """多轮用例可只给 turns：message 取末条，供展示与报告。"""
+        case = _yaml_case()
+        case.pop("message")
+        case["turns"] = ["你们有哪些房型？", "就订那间大床房，今晚一晚"]
+        path = _write_dataset(tmp_path, "turns.yaml", [case])
+        items = load_eval_set(path)
+        assert items[0].turns == ("你们有哪些房型？", "就订那间大床房，今晚一晚")
+        assert items[0].message == "就订那间大床房，今晚一晚"
+        assert items[0].effective_turns() == items[0].turns
+
+    def test_single_turn_effective_turns_is_message(self) -> None:
+        item = _make_item()
+        assert item.turns == ()
+        assert item.effective_turns() == ("我要订一间大床房",)
+
+    def test_message_must_match_last_turn(self, tmp_path: Path) -> None:
+        """message 与 turns 末条不一致即报错：两处各写一遍最容易漂移。"""
+        case = _yaml_case(message="第三轮")
+        case["turns"] = ["第一轮", "第二轮"]
+        path = _write_dataset(tmp_path, "mismatch.yaml", [case])
+        with pytest.raises(EvalSetError, match="turns 末条"):
+            load_eval_set(path)
+
+    def test_message_may_repeat_last_turn(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="第二轮")
+        case["turns"] = ["第一轮", "第二轮"]
+        path = _write_dataset(tmp_path, "match.yaml", [case])
+        assert load_eval_set(path)[0].message == "第二轮"
+
+    @pytest.mark.parametrize("bad", [[], "不是数组", ["第一轮", "  "]])
+    def test_turns_invalid(self, tmp_path: Path, bad: object) -> None:
+        case = _yaml_case()
+        case["turns"] = bad
+        path = _write_dataset(tmp_path, "bad_turns.yaml", [case])
+        with pytest.raises(EvalSetError, match="turns"):
+            load_eval_set(path)
+
 
 class TestFingerprint:
     def test_stability(self) -> None:
@@ -148,6 +186,13 @@ class TestFingerprint:
 
     def test_fingerprint_deterministic(self) -> None:
         assert fingerprint({"a": 1}) == fingerprint({"a": 1})
+
+    def test_turns_change_fingerprint(self) -> None:
+        """同一条末轮消息，单轮与多轮不是同一份评测：指纹必须能区分。"""
+        last = "算了，先不订了"
+        single = AgentEvalItem(id="a", name="a", message=last)
+        multi = AgentEvalItem(id="a", name="a", message=last, turns=("我要订一间大床房", last))
+        assert dataset_fingerprint([single]) != dataset_fingerprint([multi])
 
 
 class TestMetrics:
@@ -366,10 +411,22 @@ class TestRunner:
         assert report.metrics["avg_tool_accuracy"] == 0.0
 
     def test_default_datasets_exist(self) -> None:
-        """出厂数据集存在且可加载。"""
+        """出厂数据集存在且可加载；规模、多轮与覆盖类别是 P2.2 的验收面，做成守卫。"""
         assert DEFAULT_DATASET_DIR.is_dir()
         yaml_files = list(DEFAULT_DATASET_DIR.glob("*.yaml"))
         assert len(yaml_files) >= 3  # orders, checkin, dispatch
-        for fpath in yaml_files:
-            items = load_eval_set(fpath)
-            assert len(items) >= 1
+        items = [item for fpath in yaml_files for item in load_eval_set(fpath)]
+        assert len(items) >= 50, "Agent 评测集规模下限（P2.2：8 → 50+）"
+        assert any(item.turns for item in items), "缺少多轮用例"
+        covered = {tag for item in items for tag in item.tags}
+        required = {
+            "order",
+            "reschedule",
+            "cancel",
+            "invoice",
+            "dispatch",
+            "handoff",
+            "multi-turn",
+            "edge",
+        }
+        assert required <= covered, f"覆盖类别缺失：{sorted(required - covered)}"

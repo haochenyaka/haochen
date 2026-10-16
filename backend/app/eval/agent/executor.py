@@ -4,9 +4,13 @@
 打码副本（`args_digest`）。当前数据集期望参数不含敏感值，打码不影响比对；将来出现含
 手机号/证件号的期望参数时需另设旁路。
 
-任务成功标志取自 Run 终态与工具事实状态：工具以字符串回执业务失败（"操作失败：…"）时
-审计状态仍是 completed，此类业务级失败在审计口径下不可见——属已知边界，由答案评判
-（P2.3）与回答关键词（`answer_contains`）补偿。
+多轮用例（`turns`）按序在**同一线程**逐轮建消息与请求、逐轮等 Run 收敛；工具序列按轮序
+拼接——`seq` 是每个 Run 内独立的序号，跨轮混排会把轮次顺序打乱。因此有状态用例
+（下单后改期/取消）可以用第一轮真实建单来制造前置状态，而不是靠历史文本里的假上下文。
+
+任务成功标志取自末轮 Run 终态与该 Run 的工具事实状态：工具以字符串回执业务失败
+（"操作失败：…"）时审计状态仍是 completed，此类业务级失败在审计口径下不可见——属已知
+边界，由答案评判（P2.3）与回答关键词（`answer_contains`）补偿。
 
 无模型密钥时显式失败：工具序列由模型产生，缺密钥只会得到空序列（分数恒 0）而不报错，
 那比失败更糟。
@@ -54,14 +58,17 @@ RUN_STATUS_COMPLETED = "completed"
 
 
 def tool_calls_from_audit(entries: Sequence[AuditEntry]) -> list[dict[str, object]]:
-    """审计时间线 → 工具调用序列：只取工具事实，按 seq 升序，入参用打码副本。"""
+    """单次 Run 的审计时间线 → 工具调用序列：只取工具事实，按 seq 升序，入参用打码副本。
+
+    `seq` 在 Run 内唯一，多轮用例须逐轮调用本函数再拼接，不能把多轮事实一起排序。
+    """
     tools = [entry for entry in entries if entry.kind == "tool" and entry.tool_name]
     tools.sort(key=lambda entry: entry.seq)
     return [{"name": entry.tool_name, "args": dict(entry.args_digest or {})} for entry in tools]
 
 
 def task_success_from(outcome: str, entries: Sequence[AuditEntry]) -> bool:
-    """任务成功标志：Run 收敛为 completed 且无工具事实以 failed 收尾。
+    """任务成功标志：末轮 Run 收敛为 completed 且用例内无工具事实以 failed 收尾。
 
     业务级失败（工具返回"操作失败：…"字符串）在审计里仍是 completed，此处判为成功，
     属审计口径的已知边界。
@@ -73,6 +80,9 @@ def task_success_from(outcome: str, entries: Sequence[AuditEntry]) -> bool:
 
 class RealCaseExecutor:
     """真实编译图执行器：接入（线程/消息/请求）→ 队头 Run → 执行体 → 回读审计。
+
+    单轮用例就是只含一条消息的多轮用例；`turns` 里的每条消息在同线程按序各起一个 Run，
+    前一轮的业务副作用（订单/任务）对后一轮可见。
 
     检查点、资源策略与工具注册表可注入（测试用内存检查点与自建注册表）；缺省走进程级
     检查点与 Agent 代码声明的放行策略，与 `AgentRunBody` 一致。
@@ -103,7 +113,6 @@ class RealCaseExecutor:
             raise EvalRunError(
                 "模型密钥未配置，真实评测无法执行：工具序列由模型产生，缺密钥只会得到空序列"
             )
-        run_id = await self._intake(item)
         executor = RunExecutor(
             AgentRunBody(
                 checkpointer=self._checkpointer,
@@ -112,39 +121,56 @@ class RealCaseExecutor:
             ),
             session_factory=self._session_factory,
         )
-        outcome = await executor.execute(run_id)
-        entries = await self._audit_entries(run_id)
-        logger.info(
-            "评测用例 %s：run=%s outcome=%s 工具事实=%d", item.id, run_id, outcome, len(entries)
-        )
-        return tool_calls_from_audit(entries), task_success_from(str(outcome), entries)
+        tool_calls: list[dict[str, object]] = []
+        entries: list[AuditEntry] = []
+        thread_id: UUID | None = None
+        outcome = ""
+        for turn_no, text in enumerate(item.effective_turns(), start=1):
+            thread_id, run_id = await self._intake(item, text=text, thread_id=thread_id)
+            outcome = str(await executor.execute(run_id))
+            turn_entries = await self._audit_entries(run_id)
+            entries.extend(turn_entries)
+            tool_calls.extend(tool_calls_from_audit(turn_entries))
+            logger.info(
+                "评测用例 %s 第 %d 轮：run=%s outcome=%s 工具事实=%d",
+                item.id,
+                turn_no,
+                run_id,
+                outcome,
+                len(turn_entries),
+            )
+        return tool_calls, task_success_from(outcome, entries)
 
-    async def _intake(self, item: AgentEvalItem) -> UUID:
-        """按线上接入路径建线程与队列：每条用例独立线程，历史消息先落库再发本轮消息。"""
+    async def _intake(
+        self, item: AgentEvalItem, *, text: str, thread_id: UUID | None
+    ) -> tuple[UUID, UUID]:
+        """按线上接入路径建线程与队列；首轮建线程并落历史消息，后续轮复用同一线程。"""
         async with self._session_factory() as session:
             user = await UserRepository(session).get_or_create(username=f"eval-{item.id}")
-            thread = await ThreadRepository(session).create(
-                user_id=user.id, agent_slug=self._agent_slug
-            )
             messages = MessageRepository(session)
-            for prior in item.history:
-                await messages.append(
-                    thread_id=thread.id, role=prior.role, content={"text": prior.content}
+            if thread_id is None:
+                thread = await ThreadRepository(session).create(
+                    user_id=user.id, agent_slug=self._agent_slug
                 )
+                thread_id = thread.id
+                for prior in item.history:
+                    await messages.append(
+                        thread_id=thread_id, role=prior.role, content={"text": prior.content}
+                    )
             user_message = await messages.append(
-                thread_id=thread.id, role="user", content={"text": item.message}
+                thread_id=thread_id, role="user", content={"text": text}
             )
             await RequestRepository(session).create(
                 user_id=user.id,
                 agent_slug=self._agent_slug,
-                thread_id=thread.id,
+                thread_id=thread_id,
                 message_id=user_message.id,
             )
-            plan = await promote_head_if_idle(session, thread.id)
+            plan = await promote_head_if_idle(session, thread_id)
             await session.commit()
         if plan is None:
             raise EvalRunError(f"用例 {item.id} 未能派发 Run：队列头为空")
-        return plan.run_id
+        return thread_id, plan.run_id
 
     async def _audit_entries(self, run_id: UUID) -> list[AuditEntry]:
         async with self._session_factory() as session:

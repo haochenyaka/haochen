@@ -27,8 +27,10 @@ from app.eval.agent.runner import (
     run_eval,
 )
 from app.models.eval_agent import AgentEvalReport
+from app.models.runtime import AgentRun
+from app.repositories import UserRepository
 from tests.integration.db_utils import run_with_session_factory
-from tests.integration.support import ScriptedToolChatModel
+from tests.integration.support import PerTurnToolChatModel, ScriptedToolChatModel
 
 pytestmark = pytest.mark.integration
 
@@ -357,3 +359,80 @@ def test_real_case_executor_against_real_model(runtime_db_url: str, tmp_path: Pa
     assert all("actual_sequence" in outcome for outcome in report.outcomes)
     called = sum(len(outcome["actual_sequence"]) for outcome in report.outcomes)
     assert called >= 1, "真实模型未调用任何工具，评测链路未真正跑通"
+
+
+def test_real_case_executor_replays_multi_turn_in_one_thread(
+    runtime_db_url: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """多轮用例：同线程逐轮各起一个 Run，工具序列按轮序聚合。
+
+    关键口径：`tool_audit.seq` 在每个 Run 内独立计数，把多轮事实合并后统一排序会打乱轮次
+    顺序；本用例断言两轮的同一个工具按轮序出现（期望 [echo, echo]），并核对确实落了两个
+    Run、且属于同一线程。
+    """
+    settings = get_settings()
+    monkeypatch.setattr(settings, "model_api_key", "test-key")
+    monkeypatch.setattr(settings, "model_name", "scripted-tool")
+
+    registry = ToolRegistry()
+
+    @builtin_tool(category="test", registry=registry)
+    async def test_echo(text: str) -> str:
+        """回显文本。"""
+        return f"echo:{text}"
+
+    model = PerTurnToolChatModel(tool_name="test_echo", tool_args={"text": "你好"})
+    monkeypatch.setattr(
+        "app.agents.buildin.front_desk.agent.build_chat_model", lambda **kwargs: model
+    )
+    monkeypatch.setattr(FrontDeskAgent, "tool_ids", ("test_echo",))
+
+    dataset_path = tmp_path / "multi_turn.yaml"
+    dataset_path.write_text(
+        yaml.dump(
+            {
+                "fingerprint_meta": {"name": "multi-turn", "description": ""},
+                "cases": [
+                    {
+                        "id": "real-multi-001",
+                        "name": "两轮同一个工具",
+                        "turns": ["第一轮：你好", "第二轮：再问一次"],
+                        "expected": {
+                            "tool_sequence": [{"name": "test_echo"}, {"name": "test_echo"}],
+                            "task_success": True,
+                        },
+                        "tags": ["real", "multi-turn"],
+                    }
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        executor = RealCaseExecutor(
+            checkpointer=InMemorySaver(),
+            resource_policy=StaticResourcePolicy(allowed=frozenset({("tool", "test_echo")})),
+            tool_registry=registry,
+            session_factory=factory,
+        )
+        async with factory() as session:
+            report = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            user = await UserRepository(session).get_or_create(username="eval-real-multi-001")
+            stmt = select(AgentRun.thread_id).where(AgentRun.user_id == user.id)
+            thread_ids = list((await session.execute(stmt)).scalars())
+        return {"report": report, "thread_ids": thread_ids}
+
+    values = run_with_session_factory(runtime_db_url, _body)
+    report = values["report"]
+    thread_ids = values["thread_ids"]
+    outcome = report.outcomes[0]
+    assert [call["name"] for call in outcome["actual_sequence"]] == ["test_echo", "test_echo"]
+    assert outcome["tool_accuracy"] == 1.0
+    assert outcome["task_success"] is True
+    # 两轮各一个 Run，且复用同一线程
+    assert len(thread_ids) == 2
+    assert len(set(thread_ids)) == 1

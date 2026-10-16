@@ -1,7 +1,10 @@
-# 派单/保洁流程评估集 v1
+# 客房服务评估集 v2
+#
+# 空期望（tool_sequence: []）表示**不应调用任何工具**——查询类问题不该重复派单，
+# 这类断言只挡「多余调用」，不构成对回答质量的判定（留给 P2.3）。
 fingerprint_meta:
-  name: 派单保洁评估集 v1
-  description: 保洁任务派发与查询场景
+  name: 派单保洁评估集 v2
+  description: 保洁、配送与查询场景
 cases:
   - id: "dispatch-001"
     name: "请求保洁"
@@ -13,9 +16,54 @@ cases:
     tags: ["dispatch", "happy-path"]
 
   - id: "dispatch-002"
-    name: "查询保洁状态"
+    name: "保洁进度查询"
     message: "保洁什么时候到？"
     expected:
       tool_sequence: []
       task_success: true
     tags: ["dispatch", "inquiry"]
+
+  - id: "dispatch-003"
+    name: "配送矿泉水"
+    message: "能送两瓶矿泉水到房间吗？"
+    expected:
+      tool_sequence:
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["dispatch", "delivery"]
+
+  - id: "dispatch-004"
+    name: "配送毛巾"
+    message: "麻烦送两条毛巾过来"
+    expected:
+      tool_sequence:
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["dispatch", "delivery"]
+
+  - id: "dispatch-005"
+    name: "配送洗漱用品"
+    message: "房间没有牙刷和洗发水了，能补一下吗？"
+    expected:
+      tool_sequence:
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["dispatch", "delivery"]
+
+  - id: "dispatch-006"
+    name: "清洁并说明重点"
+    message: "帮我打扫一下房间，重点是卫生间"
+    expected:
+      tool_sequence:
+        - name: "request_room_clean"
+      task_success: true
+    tags: ["dispatch", "happy-path"]
+
+  - id: "dispatch-007"
+    name: "房间异味处理"
+    message: "房间里有一股烟味，能不能来处理一下？"
+    expected:
+      tool_sequence:
+        - name: "request_room_clean"
+      task_success: true
+    tags: ["dispatch", "happy-path"]

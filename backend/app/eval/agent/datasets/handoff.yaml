@@ -1,0 +1,64 @@
+# 转人工与投诉评估集 v1
+#
+# 转人工子 Agent 的约定：先 request_handoff 生成工单，涉及投诉时另 submit_complaint 落事实。
+# 纯转人工场景只期望 request_handoff——投诉事实不是必要条件，多写会把缺 submit_complaint
+# 的正常转人工误判为失败。
+fingerprint_meta:
+  name: 转人工与投诉评估集 v1
+  description: 要求人工、投诉、紧急与资金争议场景
+cases:
+  - id: "handoff-001"
+    name: "明确要求人工客服"
+    message: "请帮我转人工客服"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+      task_success: true
+    tags: ["handoff", "escalation"]
+
+  - id: "handoff-002"
+    name: "噪音投诉"
+    message: "隔壁太吵了，一直睡不着，我要投诉"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+        - name: "submit_complaint"
+      task_success: true
+    tags: ["handoff", "complaint"]
+
+  - id: "handoff-003"
+    name: "财物丢失"
+    message: "我的钱包好像落在房间里找不到了，怎么办？"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+      task_success: true
+    tags: ["handoff", "escalation"]
+
+  - id: "handoff-004"
+    name: "深夜门锁故障"
+    message: "我房门锁打不开了，现在进不去房间！"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+      task_success: true
+    tags: ["handoff", "urgent"]
+
+  - id: "handoff-005"
+    name: "押金退款争议"
+    message: "我退房都一周了，押金还没退给我，你们扣了我钱吗？"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+      task_success: true
+    tags: ["handoff", "funds"]
+
+  - id: "handoff-006"
+    name: "要求找经理投诉"
+    message: "我要找你们经理投诉，昨天的服务太差了"
+    expected:
+      tool_sequence:
+        - name: "request_handoff"
+        - name: "submit_complaint"
+      task_success: true
+    tags: ["handoff", "complaint"]

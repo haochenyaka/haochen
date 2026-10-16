@@ -1,8 +1,12 @@
-# 订单流程评估集 v1
-# 覆盖标准订房、加床、取消等场景
+# 订单流程评估集 v2
+#
+# 期望只列**必要**工具并按必须出现的顺序（按序子序列比对，多调不扣分）。
+# 有状态场景（改期/续订/取消/发票）用 turns 在同线程按序回放：第一轮真实建单，
+# 第二轮才有真实订单可操作——不要靠 history 里的假上下文。
+# 否定/边界用例不写 task_success，理由见 checkin.yaml 头部注释。
 fingerprint_meta:
-  name: 订单流程评估集 v1
-  description: 标准订房、加床、取消等场景
+  name: 订单流程评估集 v2
+  description: 订房、改期、续订、取消、发票，含多轮有状态链路
 cases:
   - id: "order-001"
     name: "标准订房-有房"
@@ -12,7 +16,6 @@ cases:
         - name: "list_room_types"
         - name: "create_order"
       task_success: true
-      answer_contains: ["已为您创建订单"]
     tags: ["order", "happy-path"]
 
   - id: "order-002"
@@ -25,10 +28,184 @@ cases:
     tags: ["order", "inquiry"]
 
   - id: "order-003"
-    name: "取消订单"
-    message: "我要取消刚下的订单"
+    name: "下单后取消"
+    turns:
+      - "帮我订一间大床房，今晚入住，明天退房"
+      - "算了，帮我取消这个订单"
     expected:
       tool_sequence:
+        - name: "create_order"
         - name: "cancel_order"
       task_success: true
-    tags: ["order", "cancellation"]
+    tags: ["order", "cancel", "multi-turn"]
+
+  - id: "order-004"
+    name: "连住三晚"
+    message: "我要订大床房，10月20日入住，10月23日退房"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["order", "happy-path"]
+
+  - id: "order-005"
+    name: "指定房型与人数"
+    message: "帮我订一间大床房，两个人住，后天入住，住一晚"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+      task_success: true
+    tags: ["order", "happy-path"]
+
+  - id: "order-006"
+    name: "房型咨询后下单"
+    turns:
+      - "你们有哪些房型？"
+      - "就要大床房，订今晚一晚"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["order", "multi-turn"]
+
+  - id: "order-007"
+    name: "我的订单列表"
+    message: "我有哪些订单？"
+    expected:
+      tool_sequence:
+        - name: "list_my_orders"
+      task_success: true
+    tags: ["order", "inquiry"]
+
+  - id: "order-008"
+    name: "订单改期"
+    turns:
+      - "帮我订大床房，10月20日入住，10月22日退房"
+      - "能改到10月25日入住，10月27日退房吗？"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "reschedule_order"
+      task_success: true
+    tags: ["order", "reschedule", "multi-turn"]
+
+  - id: "order-009"
+    name: "续订一晚"
+    turns:
+      - "帮我订大床房，10月20日入住，10月21日退房"
+      - "我想再续一晚"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "renew_order"
+      task_success: true
+    tags: ["order", "renew", "multi-turn"]
+
+  - id: "order-010"
+    name: "改期到满房日"
+    turns:
+      - "帮我订大床房，10月20日入住，10月22日退房"
+      - "能改到国庆那几天吗？"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "reschedule_order"
+    tags: ["order", "reschedule", "multi-turn", "negative"]
+
+  - id: "order-011"
+    name: "取消并说明原因"
+    turns:
+      - "帮我订大床房，今晚一晚"
+      - "行程有变，帮我取消，原因是航班延误"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "cancel_order"
+      task_success: true
+    tags: ["order", "cancel", "multi-turn"]
+
+  - id: "order-012"
+    name: "申请公司发票"
+    turns:
+      - "帮我订大床房，今晚一晚"
+      - "帮我开一张发票，抬头是皓晨科技有限公司"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "apply_invoice"
+      task_success: true
+    tags: ["order", "invoice", "multi-turn"]
+
+  - id: "order-013"
+    name: "开票后查询状态"
+    turns:
+      - "帮我订大床房，今晚一晚"
+      - "帮我开一张发票，抬头是皓晨科技有限公司"
+      - "这张发票开好了吗？"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "apply_invoice"
+      task_success: true
+    tags: ["order", "invoice", "multi-turn"]
+
+  - id: "order-014"
+    name: "重复申请发票"
+    turns:
+      - "帮我订大床房，今晚一晚"
+      - "帮我开一张发票，抬头是皓晨科技有限公司"
+      - "再帮我开一张发票"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "apply_invoice"
+    tags: ["order", "invoice", "multi-turn", "negative"]
+
+  - id: "order-015"
+    name: "带小孩订房"
+    message: "我带孩子一起住，订一间大床房，今晚一晚"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+      task_success: true
+    tags: ["order", "family"]
+
+  - id: "order-016"
+    name: "改期后再取消"
+    turns:
+      - "帮我订大床房，10月20日入住，10月22日退房"
+      - "改到10月25日入住，10月27日退房"
+      - "算了，还是取消吧"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "reschedule_order"
+        - name: "cancel_order"
+      task_success: true
+    tags: ["order", "cancel", "multi-turn"]
+
+  - id: "order-017"
+    name: "比价后下单"
+    turns:
+      - "大床房和双床房分别多少钱？"
+      - "订双床房，后天入住，住两晚"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["order", "multi-turn"]
+
+  - id: "order-018"
+    name: "入住当天请求延长"
+    turns:
+      - "帮我订大床房，10月20日入住，10月21日退房"
+      - "我今天入住，可以延长到后天吗？"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "renew_order"
+      task_success: true
+    tags: ["order", "renew", "multi-turn"]

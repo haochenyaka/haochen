@@ -1,0 +1,59 @@
+# 复合多意图评估集 v1
+#
+# 一句话里包含多个意图，期望按话语中的**出现顺序**跨子 Agent 拆分（订房 → 送物）。
+# 序列顺序按话语顺序写：若模型改变了执行顺序，说明路由与语义顺序不一致，应当暴露出来。
+fingerprint_meta:
+  name: 复合多意图评估集 v1
+  description: 订房+送物、咨询+下单、投诉+送物等复合请求
+cases:
+  - id: "comp-001"
+    name: "订房并送早餐到房间"
+    message: "我要订一间大床房，今晚入住，顺便叫一份早餐到房间"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["composite", "order", "dispatch"]
+
+  - id: "comp-002"
+    name: "先查房态再下单"
+    message: "大床房今晚还有吗？有的话帮我订一间"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["composite", "order"]
+
+  - id: "comp-003"
+    name: "投诉并补送用品"
+    message: "房间里的水不够喝，而且隔壁太吵了我要投诉"
+    expected:
+      tool_sequence:
+        - name: "request_robot_delivery"
+        - name: "request_handoff"
+      task_success: true
+    tags: ["composite", "dispatch", "handoff"]
+
+  - id: "comp-004"
+    name: "取消后改订房型"
+    turns:
+      - "帮我订一间双床房，今晚一晚"
+      - "算了，把这单取消，我想换成大床房"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+        - name: "cancel_order"
+      task_success: true
+    tags: ["composite", "order", "multi-turn"]
+
+  - id: "comp-005"
+    name: "清洁并配送毛巾"
+    message: "帮我打扫一下房间，再送两条毛巾上来"
+    expected:
+      tool_sequence:
+        - name: "request_room_clean"
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["composite", "dispatch"]

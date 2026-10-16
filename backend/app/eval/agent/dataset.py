@@ -1,6 +1,7 @@
 """智能体评估数据集：YAML 定义测试用例，含输入、预期工具链与任务结果。
 
 每条用例可指定前置对话历史、客人属性覆盖、预期工具调用序列与任务成功标志。
+多轮用例用 `turns` 声明按序回放的多条用户消息（同线程多个 Run），`message` 为最后一条。
 数据集指纹用于基线可比性。
 """
 
@@ -70,6 +71,11 @@ class AgentEvalItem:
     guest_overrides: dict[str, object] | None = None
     expected: ExpectedSpec | None = None
     tags: tuple[str, ...] = ()
+    turns: tuple[str, ...] = ()
+
+    def effective_turns(self) -> tuple[str, ...]:
+        """按序回放的用户消息：声明了 turns 用 turns，否则退化为单轮 message。"""
+        return self.turns or (self.message,)
 
     def as_dict(self) -> dict[str, object]:
         d: dict[str, object] = {
@@ -82,6 +88,9 @@ class AgentEvalItem:
         }
         if self.guest_overrides is not None:
             d["guest_overrides"] = dict(self.guest_overrides)
+        # 只在多轮用例里带 turns：单轮用例的指纹保持与历史一致
+        if self.turns:
+            d["turns"] = list(self.turns)
         return d
 
 
@@ -120,11 +129,20 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
         raise EvalSetError(f"{path}: case #{idx} 必须是对象")
     case_id = case.get("id", "")
     name = case.get("name", "")
+    turns = _turns(path, idx, case)
     message = case.get("message", "")
+    if not isinstance(message, str):
+        raise EvalSetError(f"{path}: case #{idx} message 必须为非空字符串")
+    message = message.strip()
+    if turns:
+        # 多轮用例：message 可省略（取末条）；显式给出时必须与末条一致，防止编写漂移
+        if message and message != turns[-1]:
+            raise EvalSetError(f"{path}: case #{idx} message 与 turns 末条不一致")
+        message = turns[-1]
+    if not message:
+        raise EvalSetError(f"{path}: case #{idx} message 缺失或非空字符串")
     if not isinstance(case_id, str) or not case_id.strip():
         raise EvalSetError(f"{path}: case #{idx} id 缺失或非空字符串")
-    if not isinstance(message, str) or not message.strip():
-        raise EvalSetError(f"{path}: case #{idx} message 缺失或非空字符串")
     # parse history
     history: tuple[HistoryMessage, ...] = ()
     raw_history = case.get("history")
@@ -158,12 +176,28 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
     return AgentEvalItem(
         id=str(case_id).strip(),
         name=str(name).strip() if name else str(case_id).strip(),
-        message=message.strip(),
+        message=message,
         history=history,
         guest_overrides=guest_overrides,
         expected=expected,
         tags=tags,
+        turns=turns,
     )
+
+
+def _turns(path: Path, idx: int, case: dict[str, Any]) -> tuple[str, ...]:
+    """解析多轮用例的用户消息序列；未声明返回空元组（单轮用例）。"""
+    raw = case.get("turns")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not raw:
+        raise EvalSetError(f"{path}: case #{idx} turns 必须为非空数组")
+    parsed: list[str] = []
+    for t_idx, text in enumerate(raw):
+        if not isinstance(text, str) or not text.strip():
+            raise EvalSetError(f"{path}: case #{idx} turns[{t_idx}] 必须为非空字符串")
+        parsed.append(text.strip())
+    return tuple(parsed)
 
 
 def _parse_expected(raw: dict[str, Any]) -> ExpectedSpec:
