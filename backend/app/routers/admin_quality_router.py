@@ -72,11 +72,8 @@ async def get_latest_scorecard(
 ) -> ScorecardResponse | None:
     """获取最新评分卡。"""
     from sqlalchemy import select
-    stmt = (
-        select(QualityScorecard)
-        .order_by(QualityScorecard.created_at.desc())
-        .limit(1)
-    )
+
+    stmt = select(QualityScorecard).order_by(QualityScorecard.created_at.desc()).limit(1)
     row = (await session.execute(stmt)).scalar_one_or_none()
     if row is None:
         return None
@@ -103,11 +100,8 @@ async def list_scorecards(
 ) -> list[ScorecardItem]:
     """列出历史评分卡。"""
     from sqlalchemy import select
-    stmt = (
-        select(QualityScorecard)
-        .order_by(QualityScorecard.created_at.desc())
-        .limit(limit)
-    )
+
+    stmt = select(QualityScorecard).order_by(QualityScorecard.created_at.desc()).limit(limit)
     rows = (await session.execute(stmt)).scalars().all()
     return [
         ScorecardItem(

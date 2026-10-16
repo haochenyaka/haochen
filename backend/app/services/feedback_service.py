@@ -71,13 +71,15 @@ class FeedbackCollector:
             assistant_text = ""
             if isinstance(row.assistant_content, dict):
                 assistant_text = row.assistant_content.get("text", "") or ""
-            results.append({
-                "feedback_id": str(row.feedback_id),
-                "question": user_text[:500],
-                "assistant_answer": assistant_text[:1000],
-                "rating": "down",
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-            })
+            results.append(
+                {
+                    "feedback_id": str(row.feedback_id),
+                    "question": user_text[:500],
+                    "assistant_answer": assistant_text[:1000],
+                    "rating": "down",
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                }
+            )
         return results
 
     async def get_upvoted_questions(self, since: datetime | None = None) -> list[dict[str, object]]:
@@ -103,12 +105,14 @@ class FeedbackCollector:
             user_text = ""
             if isinstance(row.user_content, dict):
                 user_text = row.user_content.get("text", "") or ""
-            results.append({
-                "feedback_id": str(row.feedback_id),
-                "question": user_text[:500],
-                "rating": "up",
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-            })
+            results.append(
+                {
+                    "feedback_id": str(row.feedback_id),
+                    "question": user_text[:500],
+                    "rating": "up",
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                }
+            )
         return results
 
     async def get_staff_ratings(self, since: datetime | None = None) -> list[dict[str, object]]:
@@ -121,11 +125,12 @@ class FeedbackCollector:
                 hk.task_type,
                 hk.guest_score,
                 hk.guest_comment,
+                hk.rated_at,
                 hk.verified_at
             FROM housekeeping_tasks hk
             WHERE hk.guest_score IS NOT NULL
-              AND hk.verified_at >= :since
-            ORDER BY hk.verified_at DESC
+              AND hk.rated_at >= :since
+            ORDER BY hk.rated_at DESC
             LIMIT 100
         """)
         rows = (await self._session.execute(stmt, {"since": since})).all()
@@ -136,12 +141,13 @@ class FeedbackCollector:
                 "task_type": row.task_type,
                 "score": float(row.guest_score) if row.guest_score else None,
                 "comment": row.guest_comment,
+                "rated_at": row.rated_at.isoformat() if row.rated_at else None,
                 "verified_at": row.verified_at.isoformat() if row.verified_at else None,
             }
             for row in rows
         ]
 
-    async def export_to_jsonl(self, output_path: str | Path | None = None) -> Path:
+    async def export_to_jsonl(self, output_path: str | Path | None = None) -> tuple[int, Path]:
         """将在线反馈导出为 JSONL 格式评估集。
 
         输出文件可用于追加到 kb_faq.jsonl 或作为独立 feedback 评估集。
@@ -152,15 +158,17 @@ class FeedbackCollector:
         downvoted = await self.get_downvoted_questions()
         items: list[dict[str, object]] = []
         for item in downvoted:
-            items.append({
-                "id": f"feedback-{item['feedback_id']}",
-                "question": item["question"],
-                "kb_code": "hotel_faq",
-                "gold_titles": ["[feedback_negative]"],
-                "primary_title": "[feedback_negative]",
-                "gold_answer": item.get("assistant_answer", ""),
-                "tags": ["feedback", "negative"],
-            })
+            items.append(
+                {
+                    "id": f"feedback-{item['feedback_id']}",
+                    "question": item["question"],
+                    "kb_code": "hotel_faq",
+                    "gold_titles": ["[feedback_negative]"],
+                    "primary_title": "[feedback_negative]",
+                    "gold_answer": item.get("assistant_answer", ""),
+                    "tags": ["feedback", "negative"],
+                }
+            )
 
         with open(path, "w", encoding="utf-8") as f:
             for item in items:

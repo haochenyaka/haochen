@@ -116,8 +116,8 @@ def test_seed_is_idempotent_and_demo_flow_is_reproducible(runtime_db_url: str) -
     assert values["stable"] is True
     assert values["counts"] == {
         "accounts": 6,
-        "room_types": 3,
-        "rooms": 12,
+        "room_types": 5,
+        "rooms": 18,
         "staff": 2,
         "guests": 1,
         "orders": 1,

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 
@@ -19,3 +20,13 @@ class RunIdentity:
 class RunResult:
     token_usage: dict[str, object] | None = None
     langfuse_trace_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RunInterrupted:
+    """执行体在危险工具审批处挂起：Run 转 interrupted 等待人工决定，不写终态。
+
+    `approvals` 为本次挂起的待审批元数据（call_id/工具/原因），执行器据此发 interrupt
+    事件；审批事实已由执行体落库。"""
+
+    approvals: list[dict[str, Any]] = field(default_factory=list)

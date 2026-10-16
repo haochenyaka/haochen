@@ -64,7 +64,9 @@ class DatalakeQueryService:
         prefix = sql_stripped.split()[0].upper() if sql_stripped else ""
 
         if prefix not in _ALLOWED_PREFIXES:
-            raise DatalakeQueryError(f"不支持的查询类型: {prefix}，仅允许 SELECT/WITH/DESCRIBE/SHOW/PRAGMA")
+            raise DatalakeQueryError(
+                f"不支持的查询类型: {prefix}，仅允许 SELECT/WITH/DESCRIBE/SHOW/PRAGMA"
+            )
 
         for kw in _BLOCKED_KEYWORDS:
             if kw in sql_stripped.upper():
@@ -86,10 +88,7 @@ class DatalakeQueryService:
             self._register_tables(con)
 
             # 执行查询
-            sql_with_limit = (
-                f"SELECT * FROM ({sql}) AS _q LIMIT {limit}"
-                if limit > 0 else sql
-            )
+            sql_with_limit = f"SELECT * FROM ({sql}) AS _q LIMIT {limit}" if limit > 0 else sql
             rel = con.execute(sql_with_limit)
             columns = [desc[0] for desc in rel.description]
             rows = rel.fetchall()
@@ -97,9 +96,7 @@ class DatalakeQueryService:
             # 转换行为 dict 列表
             result_rows = []
             for row in rows:
-                result_rows.append([
-                    _serialize_value(v) for v in row
-                ])
+                result_rows.append([_serialize_value(v) for v in row])
 
             return {
                 "columns": columns,
@@ -112,7 +109,7 @@ class DatalakeQueryService:
         finally:
             con.close()
 
-    def _register_tables(self, con: duckdb.DuckPyConnection) -> None:
+    def _register_tables(self, con: duckdb.DuckDBPyConnection) -> None:
         """扫描 MinIO 数据湖，将 Parquet 文件注册为 DuckDB 视图。"""
         table_files: dict[str, list[str]] = {}
 
@@ -137,7 +134,7 @@ class DatalakeQueryService:
             if files:
                 try:
                     con.execute(
-                        f"CREATE OR REPLACE VIEW \"{table_name}\" AS "
+                        f'CREATE OR REPLACE VIEW "{table_name}" AS '
                         f"SELECT * FROM read_parquet({files})"
                     )
                     logger.info("registered view: %s (%d files)", table_name, len(files))
@@ -149,12 +146,13 @@ class DatalakeQueryService:
         result = await self.query(sql, limit=10000)
         columns = result["columns"]
         rows = result["rows"]
-        return [dict(zip(columns, row)) for row in rows]
+        return [dict(zip(columns, row, strict=True)) for row in rows]
 
 
 def _parse_object_key(key: str) -> dict[str, Any] | None:
     """解析 Parquet 对象键为结构化信息。"""
     from app.data_pipeline.lake_storage import _parse_date_path
+
     parsed = _parse_date_path(key)
     if not parsed:
         return {"path": key, "table": key.split("/")[0] if "/" in key else key}

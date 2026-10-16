@@ -74,6 +74,15 @@ def test_credential_partial_unique_indexes(runtime_db_url: str) -> None:
     assert "ix_housekeeping_tasks_staff_status" in tasks
 
 
+def test_housekeeping_guest_rating_columns(runtime_db_url: str) -> None:
+    """保洁客评列已落地（feedback 读接口依赖）：曾因列缺失使接口一经调用即报错。"""
+    tables = run_with_connection(runtime_db_url, inspect_tables)
+    columns = tables["housekeeping_tasks"]["columns"]
+    assert "guest_score" in columns
+    assert "guest_comment" in columns
+    assert "rated_at" in columns
+
+
 async def _seed_room(session: AsyncSession, *, room_no: str) -> Room:
     room_type = RoomType(
         code=f"T-{room_no}",

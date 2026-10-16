@@ -34,9 +34,7 @@ class ComplaintRepository:
         await self._session.flush()
         return complaint
 
-    async def list_for_guest(
-        self, guest_id: UUID, limit: int = 20
-    ) -> list[Complaint]:
+    async def list_for_guest(self, guest_id: UUID, limit: int = 20) -> list[Complaint]:
         stmt = (
             select(Complaint)
             .where(Complaint.guest_id == guest_id)

@@ -14,8 +14,9 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import Mapping, Sequence
 from datetime import date
-from typing import Any, Mapping
+from typing import Any
 from uuid import UUID
 
 from app.services.task_registry import TaskContext, task_handler
@@ -25,7 +26,9 @@ logger = logging.getLogger(__name__)
 # 手机号正则：1xx-xxxx-xxxx
 _PHONE_PATTERN = re.compile(r"1[3-9]\d{9}")
 # 身份证号正则：18 位数字 + X/x
-_ID_CARD_PATTERN = re.compile(r"\b[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b")
+_ID_CARD_PATTERN = re.compile(
+    r"\b[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b"
+)
 
 
 async def _complete_run(ctx: TaskContext, **kwargs: Any) -> None:
@@ -34,6 +37,7 @@ async def _complete_run(ctx: TaskContext, **kwargs: Any) -> None:
     if not run_id_str:
         return
     from app.services.data_pipeline_service import DataPipelineService
+
     async with ctx.session_factory() as session:
         svc = DataPipelineService(session)
         await svc.complete_run(UUID(run_id_str), **kwargs)
@@ -43,6 +47,7 @@ async def _complete_run(ctx: TaskContext, **kwargs: Any) -> None:
 # ---------------------------------------------------------------------------
 # 管道 1：会话数据脱敏
 # ---------------------------------------------------------------------------
+
 
 @task_handler("data_pipeline.clean_conversations", 1)
 async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
@@ -66,16 +71,23 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
         while True:
             async with ctx.session_factory() as session:
                 from sqlalchemy import text
-                rows = (await session.execute(
-                    text("""
+
+                rows = (
+                    (
+                        await session.execute(
+                            text("""
                         SELECT seq, content::text
                         FROM messages
                         WHERE role IN ('assistant', 'tool')
                         ORDER BY seq
                         LIMIT :limit OFFSET :offset
                     """),
-                    {"limit": batch_size, "offset": offset},
-                )).mappings().all()
+                            {"limit": batch_size, "offset": offset},
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
 
                 if not rows:
                     break
@@ -93,7 +105,9 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
                             await session.execute(
                                 text("""
                                     UPDATE messages
-                                    SET content = jsonb_set(content, '{text}', to_jsonb(:masked::text))
+                                    SET content = jsonb_set(
+                                        content, '{text}', to_jsonb(:masked::text)
+                                    )
                                     WHERE seq = :seq
                                 """),
                                 {"seq": row["seq"], "masked": masked},
@@ -110,13 +124,18 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
                 if not dry_run:
                     async with ctx.session_factory() as progress_session:
                         from app.repositories.task_repository import TaskRepository
+
                         repo = TaskRepository(progress_session)
-                        await repo.set_progress(ctx.task_id, owner_token=ctx.owner_token,
-                            progress={"processed": total_processed, "affected": total_affected})
+                        await repo.set_progress(
+                            ctx.task_id,
+                            owner_token=ctx.owner_token,
+                            progress={"processed": total_processed, "affected": total_affected},
+                        )
                         await progress_session.commit()
 
         duration = time.time() - start
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table="messages",
             processed_rows=total_processed,
@@ -128,7 +147,8 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("clean_conversations 失败")
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="failed",
             source_table="messages",
             processed_rows=total_processed,
@@ -146,6 +166,7 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
 # 管道 2：反馈数据去重
 # ---------------------------------------------------------------------------
 
+
 @task_handler("data_pipeline.dedup_feedback", 1)
 async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
     """按 (message_id, user_id) 合并多条反馈记录，保留最新一条。"""
@@ -160,27 +181,40 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
     try:
         async with ctx.session_factory() as session:
             from sqlalchemy import text
-            dupes = (await session.execute(
-                text("""
+
+            dupes = (
+                (
+                    await session.execute(
+                        text("""
                     SELECT message_id, user_id, COUNT(*) as cnt
                     FROM message_feedback
                     GROUP BY message_id, user_id
                     HAVING COUNT(*) > 1
                 """),
-            )).mappings().all()
+                    )
+                )
+                .mappings()
+                .all()
+            )
 
             total_dupes = len(dupes)
             for dup in dupes:
                 try:
-                    rows_to_delete = (await session.execute(
-                        text("""
+                    rows_to_delete: Sequence[Any] = (
+                        (
+                            await session.execute(
+                                text("""
                             SELECT id FROM message_feedback
                             WHERE message_id = :mid AND user_id = :uid
                             ORDER BY created_at DESC
                             OFFSET 1
                         """),
-                        {"mid": dup["message_id"], "uid": dup["user_id"]},
-                    )).scalars().all()
+                                {"mid": dup["message_id"], "uid": dup["user_id"]},
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
 
                     if rows_to_delete and not dry_run:
                         for row_id in rows_to_delete:
@@ -196,7 +230,8 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
                 await session.commit()
 
         duration = time.time() - start
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table="message_feedback",
             processed_rows=total_dupes,
@@ -208,7 +243,8 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("dedup_feedback 失败")
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="failed",
             source_table="message_feedback",
             processed_rows=total_dupes,
@@ -225,6 +261,7 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 # 管道 3：审计记录归档
 # ---------------------------------------------------------------------------
+
 
 @task_handler("data_pipeline.archive_audit_logs", 1)
 async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
@@ -247,17 +284,24 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
         for table_name in tables:
             async with ctx.session_factory() as session:
                 from sqlalchemy import text
+
                 try:
-                    rows = (await session.execute(
-                        text(f"""
+                    rows = (
+                        (
+                            await session.execute(
+                                text(f"""
                             SELECT * FROM {table_name}
                             WHERE created_at < now() - :retention * INTERVAL '1 day'
                               AND deleted_at IS NULL
                             ORDER BY created_at
                             LIMIT 1000
                         """),
-                        {"retention": retention_days},
-                    )).mappings().all()
+                                {"retention": retention_days},
+                            )
+                        )
+                        .mappings()
+                        .all()
+                    )
 
                     if not rows:
                         continue
@@ -278,7 +322,10 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
                                 {"tbl": table_name, "sid": source_id, "data": dict(row)},
                             )
                             await session.execute(
-                                text(f"UPDATE {table_name} SET deleted_at = now() WHERE {pk_col} = :sid"),
+                                text(
+                                    f"UPDATE {table_name} SET deleted_at = now() "
+                                    f"WHERE {pk_col} = :sid"
+                                ),
                                 {"sid": source_id},
                             )
                         batch_count += 1
@@ -291,7 +338,8 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
                     total_errors += 1
 
         duration = time.time() - start
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table=",".join(tables),
             processed_rows=total_archived,
@@ -303,7 +351,8 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("archive_audit_logs 失败")
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="failed",
             source_table=",".join(tables),
             processed_rows=total_archived,
@@ -320,6 +369,7 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 # 管道 4：知识库一致性校验
 # ---------------------------------------------------------------------------
+
 
 @task_handler("data_pipeline.validate_kb_consistency", 1)
 async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
@@ -340,25 +390,30 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
         async with ctx.session_factory() as session:
             from sqlalchemy import text
 
-            stale_docs = (await session.execute(
-                text("""
+            stale_docs = (
+                await session.execute(
+                    text("""
                     SELECT COUNT(*) as cnt FROM kb_documents
                     WHERE updated_at < now() - :days * INTERVAL '1 day'
                       AND status = 'indexed'
                 """),
-                {"days": freshness_days},
-            )).scalar() or 0
+                    {"days": freshness_days},
+                )
+            ).scalar() or 0
 
-            empty_chunks = (await session.execute(
-                text("""
+            empty_chunks = (
+                await session.execute(
+                    text("""
                     SELECT COUNT(*) as cnt FROM kb_chunks
                     WHERE length(content) < :min_len
                 """),
-                {"min_len": min_chunk_length},
-            )).scalar() or 0
+                    {"min_len": min_chunk_length},
+                )
+            ).scalar() or 0
 
-            dup_groups = (await session.execute(
-                text("""
+            dup_groups = (
+                await session.execute(
+                    text("""
                     SELECT COUNT(*) as cnt FROM (
                         SELECT content_hash, kb_id
                         FROM kb_chunks
@@ -367,12 +422,14 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
                         HAVING COUNT(*) > 1
                     ) dup
                 """),
-            )).scalar() or 0
+                )
+            ).scalar() or 0
 
         total_issues = stale_docs + empty_chunks + dup_groups
         duration = time.time() - start
 
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table="kb_documents,kb_chunks",
             processed_rows=total_issues,
@@ -390,7 +447,8 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("validate_kb_consistency 失败")
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="failed",
             source_table="kb_documents,kb_chunks",
             processed_rows=0,
@@ -413,6 +471,7 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
 # 管道 5：质检标签清洗与合并
 # ---------------------------------------------------------------------------
 
+
 @task_handler("data_pipeline.clean_qa_labels", 1)
 async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
     """合并低置信度的自动质检标签，标记需人工复核的条目。
@@ -432,15 +491,22 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
     try:
         async with ctx.session_factory() as session:
             from sqlalchemy import text
-            low_conf = (await session.execute(
-                text("""
+
+            low_conf = (
+                (
+                    await session.execute(
+                        text("""
                     SELECT id, thread_id, label, confidence, evidence
                     FROM qa_labels
                     WHERE source = 'auto' AND confidence < :threshold
                     ORDER BY thread_id, label
                 """),
-                {"threshold": confidence_threshold},
-            )).mappings().all()
+                        {"threshold": confidence_threshold},
+                    )
+                )
+                .mappings()
+                .all()
+            )
 
             low_count = len(low_conf)
             if not dry_run:
@@ -460,7 +526,8 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
                 await session.commit()
 
         duration = time.time() - start
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table="qa_labels",
             processed_rows=low_count,
@@ -476,7 +543,8 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("clean_qa_labels 失败")
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="failed",
             source_table="qa_labels",
             processed_rows=low_count,
@@ -495,15 +563,15 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
 # ===================================================================
 
 
-async def _get_checkpoint(
-    ctx: TaskContext, task_type: str
-) -> int | None:
+async def _get_checkpoint(ctx: TaskContext, task_type: str) -> int | None:
     """从上次运行的 summary 中读取 checkpoint（最大已导出 id）。
     查找同一 task_type 最近一次成功的 pipeline_run 的 summary.checkpoint。
     """
-    from sqlalchemy import select, desc, text
+    from sqlalchemy import desc, select
+
     async with ctx.session_factory() as session:
         from app.models.data_pipeline import DataPipelineRun
+
         stmt = (
             select(DataPipelineRun.summary)
             .where(DataPipelineRun.source_table == task_type)
@@ -529,8 +597,10 @@ async def _export_batch(
     where_extra: str = "",
 ) -> dict[str, Any]:
     """通用增量导出：查询 PG 表，分批写入 MinIO Parquet。"""
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from sqlalchemy import text
+
     from app.data_pipeline.lake_storage import LakeStorage
 
     storage = LakeStorage.from_settings()
@@ -548,16 +618,22 @@ async def _export_batch(
         where_sql = " AND ".join(where_clauses)
 
         async with ctx.session_factory() as session:
-            rows = (await session.execute(
-                text(f"""
+            rows = (
+                (
+                    await session.execute(
+                        text(f"""
                     SELECT {col_list}
                     FROM {table}
                     WHERE {where_sql}
                     ORDER BY {checkpoint_col}
                     LIMIT :limit
                 """),
-                {"limit": batch_size, "checkpoint": current_cp},
-            )).mappings().all()
+                        {"limit": batch_size, "checkpoint": current_cp},
+                    )
+                )
+                .mappings()
+                .all()
+            )
 
             if not rows:
                 break
@@ -589,9 +665,13 @@ async def _export_batch(
             # 报告进度
             async with ctx.session_factory() as ps:
                 from app.repositories.task_repository import TaskRepository
+
                 repo = TaskRepository(ps)
-                await repo.set_progress(ctx.task_id, owner_token=ctx.owner_token,
-                    progress={"table": table, "exported": total_rows, "max_id": max_id})
+                await repo.set_progress(
+                    ctx.task_id,
+                    owner_token=ctx.owner_token,
+                    progress={"table": table, "exported": total_rows, "max_id": max_id},
+                )
                 await ps.commit()
 
     return {"table": table, "exported": total_rows, "max_id": max_id}
@@ -609,16 +689,23 @@ async def export_messages(ctx: TaskContext) -> Mapping[str, Any]:
         result = await _export_batch(
             ctx,
             table="messages",
-            columns=["seq", "thread_id", "role", "content::text as content_text",
-                     "metadata::text as metadata_text", "run_id::text as run_id_text",
-                     "created_at"],
+            columns=[
+                "seq",
+                "thread_id",
+                "role",
+                "content::text as content_text",
+                "metadata::text as metadata_text",
+                "run_id::text as run_id_text",
+                "created_at",
+            ],
             batch_size=batch_size,
             checkpoint_col="seq",
             checkpoint=checkpoint,
         )
         duration = time.time() - start
         summary = {**result, "checkpoint": result["max_id"]}
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed" if result["exported"] > 0 else "completed",
             source_table="messages",
             processed_rows=result["exported"],
@@ -649,12 +736,21 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
             checkpoint = await _get_checkpoint(ctx, f"data_pipeline.export_audits.{table_name}")
             extra = "deleted_at IS NULL" if table_name == "tool_audit" else "deleted_at IS NULL"
 
-            cols = ["id", "run_id::text as run_id_text", "agent_slug",
-                    "status", "duration_ms", "error"]
+            cols = [
+                "id",
+                "run_id::text as run_id_text",
+                "agent_slug",
+                "status",
+                "duration_ms",
+                "error",
+            ]
             if table_name == "model_audit":
                 cols += [
-                    "model", "prompt_tokens", "completion_tokens",
-                    "cached_prompt_tokens", "created_at"
+                    "model",
+                    "prompt_tokens",
+                    "completion_tokens",
+                    "cached_prompt_tokens",
+                    "created_at",
                 ]
             else:
                 cols += ["tool_name", "created_at"]
@@ -671,7 +767,8 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
             total_rows += result["exported"]
 
         duration = time.time() - start
-        await _complete_run(ctx,
+        await _complete_run(
+            ctx,
             status="completed",
             source_table="model_audit,tool_audit",
             processed_rows=total_rows,
@@ -694,7 +791,7 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
 
 
 @task_handler("data_pipeline.build_aggregates", 1)
-async def build_aggregates(_ctx: TaskContext) -> Mapping[str, Any]:
+async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
     """使用 DuckDB 读取数据湖 Parquet，生成预聚合 Parquet。
 
     聚合内容：
@@ -703,7 +800,7 @@ async def build_aggregates(_ctx: TaskContext) -> Mapping[str, Any]:
       - 按日会话量（messages）
     """
     import duckdb
-    import pyarrow as pa
+
     from app.data_pipeline.lake_storage import LakeStorage
 
     storage = LakeStorage.from_settings()
@@ -718,11 +815,6 @@ async def build_aggregates(_ctx: TaskContext) -> Mapping[str, Any]:
         if not audit_files and not tool_files and not msg_files:
             return {"status": "skipped", "reason": "no parquet files found"}
 
-        # 下载文件到临时目录
-        import tempfile
-        from pathlib import Path
-
-        tmp_dir = Path(tempfile.mkdtemp())
         downloaded: list[str] = []
 
         for f in audit_files + tool_files + msg_files:
@@ -767,12 +859,7 @@ async def build_aggregates(_ctx: TaskContext) -> Mapping[str, Any]:
                     ORDER BY day, model
                 """).fetch_arrow_table()
                 if agg.num_rows > 0:
-                    buf = pa.BufferOutputStream()
-                    pq.write_table(agg, buf, compression="zstd")
-                    await storage.write_parquet(
-                        "agg_token_daily", date.today(), 0,
-                        agg.to_pylist()
-                    )
+                    await storage.write_parquet("agg_token_daily", date.today(), 0, agg.to_pylist())
                     results["token_agg"] = agg.num_rows
                     logger.info("token aggregation: %d rows", agg.num_rows)
 
@@ -792,8 +879,7 @@ async def build_aggregates(_ctx: TaskContext) -> Mapping[str, Any]:
                 """).fetch_arrow_table()
                 if tool_agg.num_rows > 0:
                     await storage.write_parquet(
-                        "agg_tool_daily", date.today(), 0,
-                        tool_agg.to_pylist()
+                        "agg_tool_daily", date.today(), 0, tool_agg.to_pylist()
                     )
                     results["tool_agg"] = tool_agg.num_rows
 

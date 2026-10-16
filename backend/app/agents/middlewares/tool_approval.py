@@ -1,17 +1,23 @@
-"""工位 11 工具审批：危险操作默认拦截（业务审批策略随 P4+ 细化）。
+"""工位 11 工具审批：危险操作挂起等待人工审批，批准后执行、拒绝回执进对话。
 
-默认策略下注册元数据标记 dangerous 的工具必须走审批；拒绝与待审批都在 Run 内显式
-失败，不静默执行。审批等待的 interrupt/resume 语义（转人工参考）随 T9 接入。
+启用（接线）后，`dangerous` 标记的工具在 `before_tool` 处经 LangGraph `interrupt()` 挂起：
+图从检查点暂停、Run 转 `interrupted`、发 interrupt 事件；人工在管理端批准/拒绝后，恢复
+入口以 `Command(resume={"approved": bool})` 续跑——批准则工具执行，拒绝则回一条拒绝
+消息进对话（`ToolApprovalRejected`，模型据此改道或转人工）。
+
+未接线时保持旧语义：`before_tool` 直接抛 `ToolApprovalRequired`（图将其收敛为失败），
+供无图上下文的单元测试与未接入恢复入口的部署使用。
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from app.agents.middlewares.base import (
     Station,
+    ToolApprovalRejected,
     ToolApprovalRequired,
     ToolCallRequest,
     ToolDeniedError,
@@ -64,19 +70,73 @@ class ToolApprovalStation(Station):
         *,
         settings: ToolApprovalSettings | None = None,
         policy: ApprovalPolicy | None = None,
+        interrupt_enabled: bool = False,
     ) -> None:
         resolved = settings or ToolApprovalSettings()
         super().__init__(enabled=resolved.enabled)
         self._settings = resolved
         self._policy = policy or DangerousToolPolicy()
+        self._interrupt_enabled = interrupt_enabled
+        """是否走 interrupt 挂起：仅图有检查点（可 resume）时开启；否则回退失败语义。"""
 
     async def before_tool(self, call: ToolCallRequest) -> None:
         decision = self._policy.decide(call)
         if decision.action == "allow":
             return
-        logger.warning(
-            "工具审批拦截：tool=%s action=%s reason=%s", call.name, decision.action, decision.reason
-        )
+        reason = decision.reason or "策略要求审批"
         if decision.action == "deny":
-            raise ToolDeniedError(call.name, decision.reason or "策略拒绝")
-        raise ToolApprovalRequired(call.name, decision.reason or "策略要求审批")
+            logger.warning("工具审批拒绝：tool=%s reason=%s", call.name, reason)
+            raise ToolDeniedError(call.name, reason)
+        if not self._interrupt_enabled:
+            # 无检查点（不可 resume）：旧语义——抛让图收敛为失败，不静默执行
+            logger.warning("工具审批拦截（无挂起通道）：tool=%s", call.name)
+            raise ToolApprovalRequired(call.name, reason)
+        # 待审批：图内 interrupt 挂起（首次抛/冒泡、resume 时返回决定）；图外抛旧异常
+        out_of_graph, result = _await_human_approval(call, reason)
+        if out_of_graph:
+            raise ToolApprovalRequired(call.name, reason)
+        if _approved(result):
+            logger.info("工具审批通过：tool=%s", call.name)
+            return
+        logger.warning("工具审批被拒（人工）：tool=%s", call.name)
+        raise ToolApprovalRejected(call.name, _reason_of(result, reason))
+
+
+def _await_human_approval(call: ToolCallRequest, reason: str) -> tuple[bool, Any]:
+    """图内 interrupt 等待人工决定；返回 (是否图外, 决定)。
+
+    - 图外（无 runnable 上下文）：interrupt 抛 `RuntimeError` → `(True, None)`，调用方抛旧
+      异常走失败语义（单元测试与未接线部署）。
+    - 图内首次：interrupt 抛 `GraphInterrupt` 冒泡，被 langgraph 捕获转成 `__interrupt__`，
+      本函数不返回（节点被中断，审批元数据即 interrupt 载荷）。
+    - 图内 resume：interrupt 返回人工决定 → `(False, 决定)`。
+    """
+    from langgraph.types import interrupt
+
+    payload = {
+        "type": "tool_approval",
+        "tool": call.name,
+        "call_id": call.call_id,
+        "reason": reason,
+        "args_digest": dict(call.args),
+    }
+    try:
+        result = interrupt(payload)
+    except RuntimeError:
+        # "Called get_config outside of a runnable context"：图外调用
+        return True, None
+    return False, result
+
+
+def _approved(result: Any) -> bool:
+    if isinstance(result, dict):
+        return bool(result.get("approved"))
+    return bool(result)
+
+
+def _reason_of(result: Any, default: str) -> str:
+    if isinstance(result, dict):
+        reason = result.get("reason")
+        if isinstance(reason, str) and reason:
+            return reason
+    return default

@@ -73,8 +73,11 @@ def score_question(
     *,
     task_success: bool | None = None,
 ) -> AgentQuestionOutcome:
-    """按题打分：比对预期与实际工具序列。"""
-    expected_specs = item.expected.tool_sequence
+    """按题打分：比对预期与实际工具序列；用例未定义 expected 时按空预期处理。"""
+    expected = item.expected
+    expected_specs: list[ToolCallSpec] = []
+    if expected is not None and expected.tool_sequence is not None:
+        expected_specs = expected.tool_sequence
     tool_accuracy = _compare_sequence(expected_specs, actual_tool_calls)
     args_match_rate = _compare_args(expected_specs, actual_tool_calls)
     return AgentQuestionOutcome(
@@ -86,7 +89,7 @@ def score_question(
         tool_accuracy=tool_accuracy,
         args_match_rate=args_match_rate,
         task_success=task_success,
-        expected_success=item.expected.task_success,
+        expected_success=expected.task_success if expected is not None else None,
         tags=item.tags,
     )
 
@@ -102,7 +105,11 @@ def aggregate(outcomes: list[AgentQuestionOutcome]) -> AgentEvalMetrics:
         if o.tool_accuracy >= 1.0
         and (o.expected_success is None or o.task_success == o.expected_success)
     )
-    success_rates = [o.task_success for o in outcomes if o.task_success is not None and o.expected_success is not None]
+    success_rates = [
+        o.task_success
+        for o in outcomes
+        if o.task_success is not None and o.expected_success is not None
+    ]
     task_success_rate = (
         sum(1 for s in success_rates if s) / len(success_rates) if success_rates else None
     )
@@ -134,9 +141,7 @@ def aggregate(outcomes: list[AgentQuestionOutcome]) -> AgentEvalMetrics:
     )
 
 
-def _compare_sequence(
-    expected: list[ToolCallSpec], actual: list[dict[str, object]]
-) -> float:
+def _compare_sequence(expected: list[ToolCallSpec], actual: list[dict[str, object]]) -> float:
     """工具序列准确率：顺序匹配的预期调用数 ÷ 预期总数。"""
     if not expected:
         return 1.0
@@ -152,11 +157,9 @@ def _compare_sequence(
     return hits / len(expected)
 
 
-def _compare_args(
-    expected: list[ToolCallSpec], actual: list[dict[str, object]]
-) -> float:
+def _compare_args(expected: list[ToolCallSpec], actual: list[dict[str, object]]) -> float:
     """参数匹配率：args_contain 约束全部满足的预期调用比例。
-    
+
     实际调用格式为 {"name": "...", "args": {...}}，args_contain 从 args 子字典匹配。
     """
     if not expected:

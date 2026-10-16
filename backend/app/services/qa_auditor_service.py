@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select, text
@@ -147,9 +148,9 @@ class QaAuditorService:
             ORDER BY f.created_at DESC
             LIMIT 50
         """)
-        rows = (await self._session.execute(
-            stmt, {"down": RATING_DOWN, "window": window_start}
-        )).all()
+        rows = (
+            await self._session.execute(stmt, {"down": RATING_DOWN, "window": window_start})
+        ).all()
 
         gaps: list[dict[str, object]] = []
         for row in rows:
@@ -157,11 +158,13 @@ class QaAuditorService:
             if isinstance(content, dict):
                 text_content = content.get("text", "")
                 if isinstance(text_content, str) and text_content.strip():
-                    gaps.append({
-                        "message_id": str(row[0]),
-                        "question": text_content[:200],
-                        "status": "unaddressed",
-                    })
+                    gaps.append(
+                        {
+                            "message_id": str(row[0]),
+                            "question": text_content[:200],
+                            "status": "unaddressed",
+                        }
+                    )
         return gaps
 
     async def detect_content_conflicts(self) -> list[dict[str, object]]:
@@ -177,17 +180,20 @@ class QaAuditorService:
         for row in rows:
             # 提取标题的关键词（按空格/标点简单分割）
             import re
+
             keywords = set(re.findall(r"[\w\u4e00-\u9fff]+", row.title.lower()))
             for key in keywords:
                 if key in titles_seen:
                     for seen_title in titles_seen[key]:
                         if seen_title != row.title:
-                            conflicts.append({
-                                "document_id": str(row.id),
-                                "title": row.title,
-                                "similar_title": seen_title,
-                                "kb_id": str(row.kb_id),
-                            })
+                            conflicts.append(
+                                {
+                                    "document_id": str(row.id),
+                                    "title": row.title,
+                                    "similar_title": seen_title,
+                                    "kb_id": str(row.kb_id),
+                                }
+                            )
                             break
             for key in keywords:
                 titles_seen.setdefault(key, []).append(row.title)
@@ -200,9 +206,9 @@ class QaAuditorService:
             JOIN message_feedback f ON f.message_id = m.id
             WHERE f.rating = :down AND f.created_at >= :window
         """)
-        rows = (await self._session.execute(
-            stmt, {"down": RATING_DOWN, "window": window_start}
-        )).all()
+        rows = (
+            await self._session.execute(stmt, {"down": RATING_DOWN, "window": window_start})
+        ).all()
         return {row[0] for row in rows}
 
     async def _find_handoff_threads(self, window_start: datetime) -> set[UUID]:
@@ -211,9 +217,7 @@ class QaAuditorService:
             FROM handoff_requests
             WHERE created_at >= :window
         """)
-        rows = (await self._session.execute(
-            stmt, {"window": window_start}
-        )).all()
+        rows = (await self._session.execute(stmt, {"window": window_start})).all()
         return {row[0] for row in rows}
 
     async def _find_complaint_threads(self, window_start: datetime) -> set[UUID]:
@@ -221,7 +225,7 @@ class QaAuditorService:
         conditions = " OR ".join(
             f"m.content::text ILIKE :kw{i}" for i in range(len(complaint_keywords))
         )
-        params = {f"kw{i}": f"%{kw}%" for i, kw in enumerate(complaint_keywords)}
+        params: dict[str, Any] = {f"kw{i}": f"%{kw}%" for i, kw in enumerate(complaint_keywords)}
         params["window"] = window_start
         stmt = text(f"""
             SELECT DISTINCT m.thread_id

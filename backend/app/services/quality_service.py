@@ -37,9 +37,7 @@ class QualityScore:
         self._session = session
         self._qa = QaAuditorService(session)
 
-    async def compute(
-        self, generated_by: str = "manual"
-    ) -> QualityScorecard:
+    async def compute(self, generated_by: str = "manual") -> QualityScorecard:
         """执行完整评分卡计算并落库。"""
         # 1. 覆盖率
         coverage_score, gaps, actionable_c = await self._score_coverage()
@@ -89,9 +87,17 @@ class QualityScore:
         agent_report_id = await self._latest_agent_eval_id()
 
         summary = self._build_summary(
-            coverage_score, freshness_score, correctness_score,
-            consistency_score, recall_score, overall,
-            gaps, expired, issues, conflicts, low_count,
+            coverage_score,
+            freshness_score,
+            correctness_score,
+            consistency_score,
+            recall_score,
+            overall,
+            gaps,
+            expired,
+            issues,
+            conflicts,
+            low_count,
         )
 
         scorecard = QualityScorecard(

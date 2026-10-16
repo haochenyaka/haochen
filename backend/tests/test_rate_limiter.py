@@ -205,4 +205,5 @@ def _make_request(
 def asyncio_run(coro):
     """在同步测试中运行协程。"""
     import asyncio
+
     return asyncio.run(coro)

@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from uuid import UUID
 
 from app.config import get_settings
@@ -26,7 +27,8 @@ class LangfuseClient:
     """
 
     _instance: LangfuseClient | None = None
-    _client: object | None = None
+    # langfuse 未提供类型存根，客户端持有 Any 以避免逐调用类型断言
+    _client: Any = None
     _enabled: bool = False
 
     def __new__(cls) -> LangfuseClient:
@@ -42,13 +44,12 @@ class LangfuseClient:
             self._enabled = False
             return
         try:
-            from langfuse import Langfuse  # type: ignore[import-untyped]
+            from langfuse import Langfuse
 
             self._client = Langfuse(
                 public_key=settings.langfuse_public_key,
                 secret_key=settings.langfuse_secret_key,
                 host=settings.langfuse_base_url or "https://cloud.langfuse.com",
-                ssl_ca_certs=False,
             )
             self._enabled = True
             logger.info("Langfuse 客户端初始化成功")

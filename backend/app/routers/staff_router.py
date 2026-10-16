@@ -123,7 +123,9 @@ async def accept_task(
     hs = HousekeepingService(session)
     try:
         task = await hs.transition(
-            task_id, "accepted", assigned_staff_id=profile.id,
+            task_id,
+            "accepted",
+            assigned_staff_id=profile.id,
         )
         await session.commit()
     except DomainError as exc:
@@ -190,9 +192,7 @@ async def verify_task(
         if task.task_type == "checkout_clean":
             lock_client = LockClient.from_settings()
             checkout = CheckoutService(session)
-            await checkout.verify_and_complete(
-                task_id=task_id, lock_client=lock_client
-            )
+            await checkout.verify_and_complete(task_id=task_id, lock_client=lock_client)
 
         await session.commit()
     except DomainError as exc:

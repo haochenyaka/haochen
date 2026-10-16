@@ -53,7 +53,9 @@ class UserRepository:
         await self._session.flush()
         return user
 
-    async def list_all(self, *, role: str | None = None, status: str | None = None, search: str | None = None) -> list[User]:
+    async def list_all(
+        self, *, role: str | None = None, status: str | None = None, search: str | None = None
+    ) -> list[User]:
         stmt = select(User)
         if role is not None:
             stmt = stmt.where(User.role == role)

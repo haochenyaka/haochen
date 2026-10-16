@@ -54,6 +54,13 @@ const pages: AdminPage[] = [
     roles: ['admin', 'manager', 'operator'],
   },
   {
+    name: 'approvals',
+    path: 'approvals',
+    title: '工具审批',
+    stage: 'P0.5b 危险工具挂起审批（批准/拒绝 + 恢复）',
+    roles: ['admin', 'manager'],
+  },
+  {
     name: 'eval-agent',
     path: 'eval-agent',
     title: '智能体评估',
@@ -111,6 +118,8 @@ const children: RouteRecordRaw[] = pages.map((page) => ({
                 ? () => import('@/views/ConversationsView.vue')
                 : page.name === 'handoff'
                 ? () => import('@/views/HandoffView.vue')
+                : page.name === 'approvals'
+                ? () => import('@/views/ApprovalsView.vue')
                 : page.name === 'memories'
                 ? () => import('@/views/MemoriesView.vue')
                 : page.name === 'eval-agent'

@@ -68,9 +68,7 @@ class AgentEvalReportRepository:
         )
         return list((await self._session.execute(stmt)).scalars())
 
-    async def mark_superseded(
-        self, report_id: int, *, superseded_by: int, reason: str
-    ) -> bool:
+    async def mark_superseded(self, report_id: int, *, superseded_by: int, reason: str) -> bool:
         stmt = (
             update(AgentEvalReport)
             .where(

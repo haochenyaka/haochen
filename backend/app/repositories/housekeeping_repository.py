@@ -107,3 +107,25 @@ class HousekeepingTaskRepository:
             .execution_options(synchronize_session=False)
         )
         return affected_rows(result) == 1
+
+    async def rate(
+        self,
+        task_id: UUID,
+        *,
+        score: int,
+        comment: str | None = None,
+        rated_at: datetime | None = None,
+    ) -> bool:
+        """写入客人评分（覆盖式）：仅在任务已交付（可评分状态）时生效。
+
+        守卫与状态迁移同源：调用方必须先校验状态，本方法只负责条件写入。
+        """
+        assignments: dict[str, Any] = {"guest_score": score, "guest_comment": comment}
+        assignments["rated_at"] = rated_at or func.now()
+        result = await self._session.execute(
+            update(HousekeepingTask)
+            .where(HousekeepingTask.id == task_id)
+            .values(**assignments)
+            .execution_options(synchronize_session=False)
+        )
+        return affected_rows(result) == 1

@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.domain.states import (
+    GUEST_SCORE_RANGE,
+    HOUSEKEEPING_RATABLE_STATUSES,
     HOUSEKEEPING_TASK_TYPES,
     HOUSEKEEPING_TIMESTAMP_COLUMNS,
     IllegalTransitionError,
@@ -119,5 +121,30 @@ class HousekeepingService:
         )
         if not updated:
             raise ConflictError(f"任务状态并发改写，迁移未生效：{to_status}")
+        await self._session.refresh(task)
+        return task
+
+    async def rate(
+        self,
+        task_id: UUID,
+        *,
+        score: int,
+        comment: str | None = None,
+    ) -> HousekeepingTask:
+        """客人评分：仅任务已交付（verified/closed）可评，取值限定在 GUEST_SCORE_RANGE。
+
+        评分是可覆盖的既有事实（同一客人重评覆盖旧值），不产生多条记录。
+        """
+        low, high = GUEST_SCORE_RANGE
+        if not low <= score <= high:
+            raise ValidationFailedError(f"评分须在 {low}-{high} 之间：{score}")
+        task = await self._tasks.get_by_id(task_id)
+        if task is None:
+            raise NotFoundError("housekeeping_task", task_id)
+        if task.status not in HOUSEKEEPING_RATABLE_STATUSES:
+            raise ConflictError(f"任务尚未交付，无法评分（当前状态：{task.status}）")
+        updated = await self._tasks.rate(task_id, score=score, comment=comment)
+        if not updated:
+            raise ConflictError("评分并发改写，写入未生效")
         await self._session.refresh(task)
         return task

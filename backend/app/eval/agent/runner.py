@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +26,6 @@ from app.eval.agent.dataset import (
 )
 from app.eval.agent.judge import AgentAnswerJudge, build_agent_judge
 from app.eval.agent.metrics import (
-    AgentEvalMetrics,
     AgentQuestionOutcome,
     aggregate,
     score_question,
@@ -45,9 +44,7 @@ class EvalRunError(RuntimeError):
 class CaseExecutor(Protocol):
     """单条用例执行器：输入消息，返回工具调用列表与任务成功标志。"""
 
-    async def execute(
-        self, item: AgentEvalItem
-    ) -> tuple[list[dict[str, object]], bool | None]: ...
+    async def execute(self, item: AgentEvalItem) -> tuple[list[dict[str, object]], bool | None]: ...
 
 
 @dataclass(frozen=True)
@@ -59,8 +56,8 @@ class AgentEvalReportData:
     config_fingerprint: str
     model: str | None
     total_cases: int
-    metrics: dict[str, object]
-    outcomes: list[dict[str, object]]
+    metrics: dict[str, Any]
+    outcomes: list[dict[str, Any]]
     generated_at: str
     report_id: int | None = None
     superseded_reports: tuple[int, ...] = ()
@@ -80,9 +77,7 @@ class AgentEvalReportData:
         }
 
 
-def config_fingerprint_value(
-    settings: Settings, executor_name: str | None = None
-) -> str:
+def config_fingerprint_value(settings: Settings, executor_name: str | None = None) -> str:
     """配置指纹：模型名与评估参数。"""
     payload: dict[str, object] = {
         "model": settings.model_name or "none",
@@ -146,9 +141,7 @@ async def run_eval(
     )
 
 
-async def persist_report(
-    session: AsyncSession, report: AgentEvalReportData
-) -> AgentEvalReportData:
+async def persist_report(session: AsyncSession, report: AgentEvalReportData) -> AgentEvalReportData:
     """报告落库：同数据集 + 同模型 + 同配置下旧报告作废。"""
     repository = AgentEvalReportRepository(session)
     previous = await repository.list_by_dataset(report.dataset_fingerprint)
@@ -165,10 +158,7 @@ async def persist_report(
     for old in previous:
         if old.superseded_by is not None:
             continue
-        if (
-            old.config_fingerprint == report.config_fingerprint
-            and old.model == report.model
-        ):
+        if old.config_fingerprint == report.config_fingerprint and old.model == report.model:
             continue
         reason = _invalidation_reason(old, report)
         if await repository.mark_superseded(old.id, superseded_by=row.id, reason=reason):
@@ -199,15 +189,11 @@ class ScriptedCaseExecutor:
         self._tool_calls = tool_calls or []
         self._task_success = task_success
 
-    async def execute(
-        self, item: AgentEvalItem
-    ) -> tuple[list[dict[str, object]], bool | None]:
+    async def execute(self, item: AgentEvalItem) -> tuple[list[dict[str, object]], bool | None]:
         return self._tool_calls, self._task_success
 
 
-def _invalidation_reason(
-    old: object, report: AgentEvalReportData
-) -> str:
+def _invalidation_reason(old: object, report: AgentEvalReportData) -> str:
     """判定作废原因：通过 getattr 兼容 ORM 对象与 dataclass。"""
     old_cfg = getattr(old, "config_fingerprint", "")
     old_model = getattr(old, "model", "")

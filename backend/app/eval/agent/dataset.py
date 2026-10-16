@@ -9,8 +9,9 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -22,6 +23,7 @@ class EvalSetError(ValueError):
 @dataclass
 class ToolCallSpec:
     """预期工具调用规范：按名称匹配，可选检查参数子集。"""
+
     name: str
     args_contain: dict[str, object] | None = None
 
@@ -35,6 +37,7 @@ class ToolCallSpec:
 @dataclass
 class ExpectedSpec:
     """用例预期结果：工具序列、任务成功标志与回答关键词。"""
+
     tool_sequence: list[ToolCallSpec] | None = None
     task_success: bool | None = None
     answer_contains: list[str] | None = None
@@ -53,6 +56,7 @@ class ExpectedSpec:
 @dataclass
 class HistoryMessage:
     """前置对话消息。"""
+
     role: str
     content: str
 
@@ -162,7 +166,7 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
     )
 
 
-def _parse_expected(raw: dict[str, object]) -> ExpectedSpec:
+def _parse_expected(raw: dict[str, Any]) -> ExpectedSpec:
     tool_sequence: list[ToolCallSpec] = []
     raw_seq = raw.get("tool_sequence")
     if raw_seq is not None:

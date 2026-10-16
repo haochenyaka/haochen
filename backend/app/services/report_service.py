@@ -153,9 +153,7 @@ def _as_int(value: Any) -> int:
 def _estimate_saving(cached_prompt_tokens: int) -> float:
     """缓存命中成本节省 = 命中 tokens × (标准输入单价 − 缓存输入单价)；单价未配置则为 0。"""
     settings = get_settings()
-    delta_per_1k = (
-        settings.report_price_input_per_1k - settings.report_price_cached_input_per_1k
-    )
+    delta_per_1k = settings.report_price_input_per_1k - settings.report_price_cached_input_per_1k
     if not delta_per_1k:
         return 0.0
     return round(cached_prompt_tokens / 1000.0 * delta_per_1k, 6)
@@ -182,32 +180,32 @@ class ReportService:
     async def _duckdb_query_agg(self, agg_table: str, sql: str) -> list[dict[str, Any]] | None:
         """对数据湖中的预聚合 Parquet 表执行 DuckDB 查询。
 
-        返回 [{col: value, ...}, ...] 或 None（表不存在或查询失败）。
-        失败时静默降级，由调用方走 PostgreSQL 回退路径。
+        返回 [{col: value, ...}, ...] 或 None（表不存在、数据湖不可达或查询失败）。
+        整个探测与读取过程都在兜底范围内：湖不可达时按契约降级，由调用方走 PostgreSQL。
         """
         from app.data_pipeline.lake_storage import LakeStorage
 
-        storage = LakeStorage.from_settings()
-        files = await storage.list_partitions(agg_table)
-        if not files:
-            return None
-
-        local_paths = [str(await storage.read_parquet_to_temp(f)) for f in files]
-
-        def _run() -> list[dict[str, Any]]:
-            con = duckdb.connect()
-            try:
-                con.execute(
-                    f'CREATE OR REPLACE VIEW "{agg_table}" AS '
-                    f"SELECT * FROM read_parquet({local_paths})"
-                )
-                rel = con.execute(sql)
-                columns = [desc[0] for desc in rel.description]
-                return [dict(zip(columns, row)) for row in rel.fetchall()]
-            finally:
-                con.close()
-
         try:
+            storage = LakeStorage.from_settings()
+            files = await storage.list_partitions(agg_table)
+            if not files:
+                return None
+
+            local_paths = [str(await storage.read_parquet_to_temp(f)) for f in files]
+
+            def _run() -> list[dict[str, Any]]:
+                con = duckdb.connect()
+                try:
+                    con.execute(
+                        f'CREATE OR REPLACE VIEW "{agg_table}" AS '
+                        f"SELECT * FROM read_parquet({local_paths})"
+                    )
+                    rel = con.execute(sql)
+                    columns = [desc[0] for desc in rel.description]
+                    return [dict(zip(columns, row, strict=True)) for row in rel.fetchall()]
+                finally:
+                    con.close()
+
             return await asyncio.to_thread(_run)
         except Exception:
             logger.debug("DuckDB query on %s failed", agg_table, exc_info=True)
@@ -219,9 +217,7 @@ class ReportService:
         messages = await self._count(Message, Message.created_at, start, end)
         return Reception(threads=threads, runs=runs, messages=messages)
 
-    async def reception_series(
-        self, *, start: datetime, end: datetime
-    ) -> list[DailyCount]:
+    async def reception_series(self, *, start: datetime, end: datetime) -> list[DailyCount]:
         days: dict[date, DailyCount] = {}
 
         def _bucket(day: date) -> DailyCount:
@@ -247,8 +243,8 @@ class ReportService:
             )
         ).scalar_one()
 
-        handoff_threads = (
-            select(HandoffRequest.thread_id).where(HandoffRequest.thread_id == AgentRun.thread_id)
+        handoff_threads = select(HandoffRequest.thread_id).where(
+            HandoffRequest.thread_id == AgentRun.thread_id
         )
         down_feedback = (
             select(MessageFeedback.id)
@@ -388,9 +384,7 @@ class ReportService:
             cached_prompt_tokens=_as_int(row[2]),
         )
 
-    async def token_usage_by_model(
-        self, *, start: datetime, end: datetime
-    ) -> list[TokenBucket]:
+    async def token_usage_by_model(self, *, start: datetime, end: datetime) -> list[TokenBucket]:
         rows = await self._duckdb_query_agg(
             "agg_token_daily",
             f"""
@@ -407,15 +401,17 @@ class ReportService:
         )
         if rows is not None:
             return [
-                TokenBucket(key=r["bucket"], prompt_tokens=int(r["pt"]),
-                            completion_tokens=int(r["ct"]), cached_prompt_tokens=int(r["cpt"]))
+                TokenBucket(
+                    key=r["bucket"],
+                    prompt_tokens=int(r["pt"]),
+                    completion_tokens=int(r["ct"]),
+                    cached_prompt_tokens=int(r["cpt"]),
+                )
                 for r in rows
             ]
         return await self._token_group(ModelAudit.model, start, end)
 
-    async def token_usage_by_agent(
-        self, *, start: datetime, end: datetime
-    ) -> list[TokenBucket]:
+    async def token_usage_by_agent(self, *, start: datetime, end: datetime) -> list[TokenBucket]:
         return await self._token_group(ModelAudit.agent_slug, start, end)
 
     async def token_usage_by_day(self, *, start: datetime, end: datetime) -> list[TokenBucket]:
@@ -435,8 +431,12 @@ class ReportService:
         )
         if rows is not None:
             return [
-                TokenBucket(key=r["bucket"], prompt_tokens=int(r["pt"]),
-                            completion_tokens=int(r["ct"]), cached_prompt_tokens=int(r["cpt"]))
+                TokenBucket(
+                    key=r["bucket"],
+                    prompt_tokens=int(r["pt"]),
+                    completion_tokens=int(r["ct"]),
+                    cached_prompt_tokens=int(r["cpt"]),
+                )
                 for r in rows
             ]
         day = func.to_char(ModelAudit.created_at, _DAY_FMT)
@@ -482,7 +482,7 @@ class ReportService:
 
         day = func.to_char(ModelAudit.created_at, _DAY_FMT)
         model_start, model_end = _window(ModelAudit.created_at, start, end)
-        rows = (
+        pg_rows = (
             await self._session.execute(
                 select(
                     day.label("bucket"),
@@ -494,10 +494,10 @@ class ReportService:
                 .order_by(day)
             )
         ).all()
-        series: list[CacheHit] = []
-        for _bucket, prompt, cached in rows:
+        series_pg: list[CacheHit] = []
+        for _bucket, prompt, cached in pg_rows:
             prompt_i, cached_i = _as_int(prompt), _as_int(cached)
-            series.append(
+            series_pg.append(
                 CacheHit(
                     prompt_tokens=prompt_i,
                     cached_prompt_tokens=cached_i,
@@ -505,7 +505,7 @@ class ReportService:
                     estimated_saving=_estimate_saving(cached_i),
                 )
             )
-        return series
+        return series_pg
 
     async def performance(self, *, start: datetime, end: datetime) -> Performance:
         ttft_p50, ttft_p95, ttft_samples = await self._ttft_percentiles(start, end)
@@ -516,7 +516,9 @@ class ReportService:
             f"""
                 SELECT
                     COALESCE(SUM(calls), 0) AS total_calls,
-                    COALESCE(SUM(CASE WHEN status = '{TOOL_STATUS_COMPLETED}' THEN calls ELSE 0 END), 0) AS completed_calls
+                    COALESCE(
+                        SUM(CASE WHEN status = '{TOOL_STATUS_COMPLETED}' THEN calls ELSE 0 END), 0
+                    ) AS completed_calls
                 FROM "agg_tool_daily"
                 WHERE day >= '{start.date()}' AND day < '{end.date()}'
             """,
@@ -632,9 +634,7 @@ class ReportService:
             interrupt_ratio=_rate(interrupted, total),
         )
 
-    async def _token_group(
-        self, column: Any, start: datetime, end: datetime
-    ) -> list[TokenBucket]:
+    async def _token_group(self, column: Any, start: datetime, end: datetime) -> list[TokenBucket]:
         model_start, model_end = _window(ModelAudit.created_at, start, end)
         rows = (
             await self._session.execute(
@@ -691,9 +691,7 @@ class ReportService:
             int(samples),
         )
 
-    async def _count(
-        self, model: type[Any], column: Any, start: datetime, end: datetime
-    ) -> int:
+    async def _count(self, model: type[Any], column: Any, start: datetime, end: datetime) -> int:
         cond_start, cond_end = _window(column, start, end)
         return (
             await self._session.execute(

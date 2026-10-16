@@ -78,14 +78,14 @@ def _run(api: Api, body: Any) -> Any:
     return asyncio.run(_inner())
 
 
-async def _seed_staff(
-    session: AsyncSession
-) -> tuple[UUID, UUID]:
+async def _seed_staff(session: AsyncSession) -> tuple[UUID, UUID]:
     """创建员工账号与档案，返回 (user_id, staff_id)。"""
     staff_no = f"att-{uuid4().hex[:8]}"
     user_repo = UserRepository(session)
     user = await user_repo.create_account(
-        username=staff_no, password_hash=hash_password("pass"), role="staff",
+        username=staff_no,
+        password_hash=hash_password("pass"),
+        role="staff",
         display_name=f"测试-{staff_no}",
     )
     staff_repo = StaffRepository(session)
@@ -100,7 +100,10 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             record = await service.clock(
-                user_id, direction="check_in", photo_url="/tmp/test.jpg", vision=vision,
+                user_id,
+                direction="check_in",
+                photo_url="/tmp/test.jpg",
+                vision=vision,
             )
             assert record.direction == "check_in"
             assert record.review_status == "auto_pass"
@@ -116,7 +119,10 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             record = await service.clock(
-                user_id, direction="check_out", photo_url="/tmp/test.jpg", vision=vision,
+                user_id,
+                direction="check_out",
+                photo_url="/tmp/test.jpg",
+                vision=vision,
             )
             assert record.direction == "check_out"
             assert record.review_status == "auto_pass"
@@ -129,12 +135,19 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             await service.clock(
-                user_id, direction="check_in", photo_url="/tmp/test.jpg", vision=vision,
+                user_id,
+                direction="check_in",
+                photo_url="/tmp/test.jpg",
+                vision=vision,
             )
             from app.domain.errors import ConflictError
+
             with pytest.raises(ConflictError, match="今日已check_in打卡"):
                 await service.clock(
-                    user_id, direction="check_in", photo_url="/tmp/test2.jpg", vision=vision,
+                    user_id,
+                    direction="check_in",
+                    photo_url="/tmp/test2.jpg",
+                    vision=vision,
                 )
 
         _run(api, body)
@@ -145,7 +158,10 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = _FailingVisionClient()
             record = await service.clock(
-                user_id, direction="check_in", photo_url="/tmp/test.jpg", vision=vision,
+                user_id,
+                direction="check_in",
+                photo_url="/tmp/test.jpg",
+                vision=vision,
             )
             assert record.review_status == "manual_review"
             assert record.badge_ok is False
@@ -161,10 +177,16 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             await service.clock(
-                user_id, direction="check_in", photo_url="/tmp/a.jpg", vision=vision,
+                user_id,
+                direction="check_in",
+                photo_url="/tmp/a.jpg",
+                vision=vision,
             )
             await service.clock(
-                user_id, direction="check_out", photo_url="/tmp/b.jpg", vision=vision,
+                user_id,
+                direction="check_out",
+                photo_url="/tmp/b.jpg",
+                vision=vision,
             )
             records = await service.list_my_records(user_id)
             assert len(records) >= 2
@@ -177,9 +199,13 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             from app.domain.errors import ValidationFailedError
+
             with pytest.raises(ValidationFailedError):
                 await service.clock(
-                    user_id, direction="invalid", photo_url="/tmp/test.jpg", vision=vision,
+                    user_id,
+                    direction="invalid",
+                    photo_url="/tmp/test.jpg",
+                    vision=vision,
                 )
 
         _run(api, body)
@@ -189,9 +215,13 @@ class TestAttendanceService:
             service = AttendanceService(session)
             vision = VisionClient()
             from app.domain.errors import NotFoundError
+
             with pytest.raises(NotFoundError):
                 await service.clock(
-                    uuid4(), direction="check_in", photo_url="/tmp/test.jpg", vision=vision,
+                    uuid4(),
+                    direction="check_in",
+                    photo_url="/tmp/test.jpg",
+                    vision=vision,
                 )
 
         _run(api, body)

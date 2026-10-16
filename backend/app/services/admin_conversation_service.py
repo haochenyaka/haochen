@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, func as sa_func, select
+from sqlalchemy import and_, select
+from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.conversation import HANDOFF_STATUS_PENDING, HandoffRequest
@@ -52,7 +54,7 @@ class ThreadDetail:
     created_at: datetime
     updated_at: datetime
     messages: list[MessageView]
-    labels: list[dict[str, object]]
+    labels: list[dict[str, Any]]
 
 
 @dataclass
@@ -281,14 +283,11 @@ class AdminConversationService:
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[HandoffSummary], int]:
-        base = (
-            select(
-                HandoffRequest,
-                User.username,
-                User.display_name,
-            )
-            .join(User, HandoffRequest.user_id == User.id)
-        )
+        base = select(
+            HandoffRequest,
+            User.username,
+            User.display_name,
+        ).join(User, HandoffRequest.user_id == User.id)
         # 左连接 assigned_to 以获取接单运营人员用户名
         assigned_user = User.__table__.alias("assigned_user")
         base = base.outerjoin(
@@ -302,11 +301,7 @@ class AdminConversationService:
         count_q = select(sa_func.count()).select_from(base.subquery())
         total = (await self._session.execute(count_q)).scalar() or 0
 
-        query = (
-            base.order_by(HandoffRequest.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        query = base.order_by(HandoffRequest.created_at.desc()).offset(offset).limit(limit)
         rows = (await self._session.execute(query)).all()
         items = [
             HandoffSummary(
@@ -315,7 +310,8 @@ class AdminConversationService:
                 username=row.username,
                 reason=row.HandoffRequest.reason,
                 status=row.HandoffRequest.status,
-                assigned_to_username=getattr(row, "username_1", None) or getattr(row, "username", None),
+                assigned_to_username=getattr(row, "username_1", None)
+                or getattr(row, "username", None),
                 assigned_at=row.HandoffRequest.assigned_at,
                 note=row.HandoffRequest.note,
                 closed_at=row.HandoffRequest.closed_at,
@@ -326,12 +322,14 @@ class AdminConversationService:
         ]
         return items, total
 
-    async def accept_handoff(self, handoff_id: UUID, assigned_to: UUID, assigned_to_username: str) -> bool:
+    async def accept_handoff(
+        self, handoff_id: UUID, assigned_to: UUID, assigned_to_username: str
+    ) -> bool:
         stmt = select(HandoffRequest).where(HandoffRequest.id == handoff_id)
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
             return False
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row.status = "accepted"
         row.assigned_to = assigned_to
         row.assigned_at = now
@@ -343,7 +341,7 @@ class AdminConversationService:
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
             return False
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row.status = "closed"
         row.closed_at = now
         if note is not None:
@@ -366,9 +364,8 @@ class AdminConversationService:
             return None
 
         # 获取下一个 seq
-        seq_q = (
-            select(sa_func.coalesce(sa_func.max(Message.seq), 0) + 1)
-            .where(Message.thread_id == thread_id)
+        seq_q = select(sa_func.coalesce(sa_func.max(Message.seq), 0) + 1).where(
+            Message.thread_id == thread_id
         )
         next_seq = (await self._session.execute(seq_q)).scalar() or 1
 
@@ -398,10 +395,14 @@ class AdminConversationService:
 
     async def has_active_handoff(self, thread_id: UUID) -> bool:
         """检查线程是否有已接单（进行中）的转人工请求。"""
-        stmt = select(HandoffRequest).where(
-            HandoffRequest.thread_id == thread_id,
-            HandoffRequest.status == "accepted",
-        ).limit(1)
+        stmt = (
+            select(HandoffRequest)
+            .where(
+                HandoffRequest.thread_id == thread_id,
+                HandoffRequest.status == "accepted",
+            )
+            .limit(1)
+        )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return row is not None
 

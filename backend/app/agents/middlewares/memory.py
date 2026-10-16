@@ -61,9 +61,11 @@ class MemoryStation(Station):
         thread_id: UUID | None = None,
     ) -> None:
         resolved = settings or MemorySettings()
-        super().__init__(enabled=resolved.enabled)
+        # 启用条件：配置开关打开，或装配期注入了记忆来源（全局默认 / Agent 配置关闭仍可关）
+        enabled = resolved.enabled or provider is not None
+        super().__init__(enabled=enabled)
         self._settings = resolved
-        if self.enabled and (provider is None or user_id is None or thread_id is None):
+        if enabled and (provider is None or user_id is None or thread_id is None):
             raise MiddlewareConfigError("记忆已启用但缺少来源或身份（P7.7 提供记忆存储）")
         self._provider = provider
         self._user_id = user_id

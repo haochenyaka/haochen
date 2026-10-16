@@ -30,9 +30,11 @@ from app.services.audit_service import AuditRecorder
 from app.services.run_events import RunEventEmitter
 
 if TYPE_CHECKING:  # 真实类型仅供静态检查
+    from app.agents.middlewares.memory import MemoryProvider
     from app.agents.toolkits.registry import ToolRegistry
 else:  # 运行期占位：pydantic 解析字段注解只要求名字可解析，导入真身会与 toolkits 包初始化成环
     ToolRegistry = object
+    MemoryProvider = object
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,10 @@ class RuntimeContext:
     middleware_config: Mapping[str, Any] = field(default_factory=dict)
     tool_registry: ToolRegistry | None = None
     """工具注册表覆盖（测试注入用）；缺省取进程级内置注册表。"""
+    memory_provider: MemoryProvider | None = None
+    """长期记忆来源：装配期注入（None 时记忆工位关闭，不注入记忆）。"""
+    cancel_event: asyncio.Event | None = None
+    """Run 级取消信号：Steer 等工位置位以请求中止（None 时不接线）。"""
     events: RunEventEmitter | None = None
     """运行事件发射器：None 时事件不发射（投影可缺失，事实不受影响）。"""
     session_factory: async_sessionmaker[AsyncSession] = SessionFactory

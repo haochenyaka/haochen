@@ -60,6 +60,9 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://haochen:haochen@localhost:5432/haochen
       REDIS_URL: redis://localhost:6379/0
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: haochen
+      MINIO_SECRET_KEY: haochen-dev-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -75,6 +78,8 @@ jobs:
         run: alembic downgrade base
       - name: Migration upgrade head again
         run: alembic upgrade head
+      # 不启 MinIO：dockerhub 的 minio/minio 已不可匿名拉取（pull access denied），
+      # 且报表/健康面板用例在数据湖不可达时按契约降级回 PostgreSQL，这里正是跑这条路径。
       - name: Integration tests
         run: pytest -q -m integration
 

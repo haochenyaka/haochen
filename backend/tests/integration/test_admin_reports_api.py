@@ -71,9 +71,7 @@ def _token(api: Api, *, role: str) -> str:
             await session.commit()
 
     asyncio.run(_body())
-    response = api.client.post(
-        "/api/auth/login", json={"username": username, "password": PASSWORD}
-    )
+    response = api.client.post("/api/auth/login", json={"username": username, "password": PASSWORD})
     assert response.status_code == 200, response.text
     return str(response.json()["token"])
 
@@ -118,16 +116,30 @@ def _seed(api: Api) -> tuple[datetime, datetime]:
             run_a.first_token_at = stamp + timedelta(seconds=1)
             session.add(
                 ModelAudit(
-                    run_id=str(a.run_id), seq=1, agent_slug="front-desk", actor_type="system",
-                    actor_id="t", model="deepseek-flash", status="completed", duration_ms=900,
-                    prompt_tokens=100, cached_prompt_tokens=40, completion_tokens=20,
-                    retrieval_refs=[{"chunk_id": "c1"}], created_at=stamp,
+                    run_id=str(a.run_id),
+                    seq=1,
+                    agent_slug="front-desk",
+                    actor_type="system",
+                    actor_id="t",
+                    model="deepseek-flash",
+                    status="completed",
+                    duration_ms=900,
+                    prompt_tokens=100,
+                    cached_prompt_tokens=40,
+                    completion_tokens=20,
+                    retrieval_refs=[{"chunk_id": "c1"}],
+                    created_at=stamp,
                 )
             )
             session.add(
                 ToolAudit(
-                    run_id=str(a.run_id), seq=1, agent_slug="front-desk", tool_name="query_kb",
-                    status="completed", duration_ms=30, created_at=stamp,
+                    run_id=str(a.run_id),
+                    seq=1,
+                    agent_slug="front-desk",
+                    tool_name="query_kb",
+                    status="completed",
+                    duration_ms=30,
+                    created_at=stamp,
                 )
             )
 
@@ -143,14 +155,20 @@ def _seed(api: Api) -> tuple[datetime, datetime]:
 
             session.add(
                 Task(
-                    task_type="lock.rotate_daily", handler_version=1, payload={},
-                    status="succeeded", created_at=stamp,
+                    task_type="lock.rotate_daily",
+                    handler_version=1,
+                    payload={},
+                    status="succeeded",
+                    created_at=stamp,
                 )
             )
             session.add(
                 Task(
-                    task_type="checkin.prepare", handler_version=1, payload={},
-                    status="failed", created_at=stamp,
+                    task_type="checkin.prepare",
+                    handler_version=1,
+                    payload={},
+                    status="failed",
+                    created_at=stamp,
                 )
             )
 

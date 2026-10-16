@@ -35,15 +35,21 @@ def _unique_window() -> tuple[datetime, datetime, datetime]:
 async def _stamp(session: AsyncSession, thread_ids: list[UUID], stamp: datetime) -> None:
     """把接力路径落库的线程/消息/运行/转人工行的 created_at 统一改写到专属窗口。"""
     await session.execute(
-        update(Thread).where(Thread.id.in_(thread_ids)).values(created_at=stamp)
+        update(Thread)
+        .where(Thread.id.in_(thread_ids))
+        .values(created_at=stamp)
         .execution_options(synchronize_session=False)
     )
     await session.execute(
-        update(Message).where(Message.thread_id.in_(thread_ids)).values(created_at=stamp)
+        update(Message)
+        .where(Message.thread_id.in_(thread_ids))
+        .values(created_at=stamp)
         .execution_options(synchronize_session=False)
     )
     await session.execute(
-        update(AgentRun).where(AgentRun.thread_id.in_(thread_ids)).values(created_at=stamp)
+        update(AgentRun)
+        .where(AgentRun.thread_id.in_(thread_ids))
+        .values(created_at=stamp)
         .execution_options(synchronize_session=False)
     )
     await session.execute(
@@ -80,22 +86,42 @@ async def _seed(session: AsyncSession) -> dict[str, Any]:
     )
     session.add(
         ModelAudit(
-            run_id=str(a.run_id), seq=1, agent_slug="front-desk", actor_type="system",
-            actor_id="t", model="deepseek-flash", status="completed", duration_ms=900,
-            prompt_tokens=100, cached_prompt_tokens=40, completion_tokens=20,
-            retrieval_refs=[{"chunk_id": "c1"}], created_at=stamp,
+            run_id=str(a.run_id),
+            seq=1,
+            agent_slug="front-desk",
+            actor_type="system",
+            actor_id="t",
+            model="deepseek-flash",
+            status="completed",
+            duration_ms=900,
+            prompt_tokens=100,
+            cached_prompt_tokens=40,
+            completion_tokens=20,
+            retrieval_refs=[{"chunk_id": "c1"}],
+            created_at=stamp,
         )
     )
     session.add(
         ToolAudit(
-            run_id=str(a.run_id), seq=1, agent_slug="front-desk", tool_name="query_kb",
-            status="completed", duration_ms=30, created_at=stamp,
+            run_id=str(a.run_id),
+            seq=1,
+            agent_slug="front-desk",
+            tool_name="query_kb",
+            status="completed",
+            duration_ms=30,
+            created_at=stamp,
         )
     )
     session.add(
         ToolAudit(
-            run_id=str(a.run_id), seq=2, agent_slug="front-desk", tool_name="list_my_orders",
-            status="failed", duration_ms=12, error="boom", created_at=stamp,
+            run_id=str(a.run_id),
+            seq=2,
+            agent_slug="front-desk",
+            tool_name="list_my_orders",
+            status="failed",
+            duration_ms=12,
+            error="boom",
+            created_at=stamp,
         )
     )
 
@@ -114,21 +140,33 @@ async def _seed(session: AsyncSession) -> dict[str, Any]:
     )
     session.add(
         ModelAudit(
-            run_id=str(b.run_id), seq=1, agent_slug="front-desk", actor_type="system",
-            actor_id="t", model="deepseek-flash", status="completed", duration_ms=500,
-            prompt_tokens=200, cached_prompt_tokens=0, completion_tokens=50, retrieval_refs=None,
+            run_id=str(b.run_id),
+            seq=1,
+            agent_slug="front-desk",
+            actor_type="system",
+            actor_id="t",
+            model="deepseek-flash",
+            status="completed",
+            duration_ms=500,
+            prompt_tokens=200,
+            cached_prompt_tokens=0,
+            completion_tokens=50,
+            retrieval_refs=None,
             created_at=stamp,
         )
     )
     session.add(
         ToolAudit(
-            run_id=str(b.run_id), seq=1, agent_slug="front-desk", tool_name="cancel_order",
-            status="completed", duration_ms=40, created_at=stamp,
+            run_id=str(b.run_id),
+            seq=1,
+            agent_slug="front-desk",
+            tool_name="cancel_order",
+            status="completed",
+            duration_ms=40,
+            created_at=stamp,
         )
     )
-    session.add(
-        MessageFeedback(message_id=msg_b.id, user_id=run_b.user_id, rating="down")
-    )
+    session.add(MessageFeedback(message_id=msg_b.id, user_id=run_b.user_id, rating="down"))
     await HandoffRequestRepository(session).create(
         thread_id=b.thread_id, user_id=run_b.user_id, reason="客人要求人工"
     )
@@ -144,13 +182,19 @@ async def _seed(session: AsyncSession) -> dict[str, Any]:
     # Durable Task：1 成功 1 失败 → 任务成功率 0.5
     session.add(
         Task(
-            task_type="lock.rotate_daily", handler_version=1, payload={}, status="succeeded",
+            task_type="lock.rotate_daily",
+            handler_version=1,
+            payload={},
+            status="succeeded",
             created_at=stamp,
         )
     )
     session.add(
         Task(
-            task_type="checkin.prepare", handler_version=1, payload={}, status="failed",
+            task_type="checkin.prepare",
+            handler_version=1,
+            payload={},
+            status="failed",
             created_at=stamp,
         )
     )
@@ -158,7 +202,6 @@ async def _seed(session: AsyncSession) -> dict[str, Any]:
     await _stamp(session, [a.thread_id, b.thread_id, c.thread_id], stamp)
     await session.commit()
     return {"start": start, "end": end, "msg_a": msg_a.id}
-
 
 
 def test_report_metrics_match_audit_recompute(runtime_db_url: str) -> None:

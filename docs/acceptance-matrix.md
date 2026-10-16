@@ -54,6 +54,8 @@
 | 2 | `test_credential_guard.py::test_credential_guard_redacts_plaintext` | CredentialGuard 打码验证 | 工具回包/助手消息/审计入参打码后零命中 | 通过 |
 | 3 | `test_recovery_drill.py::test_drill_plaintext_scan_skeleton` | Run 全链路产物明文扫描 | 消息/审计/事件负载零敏感命中 | 通过 |
 | 4 | `test_middlewares.py::test_credential_scan_skeleton_detects_plaintext` | 扫描器正向验证 | 可检出三类明文（password/id_card/phone） | 通过 |
+| 5 | `test_middlewares.py::test_credential_guard_defaults_to_all_categories_and_rejects_unknown` | 默认打码三类 | 身份证保前 6 后 4、手机号保前 3 后 4、中间等长打码；打码后零命中 | 通过 |
+| 6 | `test_credential_mask.py`（8 例） | 部分打码逻辑 | `13812345678`→`138****5678`、身份证→`110101********1234`；订单号等不误伤 | 通过 |
 
 **负向取证：**
 
@@ -61,6 +63,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | 工具回包含密码 | 构造含密码的工具调用结果 | CredentialGuard 打码后入库内容无明文 | 通过 |
 | 2 | 审计入参含密码 | 工具入参含明文密码字段 | `tool_audit.args_digest` 对应字段已打码 | 通过 |
+| 3 | 手机号/身份证流经边界 | 工具入参含手机号与身份证 | 默认打码为部分形态；完整串不再命中 `scan_sensitive_plaintext` | 通过 |
 
 ---
 
@@ -174,6 +177,63 @@
 
 ---
 
+## A7 — 运行期配置生效
+
+| 项目 | 内容 |
+| --- | --- |
+| 主张 | 管理端保存的 Agent 配置（`system_prompt`/`model`/`temperature` 与 `enabled_*`）在运行时装配中真正生效 |
+| 失败面 | 配置只落库不读、UI 能改运行不生效 |
+| 直接证据 | 集成测试：写入配置覆盖后运行 Run，断言模型请求与可见工具集合随之变化 |
+| 负向案例 | 未配置覆盖时回退代码声明默认值，行为与改造前一致 |
+
+**证据清单：**
+
+| # | 测试用例 | 描述 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | `test_run_config_wiring.py::test_context_config_override_reaches_model_request` | context 覆盖进入模型请求 | 管理端 `system_prompt` 出现在首个系统消息 | 通过 |
+| 2 | `test_run_config_wiring.py::test_enabled_tools_narrowing_limits_visible_tools` | 工具收窄 | 代码声明两工具、管理端启用其一 → 模型只见启用项 | 通过 |
+| 3 | `test_agent_config_normalize.py`（4 例） | config_json 形状兼容 | 嵌套 `{context,middleware}` 与旧扁平均可解析；非对象段显式失败 | 通过 |
+| 4 | `test_agent_runtime.py`（5 例） | 默认路径回归 | 无配置覆盖时行为不变 | 通过 |
+
+**负向取证：**
+
+| # | 场景 | 注入 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | 配置段形状非法 | `context` 段传非对象 | `normalize_config_json` 抛错，不静默 | 通过 |
+| 2 | 无配置覆盖 | 不写 `AgentConfig` 行 | 回退代码声明默认值（`enabled_*` 为 None） | 通过 |
+
+---
+
+## A8 — 保洁客评闭环
+
+| 项目 | 内容 |
+| --- | --- |
+| 主张 | 客人可对已交付的清洁任务评分，反馈读接口不再读不存在的列 |
+| 失败面 | 反馈接口读 `housekeeping_tasks.guest_score/guest_comment` 但列从未落地 → 一经真实调用即报错；评分只有读没有写，永远是空集 |
+| 直接证据 | 集成测试：评分落库后反馈读接口可捞出；客人端到端评分返回 200 并回显 |
+| 负向案例 | 未交付任务不可评（状态守卫）；越界评分被拒；他人任务评分 403；未认证 401 |
+
+**证据清单：**
+
+| # | 测试用例 | 描述 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | `test_housekeeping_rating.py::test_get_staff_ratings_no_longer_errors` | 反馈读接口回归 | 不因缺列报错，能捞取已评任务（含 rated_at） | 通过 |
+| 2 | `test_housekeeping_rating.py::test_guest_rates_own_task_end_to_end` | 客人评分端到端 | 200 + 回显 score/comment/rated_at | 通过 |
+| 3 | `test_schema_domain.py::test_housekeeping_guest_rating_columns` | 列落地基线 | `guest_score/guest_comment/rated_at` 存在于 housekeeping_tasks | 通过 |
+
+**负向取证：**
+
+| # | 场景 | 注入 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | 任务未交付 | 对 pending 任务评分 | `ConflictError`，状态不变 | 通过 |
+| 2 | 评分越界 | score=0 / score=9 | `ValidationFailedError` | 通过 |
+| 3 | 评他人任务 | 非本人 token 评分 | 403（归属 fail-closed） | 通过 |
+| 4 | 未认证 | 无 token 评分 | 401 | 通过 |
+
+（A8 为 2026-10-13 修复既有潜在 bug 新增：`get_staff_ratings` 读不存在的列。）
+
+---
+
 ## 汇总
 
 | 验收主张 | 状态 | 正例数 | 负例数 | 关键证据 |
@@ -184,5 +244,7 @@
 | A4 指标由审计派生 | ✅ 通过 | 4 | 2 | 报表服务 + API 集成测试 |
 | A5 数据中心闭环 | ✅ 通过 | 5 | 2 | KB/Agent/评分卡评估测试 |
 | A6 服务端授权 | ✅ 通过 | 6 | 14 | 越权负向测试全部通过 |
+| A7 运行期配置生效 | ✅ 通过 | 4 组 | 2 | 配置接线集成测试 + 形状兼容单测 |
+| A8 保洁客评闭环 | ✅ 通过 | 3 | 4 | 评分列落地 + 端到端评分 + 归属/状态守卫 |
 
-**P9.5 结论**：全部 6 条验收主张均有直接证据，正例 29 个 + 负例 24 个，矩阵全绿。项目就绪可进入灰度上线。
+**P9.5 结论**：全部 7 条验收主张均有直接证据，正例 32 个 + 负例 28 个，矩阵全绿。项目就绪可进入灰度上线。（A7、A8 为 2026-10-13 改造新增。）

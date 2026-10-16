@@ -21,10 +21,17 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("handoff_requests", sa.Column("assigned_to", UUID(), sa.ForeignKey("users.id"), nullable=True))
-    op.add_column("handoff_requests", sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column(
+        "handoff_requests",
+        sa.Column("assigned_to", UUID(), sa.ForeignKey("users.id"), nullable=True),
+    )
+    op.add_column(
+        "handoff_requests", sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=True)
+    )
     op.add_column("handoff_requests", sa.Column("note", sa.Text(), nullable=True))
-    op.add_column("handoff_requests", sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column(
+        "handoff_requests", sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True)
+    )
 
 
 def downgrade() -> None:

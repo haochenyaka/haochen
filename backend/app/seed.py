@@ -59,11 +59,19 @@ ROOM_TYPES: tuple[RoomTypeSpec, ...] = (
         "FAMILY", "皓晨家庭套房", 69800, 4, "king+twin", ("wifi", "智能门锁", "投影", "儿童用品")
     ),
     RoomTypeSpec(
-        "EXEC", "皓晨行政房", 59800, 2, "king",
+        "EXEC",
+        "皓晨行政房",
+        59800,
+        2,
+        "king",
         ("wifi", "智能门锁", "投影", "迷你吧", "浴缸", "吹风机"),
     ),
     RoomTypeSpec(
-        "SUITE", "皓晨总统套房", 128800, 4, "king+twin",
+        "SUITE",
+        "皓晨总统套房",
+        128800,
+        4,
+        "king+twin",
         ("wifi", "智能门锁", "投影", "迷你吧", "浴缸", "沙发", "阳台", "保险箱"),
     ),
 )

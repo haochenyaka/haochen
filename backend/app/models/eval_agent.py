@@ -8,6 +8,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import BigInteger, DateTime, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -29,8 +30,8 @@ class AgentEvalReport(Base):
     config_fingerprint: Mapped[str] = mapped_column(String(80), nullable=False)
     model: Mapped[str | None] = mapped_column(String(128))
     total_cases: Mapped[int] = mapped_column(Integer, nullable=False)
-    metrics: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
-    outcomes: Mapped[list[dict[str, object]]] = mapped_column(JSONB, nullable=False)
+    metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    outcomes: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
     superseded_by: Mapped[int | None] = mapped_column(BigInteger)
     invalidated_reason: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(

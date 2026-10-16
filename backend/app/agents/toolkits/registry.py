@@ -21,6 +21,7 @@ from langgraph.prebuilt import ToolNode
 
 from app.agents.middlewares.base import (
     DuplicateToolCallError,
+    ToolApprovalRejected,
     ToolApprovalRequired,
     ToolCallRequest,
     ToolResult,
@@ -219,6 +220,9 @@ def build_tool_node(
             return await _reuse(recorder, pipeline, pipeline_call, reused, events=events)
         try:
             await pipeline.before_tool(pipeline_call)
+        except ToolApprovalRejected as exc:
+            # 人工拒绝：回一条拒绝消息进对话（模型据此改道或转人工），Run 不失败
+            return await _blocked_approval(recorder, pipeline_call, exc, events=events)
         except ToolApprovalRequired as exc:
             if events is not None:
                 await events.interrupt(tool=tool_name, call_id=call_id, reason=exc.reason)
@@ -396,6 +400,34 @@ async def _blocked_duplicate(
         )
     logger.warning("重复调用被拦截：tool=%s key=%s", call.name, exc.key)
     return _error_message(call.name, call.call_id, BLOCKED_DUPLICATE_REASON)
+
+
+async def _blocked_approval(
+    recorder: AuditRecorder,
+    call: ToolCallRequest,
+    exc: ToolApprovalRejected,
+    *,
+    events: RunEventEmitter | None = None,
+) -> ToolMessage:
+    """审批被拒：写失败事实与结果事件，返回模型可见的拒绝回执（Run 继续）。"""
+    reason = f"人工审批未通过：{exc.reason}"
+    await recorder.tool_call(
+        tool_name=call.name,
+        status=TOOL_STATUS_FAILED,
+        args_digest=dict(call.args),
+        duration_ms=0,
+        error=reason,
+    )
+    if events is not None:
+        await events.tool_result(
+            tool=call.name,
+            call_id=call.call_id,
+            status=TOOL_STATUS_FAILED,
+            duration_ms=0,
+            error=reason,
+        )
+    logger.warning("工具审批被拒：tool=%s", call.name)
+    return _error_message(call.name, call.call_id, reason)
 
 
 def _result_key(metadata: Mapping[str, Any]) -> str | None:

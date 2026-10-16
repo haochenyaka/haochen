@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.types import Command
 
 from app.agents import (
     AgentResourceRequest,
@@ -30,10 +31,12 @@ from app.agents import (
 )
 from app.config import get_settings
 from app.models.runtime import Message
-from app.repositories import AgentRunRepository, MessageRepository
+from app.repositories import AgentRunRepository, MessageRepository, ToolApprovalRepository
+from app.services.admin_memory_service import DbMemoryProvider
+from app.services.agent_config_service import AgentConfigService, AgentRuntimeConfig
 from app.services.audit_service import AuditRecorder
 from app.services.langfuse_service import get_langfuse
-from app.services.run_types import RunResult
+from app.services.run_types import RunInterrupted, RunResult
 
 if TYPE_CHECKING:
     from app.services.run_worker import RunContext
@@ -88,7 +91,7 @@ class AgentRunBody:
         self._resource_policy = resource_policy
         self._tool_registry = tool_registry
 
-    async def __call__(self, ctx: RunContext) -> RunResult:
+    async def __call__(self, ctx: RunContext) -> RunResult | RunInterrupted:
         await ctx.ensure_not_cancelled()
         identity = ctx.identity
         recorder = AuditRecorder(
@@ -103,16 +106,26 @@ class AgentRunBody:
 
         async with ctx.session_factory() as session:
             history = await MessageRepository(session).list_for_thread(identity.thread_id)
+            agent_config = await AgentConfigService(session).load_runtime_config(
+                identity.agent_slug
+            )
 
         resources = await prepare_agent_runtime_context(
             agent_slug=identity.agent_slug,
             user_id=identity.user_id,
             requested=AgentResourceRequest(
-                refs=tuple(ResourceRef(kind="tool", id=name) for name in agent.tool_ids)
-                + tuple(
-                    ResourceRef(kind="knowledge_base", id=code) for code in agent.knowledge_base_ids
+                refs=tuple(
+                    ResourceRef(kind="tool", id=name)
+                    for name in _enabled_tools(agent, agent_config)
                 )
-                + tuple(ResourceRef(kind="skill", id=slug) for slug in agent.skill_ids)
+                + tuple(
+                    ResourceRef(kind="knowledge_base", id=code)
+                    for code in _enabled_knowledge_bases(agent, agent_config)
+                )
+                + tuple(
+                    ResourceRef(kind="skill", id=slug)
+                    for slug in _enabled_skills(agent, agent_config)
+                )
             ),
             policy=self._resource_policy
             or _default_resource_policy(
@@ -128,23 +141,36 @@ class AgentRunBody:
             run_id=identity.run_id,
             actor_id=ctx.owner_token,
             resources=resources,
-            config={},  # 管理端 Agent 配置（config_json.context）在 P2 接入
+            config=agent_config.context,  # 管理端 Agent 配置（config_json.context 段）
             prompt_docs=load_prompt_docs(agent.package_dir()),
             skills=load_skill_catalog(get_settings().skills_root),
             checkpointer=self._checkpointer or await get_shared_checkpointer(),
             recorder=recorder,
             workdir=Path(get_settings().workdir_root) / "threads" / str(identity.thread_id),
-            middleware_config={},  # 中间件配置段（config_json.middleware）在 P2 接入
+            middleware_config=agent_config.middleware,  # 中间件配置段（config_json.middleware）
             tool_registry=self._tool_registry,
+            memory_provider=DbMemoryProvider(ctx.session_factory),
+            cancel_event=ctx.cancel_event,
             events=ctx.events,
             session_factory=ctx.session_factory,
         )
         graph = await agent.build_graph(runtime)
+        resume = await self._resolve_resume(ctx)
+        invoke_input: Any = (
+            Command(resume=resume) if resume is not None else {"messages": to_lc_messages(history)}
+        )
         output = await graph.ainvoke(
-            {"messages": to_lc_messages(history)},
+            invoke_input,
             config=runtime.thread_config(),
             context=runtime,
         )
+        interrupts = output.get("__interrupt__")
+        if interrupts:
+            # 危险工具挂起等待人工审批：从 `__interrupt__` 落审批事实，Run 收敛为 interrupted
+            approvals = _parse_approvals(interrupts)
+            await self._persist_approvals(ctx, approvals)
+            return RunInterrupted(approvals)
+
         reply = output["messages"][-1]
 
         await ctx.ensure_not_cancelled()
@@ -160,6 +186,7 @@ class AgentRunBody:
             message_id = message.id
         # 事件在消息事实提交之后发射：投影可迟到，事实不可缺失
         await ctx.events.message_completed(text=reply_text(reply), message_id=message_id)
+        await self._consume_approval(ctx)
 
         token_usage = output.get("token_usage")
         return RunResult(
@@ -167,9 +194,43 @@ class AgentRunBody:
             langfuse_trace_id=langfuse_trace_id,
         )
 
-    async def _prepare_langfuse_trace(
-        self, ctx: RunContext, identity: object
-    ) -> str | None:
+    async def _resolve_resume(self, ctx: RunContext) -> dict[str, object] | None:
+        """恢复路径：存在已决定（approved/denied）且未消费的审批 → 构造 resume 续跑图。
+
+        不看 Run 状态——resume 时 `claim_resume` 已把状态置回 running；判据是"本 Run 有
+        一条已决定未消费的审批"。返回 None 表示首次执行（按历史消息发起）。"""
+        async with ctx.session_factory() as session:
+            approval = await ToolApprovalRepository(session).get_decided_for_run(
+                ctx.identity.run_id
+            )
+        if approval is None:
+            return None
+        return {"approved": approval.status == "approved", "reason": approval.reason or ""}
+
+    async def _persist_approvals(self, ctx: RunContext, approvals: list[dict[str, Any]]) -> None:
+        async with ctx.session_factory() as session:
+            repository = ToolApprovalRepository(session)
+            for item in approvals:
+                await repository.create_pending(
+                    run_id=ctx.identity.run_id,
+                    thread_id=ctx.identity.thread_id,
+                    call_id=str(item.get("call_id", "")),
+                    tool_name=str(item.get("tool_name", "")),
+                    reason=item.get("reason"),
+                    args_digest=item.get("args_digest"),
+                )
+            await session.commit()
+
+    async def _consume_approval(self, ctx: RunContext) -> None:
+        """resume 后 Run 正常完成：把已决定的审批标记 consumed，避免重复恢复。"""
+        async with ctx.session_factory() as session:
+            repository = ToolApprovalRepository(session)
+            latest = await repository.get_decided_for_run(ctx.identity.run_id)
+            if latest is not None:
+                await repository.mark_consumed(latest.id)
+                await session.commit()
+
+    async def _prepare_langfuse_trace(self, ctx: RunContext, identity: object) -> str | None:
         """Langfuse trace 预创建：独立短事务，失败不阻断 Run。
 
         从 identity 提取 run_id/thread_id/user_id/agent_slug 后创建 trace，
@@ -209,6 +270,40 @@ class AgentRunBody:
         except Exception as exc:
             logger.warning("langfuse trace_id 落库失败（不阻断 Run）：%s", exc)
         return trace_id
+
+
+def _enabled_tools(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    """工具集合：管理端显式选择优先，未配置（None）时回退 Agent 代码声明。"""
+    return config.enabled_tools if config.enabled_tools is not None else agent.tool_ids
+
+
+def _parse_approvals(interrupts: Sequence[Any]) -> list[dict[str, Any]]:
+    """把图的 `__interrupt__` 载荷解析为待审批元数据（ToolApprovalStation 的 interrupt 载荷）。"""
+    approvals: list[dict[str, Any]] = []
+    for item in interrupts:
+        value = getattr(item, "value", None)
+        if isinstance(value, dict) and value.get("type") == "tool_approval":
+            approvals.append(
+                {
+                    "call_id": str(value.get("call_id", "")),
+                    "tool_name": str(value.get("tool", "")),
+                    "reason": value.get("reason"),
+                    "args_digest": value.get("args_digest"),
+                }
+            )
+    return approvals
+
+
+def _enabled_knowledge_bases(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    return (
+        config.enabled_knowledge_bases
+        if config.enabled_knowledge_bases is not None
+        else agent.knowledge_base_ids
+    )
+
+
+def _enabled_skills(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
+    return config.enabled_skills if config.enabled_skills is not None else agent.skill_ids
 
 
 def _default_resource_policy(

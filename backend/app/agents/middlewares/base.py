@@ -49,6 +49,25 @@ class DuplicateToolCallError(RuntimeError):
         self.key = key
 
 
+class SteerSuperseded(RuntimeError):
+    """Steer：检测到更新的用户消息，当前 Run 让位给队头新请求。
+
+    由运行执行器按取消收敛（cancel_event 已在触发点置位），新请求经既有接力链路派发。
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"当前 Run 被更新的用户消息接管：{reason}")
+
+
+class ToolApprovalRejected(RuntimeError):
+    """工具审批被人工拒绝：拒绝回执进对话（非失败），模型据此改用其它方式或转人工。"""
+
+    def __init__(self, tool_name: str, reason: str) -> None:
+        super().__init__(f"工具 {tool_name} 审批被拒：{reason}")
+        self.tool_name = tool_name
+        self.reason = reason
+
+
 @dataclass
 class ModelCallRequest:
     """一次模型调用的请求：前置工位可改写消息与可见工具集合。"""

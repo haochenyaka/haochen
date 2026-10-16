@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -142,19 +142,19 @@ async def run_kb_eval_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     try:
         report = await run_kb_eval(session, items=items, k=body.k, dataset_path=dataset_path)
     except EvalRunError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     except RetrievalError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"检索服务不可用：{exc}",
-        )
+        ) from exc
     outcome = await persist_kb_report(session, report)
     await session.commit()
     return _build_detail(report, outcome)
@@ -235,7 +235,7 @@ async def invalidate_report(
     )
 
 
-def _to_metrics_model(metrics: dict[str, object]) -> MetricsModel:
+def _to_metrics_model(metrics: dict[str, Any]) -> MetricsModel:
     return MetricsModel(
         questions=int(metrics.get("questions", 0)),
         k=int(metrics.get("k", DEFAULT_K)),
@@ -287,10 +287,12 @@ def _build_detail(report: EvalReport, outcome: PersistOutcome) -> ReportDetail:
 
 def _to_report_detail(row: object) -> ReportDetail:
     retrieval_config = dict(getattr(row, "retrieval_config", {}))
-    comparable = []
-    superseded = []
-    if getattr(row, "superseded_by", None) is not None:
-        superseded.append(getattr(row, "superseded_by"))
+    comparable: list[Any] = []
+    superseded: list[Any] = []
+    superseded_by = getattr(row, "superseded_by", None)
+    if superseded_by is not None:
+        superseded.append(superseded_by)
+    created = getattr(row, "created_at", "")
     return ReportDetail(
         id=getattr(row, "id", 0),
         dataset_path=getattr(row, "dataset_path", ""),
@@ -321,9 +323,5 @@ def _to_report_detail(row: object) -> ReportDetail:
         superseded_reports=superseded,
         superseded_by=getattr(row, "superseded_by", None),
         invalidated_reason=getattr(row, "invalidated_reason", None),
-        created_at=(
-            getattr(row, "created_at", "").isoformat()
-            if hasattr(getattr(row, "created_at", ""), "isoformat")
-            else str(getattr(row, "created_at", ""))
-        ),
+        created_at=created.isoformat() if hasattr(created, "isoformat") else str(created),
     )

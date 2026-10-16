@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import pytest
 import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.config import get_settings
 from app.eval.agent.dataset import dataset_fingerprint
 from app.eval.agent.runner import (
     ScriptedCaseExecutor,
@@ -119,21 +119,38 @@ def test_run_eval_persists_report(runtime_db_url: str, tmp_path: Path) -> None:
 
 
 def test_supersede_on_config_change(runtime_db_url: str, tmp_path: Path) -> None:
-    """同数据集 + 同模型下配置变化：旧报告被标记作废。"""
+    """同数据集 + 配置变化：旧报告被标记作废。"""
+    from app.eval.agent.dataset import load_eval_set
+    from app.eval.agent.runner import config_fingerprint_value
+
     dataset_path = _write_dataset(tmp_path, "test_set2.yaml")
     executor = ScriptedCaseExecutor(
         tool_calls=[{"name": "test_tool", "args": {}}],
         task_success=True,
     )
+    items = load_eval_set(dataset_path)
+    base_settings = get_settings()
+    # 第二次运行的配置指纹变化（模拟管理端改配置）：同数据集、相同模型
+    changed_settings = base_settings.model_copy(update={"model_name": "changed-model"})
+    base_cfp = config_fingerprint_value(base_settings, None)
+    changed_cfp = config_fingerprint_value(changed_settings, None)
+    assert base_cfp != changed_cfp
 
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
-            # first run
-            report1 = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            report1 = await evaluate_items(
+                items=items,
+                executor=executor,
+                settings=base_settings,
+                dataset_path=str(dataset_path),
+            )
             p1 = await persist_report(session, report1)
-
-            # second run — same dataset, executor returns different result to simulate config change
-            report2 = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            report2 = await evaluate_items(
+                items=items,
+                executor=executor,
+                settings=changed_settings,
+                dataset_path=str(dataset_path),
+            )
             p2 = await persist_report(session, report2)
 
             rows = await _rows(session, report1.dataset_fingerprint)

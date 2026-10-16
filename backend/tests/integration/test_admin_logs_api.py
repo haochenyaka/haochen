@@ -89,24 +89,39 @@ def _seed(api: Api) -> dict[str, Any]:
             run.status = "completed"
             audits = AuditRepository(session)
             m1 = await audits.append_model(
-                run_id=intake.run_id, agent_slug="front-desk",
-                actor_type="guest", actor_id="t", model="deepseek-flash",
-                status="completed", prompt_tokens=100, completion_tokens=20,
+                run_id=intake.run_id,
+                agent_slug="front-desk",
+                actor_type="guest",
+                actor_id="t",
+                model="deepseek-flash",
+                status="completed",
+                prompt_tokens=100,
+                completion_tokens=20,
                 retrieval_refs=[{"chunk_id": "c1"}],
             )
             m2 = await audits.append_model(
-                run_id=intake.run_id, agent_slug="front-desk",
-                actor_type="guest", actor_id="t", model="deepseek-flash",
-                status="completed", prompt_tokens=50, completion_tokens=10,
+                run_id=intake.run_id,
+                agent_slug="front-desk",
+                actor_type="guest",
+                actor_id="t",
+                model="deepseek-flash",
+                status="completed",
+                prompt_tokens=50,
+                completion_tokens=10,
                 retrieval_refs=None,
             )
             t1 = await audits.append_tool(
-                run_id=intake.run_id, agent_slug="front-desk",
-                tool_name="query_kb", status="completed",
+                run_id=intake.run_id,
+                agent_slug="front-desk",
+                tool_name="query_kb",
+                status="completed",
             )
             t2 = await audits.append_tool(
-                run_id=intake.run_id, agent_slug="front-desk",
-                tool_name="list_my_orders", status="failed", error="boom",
+                run_id=intake.run_id,
+                agent_slug="front-desk",
+                tool_name="list_my_orders",
+                status="failed",
+                error="boom",
             )
             await session.commit()
             return {
@@ -191,7 +206,8 @@ def test_soft_delete_and_action_log(api: Api) -> None:
     # Delete 2 tool rows
     tool_ids = [data["tool_ids"][0]]
     resp = api.client.request(
-        "DELETE", "/api/admin/logs/delete",
+        "DELETE",
+        "/api/admin/logs/delete",
         headers=_auth(admin),
         json={"tool_ids": tool_ids},
     )
@@ -210,7 +226,8 @@ def test_soft_delete_and_action_log(api: Api) -> None:
 
     # Verify include_deleted brings it back
     with_deleted = api.client.get(
-        "/api/admin/logs", headers=_auth(admin),
+        "/api/admin/logs",
+        headers=_auth(admin),
         params={"kind": "tool", "include_deleted": "true"},
     )
     assert with_deleted.status_code == 200
@@ -226,9 +243,9 @@ def test_soft_delete_and_action_log(api: Api) -> None:
     # Verify admin_action_log table has the record
     async def _check_action_log() -> int:
         async with AsyncSession(api.engine, expire_on_commit=False) as session:
-            count = (await session.execute(
-                select(func.count()).select_from(AdminActionLog)
-            )).scalar_one()
+            count = (
+                await session.execute(select(func.count()).select_from(AdminActionLog))
+            ).scalar_one()
             return int(count)
 
     assert asyncio.run(_check_action_log()) >= 1
@@ -237,7 +254,8 @@ def test_soft_delete_and_action_log(api: Api) -> None:
 def test_soft_delete_empty_request_is_rejected(api: Api) -> None:
     admin = _token(api, role="admin")
     resp = api.client.request(
-        "DELETE", "/api/admin/logs/delete",
+        "DELETE",
+        "/api/admin/logs/delete",
         headers=_auth(admin),
         json={"model_ids": [], "tool_ids": []},
     )
@@ -267,7 +285,11 @@ def test_log_endpoints_enforce_role_matrix(api: Api) -> None:
 
     del_body = {"tool_ids": [999]}
     for token, expected in [
-        (None, 401), (staff, 403), (customer, 403), (manager, 403), (admin, 200)
+        (None, 401),
+        (staff, 403),
+        (customer, 403),
+        (manager, 403),
+        (admin, 200),
     ]:
         hdrs = _auth(token) if token else None
         code = api.client.request("DELETE", del_path, json=del_body, headers=hdrs).status_code

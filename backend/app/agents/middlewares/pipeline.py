@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from langchain_core.messages import AIMessage
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.middlewares.base import (
     MiddlewareConfigError,
@@ -30,7 +31,13 @@ from app.agents.middlewares.memory import MemoryProvider, MemorySettings, Memory
 from app.agents.middlewares.model_retry import ModelRetrySettings, ModelRetryStation, Sleeper
 from app.agents.middlewares.patch_tool_calls import PatchToolCallsSettings, PatchToolCallsStation
 from app.agents.middlewares.skills import SkillsSettings, SkillsStation
-from app.agents.middlewares.steer import SteerSettings, SteerStation
+from app.agents.middlewares.steer import (
+    CancelSignal as SteerCancelSignal,
+)
+from app.agents.middlewares.steer import (
+    SteerSettings,
+    SteerStation,
+)
 from app.agents.middlewares.summary import (
     SummarizationStation,
     SummaryDelegate,
@@ -268,6 +275,9 @@ def build_middleware_pipeline(
     summary_delegate: SummaryDelegate | None = None,
     approval_policy: ApprovalPolicy | None = None,
     sleeper: Sleeper | None = None,
+    steer_session_factory: async_sessionmaker[AsyncSession] | None = None,
+    steer_cancel_signal: SteerCancelSignal | None = None,
+    approval_interrupt_enabled: bool = False,
 ) -> MiddlewarePipeline:
     """装配 11 道工位；顺序与基线一致，否则显式失败。"""
     resolved = (
@@ -279,7 +289,12 @@ def build_middleware_pipeline(
     )
     pipeline = MiddlewarePipeline(
         [
-            SteerStation(settings=resolved.steer),
+            SteerStation(
+                settings=resolved.steer,
+                session_factory=steer_session_factory,
+                thread_id=thread_id,
+                cancel_signal=steer_cancel_signal,
+            ),
             FilesystemStation(settings=resolved.filesystem, workdir=workdir),
             CredentialGuardStation(settings=resolved.credential_guard),
             SkillsStation(settings=resolved.skills, catalog=skills, preload=tuple(preload_skills)),
@@ -299,7 +314,11 @@ def build_middleware_pipeline(
             ModelRetryStation(settings=resolved.model_retry, sleeper=sleeper),
             ToolGuardStation(settings=resolved.tool_guard, run_id=run_id),
             token_usage_station,
-            ToolApprovalStation(settings=resolved.tool_approval, policy=approval_policy),
+            ToolApprovalStation(
+                settings=resolved.tool_approval,
+                policy=approval_policy,
+                interrupt_enabled=approval_interrupt_enabled,
+            ),
         ]
     )
     keys = tuple(station.key for station in pipeline.stations)

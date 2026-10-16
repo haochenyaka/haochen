@@ -54,6 +54,10 @@ HOUSEKEEPING_TERMINAL_STATUSES: frozenset[str] = frozenset({"closed"})
 
 HOUSEKEEPING_TASK_TYPES: frozenset[str] = frozenset({"checkout_clean", "call_clean"})
 
+# 保洁客评：仅在任务完成后允许（verified/closed 才代表服务已交付），取值 1..5
+HOUSEKEEPING_RATABLE_STATUSES: frozenset[str] = frozenset({"verified", "closed"})
+GUEST_SCORE_RANGE: tuple[int, int] = (1, 5)
+
 # 后台任务状态机（机制基线 §2.3）：意图落库后由 worker 抢占执行，失联统一失败。
 TASK_STATUSES: tuple[str, ...] = ("pending", "running", "succeeded", "failed", "cancelled")
 

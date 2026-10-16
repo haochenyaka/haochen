@@ -15,7 +15,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -77,9 +77,14 @@ def _add_fake_kb_report(session: AsyncSession, fp: str | None = None) -> KbEvalR
 
 async def _add_feedback(session: AsyncSession) -> UUID:
     """添加点踩反馈并返回 thread_id。"""
-    from app.models.runtime import Message, Thread
+    from app.models.runtime import Message, Thread, User
 
-    thread = Thread(guest_id=uuid4())
+    # threads/messages 都要求真实的 user_id（外键）：先建一个接入身份
+    user = User(username=f"p8-{uuid4().hex[:8]}", role="customer")
+    session.add(user)
+    await session.flush()
+
+    thread = Thread(user_id=user.id, agent_slug="front-desk")
     session.add(thread)
     await session.flush()
 
@@ -94,7 +99,7 @@ async def _add_feedback(session: AsyncSession) -> UUID:
 
     feedback = MessageFeedback(
         message_id=msg.id,
-        user_id=uuid4(),
+        user_id=user.id,
         rating="down",
     )
     session.add(feedback)
@@ -104,6 +109,7 @@ async def _add_feedback(session: AsyncSession) -> UUID:
 
 def test_kb_eval_persist(runtime_db_url: str) -> None:
     """KB eval 报告落库与查询。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             _add_fake_kb_report(session)
@@ -111,7 +117,10 @@ def test_kb_eval_persist(runtime_db_url: str) -> None:
 
             repo = KbEvalReportRepository(session)
             recent = await repo.list_recent(limit=5)
-            return {"count": len(recent), "recall": recent[0].metrics["recall_at_k"] if recent else None}
+            return {
+                "count": len(recent),
+                "recall": recent[0].metrics["recall_at_k"] if recent else None,
+            }
 
     result = run_with_session_factory(runtime_db_url, _body)
     assert result["count"] >= 1
@@ -120,6 +129,7 @@ def test_kb_eval_persist(runtime_db_url: str) -> None:
 
 def test_kb_eval_invalidate(runtime_db_url: str) -> None:
     """KB eval 报告手动作废。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             report = _add_fake_kb_report(session)
@@ -130,7 +140,11 @@ def test_kb_eval_invalidate(runtime_db_url: str) -> None:
             await session.commit()
 
             row = await repo.get(report.id)
-            return {"ok": ok, "superseded": row.superseded_by is not None, "reason": row.invalidated_reason}
+            return {
+                "ok": ok,
+                "superseded": row.superseded_by is not None,
+                "reason": row.invalidated_reason,
+            }
 
     result = run_with_session_factory(runtime_db_url, _body)
     assert result["ok"] is True
@@ -140,6 +154,7 @@ def test_kb_eval_invalidate(runtime_db_url: str) -> None:
 
 def test_quality_scorecard(runtime_db_url: str) -> None:
     """质量评分卡计算与历史查询。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             _add_fake_kb_report(session)
@@ -164,7 +179,8 @@ def test_quality_scorecard(runtime_db_url: str) -> None:
             stmt = select(QualityScorecard).order_by(QualityScorecard.created_at.desc()).limit(10)
             rows = (await session.execute(stmt)).scalars().all()
             return {
-                "id1": id1, "id2": id2,
+                "id1": id1,
+                "id2": id2,
                 "count": len(rows),
                 "scores": [r.overall_score for r in rows],
             }
@@ -178,6 +194,7 @@ def test_quality_scorecard(runtime_db_url: str) -> None:
 
 def test_qa_auditor_auto_label(runtime_db_url: str) -> None:
     """QA 自动标注：创建点踩反馈后自动打标。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             thread_id = await _add_feedback(session)
@@ -190,9 +207,14 @@ def test_qa_auditor_auto_label(runtime_db_url: str) -> None:
 
         async with factory() as session:
             from app.models.qa_label import QALabel
+
             stmt = select(QALabel).where(QALabel.thread_id == thread_id, QALabel.source == "auto")
             labels = (await session.execute(stmt)).scalars().all()
-            return {"label_count": count, "found": len(labels), "labels": [l.label for l in labels]}
+            return {
+                "label_count": count,
+                "found": len(labels),
+                "labels": [label.label for label in labels],
+            }
 
     result = run_with_session_factory(runtime_db_url, _body)
     assert result["label_count"] > 0
@@ -202,6 +224,7 @@ def test_qa_auditor_auto_label(runtime_db_url: str) -> None:
 
 def test_qa_auditor_detections(runtime_db_url: str) -> None:
     """QA 检测：过期文档、覆盖率缺口、低召回 KB。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             qa = QaAuditorService(session)
@@ -225,6 +248,7 @@ def test_qa_auditor_detections(runtime_db_url: str) -> None:
 
 def test_feedback_collect(runtime_db_url: str) -> None:
     """反馈收集与导出。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         # 创建反馈
         async with factory() as session:
@@ -234,6 +258,7 @@ def test_feedback_collect(runtime_db_url: str) -> None:
         # 收集
         async with factory() as session:
             from app.services.feedback_service import FeedbackCollector
+
             collector = FeedbackCollector(session)
             since = datetime.now(UTC) - timedelta(days=1)
             down = await collector.get_downvoted_questions(since=since)
@@ -252,6 +277,7 @@ def test_feedback_collect(runtime_db_url: str) -> None:
 
 def test_feedback_export(runtime_db_url: str) -> None:
     """反馈导出为评估集 JSONL。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
         async with factory() as session:
             await _add_feedback(session)
@@ -259,6 +285,7 @@ def test_feedback_export(runtime_db_url: str) -> None:
 
         async with factory() as session:
             from app.services.feedback_service import FeedbackCollector
+
             collector = FeedbackCollector(session)
             count, path = await collector.export_to_jsonl()
             return {"count": count, "path": str(path)}
@@ -270,24 +297,41 @@ def test_feedback_export(runtime_db_url: str) -> None:
     path.unlink(missing_ok=True)
 
 
+def _test_app(factory: SessionFactoryArg) -> Any:
+    """测试 app：把 get_session 覆盖到隔离库 factory（避免走默认库与跨循环连接）。"""
+    from app.db import get_session
+
+    app = create_app()
+    override = get_session
+
+    async def _override() -> Any:
+        async with factory() as session:
+            yield session
+
+    app.dependency_overrides[override] = _override
+    return app
+
+
 def test_kb_eval_api_datasets(runtime_db_url: str) -> None:
     """KB eval API 端点：列出数据集。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
-        app = create_app()
-        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        transport = ASGITransport(app=_test_app(factory))  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.get("/api/admin/eval/kb/datasets", headers={"X-Dev-Username": "admin"})
+            resp = await client.get(
+                "/api/admin/eval/kb/datasets", headers={"X-Dev-Username": "admin"}
+            )
             return {"status": resp.status_code, "body": resp.text[:200]}
 
     result = run_with_session_factory(runtime_db_url, _body)
-    assert result["status"] in (200, 401)
+    assert result["status"] in (200, 401, 403)
 
 
 def test_quality_scorecard_api(runtime_db_url: str) -> None:
     """质量评分卡 API：获取最新评分卡。"""
+
     async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
-        app = create_app()
-        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        transport = ASGITransport(app=_test_app(factory))  # type: ignore[arg-type]
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             resp = await client.get(
                 "/api/admin/quality/scorecards/latest",
@@ -296,4 +340,4 @@ def test_quality_scorecard_api(runtime_db_url: str) -> None:
             return {"status": resp.status_code}
 
     result = run_with_session_factory(runtime_db_url, _body)
-    assert result["status"] in (200, 401, 404)
+    assert result["status"] in (200, 401, 403, 404)

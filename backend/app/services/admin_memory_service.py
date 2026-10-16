@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, func as sa_func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy import func as sa_func
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.middlewares.memory import MemoryEntry as AgentMemoryEntry
 from app.agents.middlewares.memory import MemoryProvider
@@ -45,9 +45,8 @@ class AdminMemoryService:
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[MemoryView], int]:
-        base = (
-            select(GuestMemory, Guest.nickname, Guest.user_id)
-            .join(Guest, GuestMemory.guest_id == Guest.id)
+        base = select(GuestMemory, Guest.nickname, Guest.user_id).join(
+            Guest, GuestMemory.guest_id == Guest.id
         )
         if not include_deleted:
             base = base.where(GuestMemory.deleted_at.is_(None))
@@ -166,25 +165,25 @@ class AdminMemoryService:
 class DbMemoryProvider(MemoryProvider):
     """MemoryProvider 的 DB 实现：从 guest_memories 表按 user_id 读取记忆。
 
+    持有 sessionmaker 而非会话实例——工位在装配期构建且跨整个 Run，而 Run 期间每次
+    模型调用都要读记忆；短开会话避免长生命周期会话跨 await 与并发，口径与工具侧一致。
     通过 User → Guest → GuestMemory 链路查找当前用户关联客人 + 所有客人的记忆。
     """
 
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
 
     async def load(self, *, user_id: UUID, thread_id: UUID) -> Sequence[AgentMemoryEntry]:
-        stmt = (
-            select(GuestMemory)
-            .join(Guest, GuestMemory.guest_id == Guest.id)
-            .where(
-                Guest.user_id == user_id,
-                GuestMemory.deleted_at.is_(None),
-                GuestMemory.sensitive.is_(False),
+        async with self._session_factory() as session:
+            stmt = (
+                select(GuestMemory)
+                .join(Guest, GuestMemory.guest_id == Guest.id)
+                .where(
+                    Guest.user_id == user_id,
+                    GuestMemory.deleted_at.is_(None),
+                    GuestMemory.sensitive.is_(False),
+                )
+                .order_by(GuestMemory.created_at.desc())
             )
-            .order_by(GuestMemory.created_at.desc())
-        )
-        rows = (await self._session.execute(stmt)).scalars().all()
-        return [
-            AgentMemoryEntry(text=row.content, source=row.source or "")
-            for row in rows
-        ]
+            rows = (await session.execute(stmt)).scalars().all()
+        return [AgentMemoryEntry(text=row.content, source=row.source or "") for row in rows]

@@ -194,9 +194,21 @@ HaoChen 目标（11 道）= 设计文档规定的 9 道 + 新增 2 道：
 
 P1 已在 app/agents/middlewares/ 落地全部 11 道工位（Station 基类 + pipeline 装配；prepare/before 正向、after 逆向的洋葱模型；关闭的工位整道跳过）。Steer 按计划留空实现挂位（默认关闭，键位与顺序保留）；阈值类参数只来自全局配置（`summary_threshold` 等），工位级差异走 Agent 配置 `middleware` 段的字段覆盖，未知工位或未知字段显式报错。CredentialGuard 与 ToolGuard 已按 P4.4/P4.5 落地默认开启（见 §6 与 §7 第 13、18 条）；顺序与洋葱语义由单测与真实 Run 集成测试验证，明文负例（明文不进消息库/检查点/审计/摘要历史）与幂等负例（同参副作用不二次执行）已有对应用例。
 
-CredentialGuard 的打码口径（P4.4）：打码落在持久化边界——工具回包进检查点与后续请求之前、助手消息入库之前、压缩历史落盘之前、工具入参进审计与事件投影之前；生成中的流式增量不审查（下发与提醒场景的实时回复可含当日密码，落库副本仍是打码形态）。默认只打码密码字段（`密码/口令/password/passcode` + 分隔符 + 含数字且长度≥4 的值），身份证与手机号由 Memory 的敏感条目过滤负责；打码类别可配置、未知类别显式失败。约束并入开头系统提示（不新增消息，历史索引不变）。已知边界：客人自己输入的消息在接入侧即落库、不经过本工位；模型生成的工具调用入参（AIMessage.tool_calls.args）随图状态进检查点，打码只覆盖审计与投影副本（改写状态会破坏 resume 重放语义）。
+CredentialGuard 的打码口径（P4.4，默认类别于 P0 改造扩为三类）：打码落在持久化边界——工具回包进检查点与后续请求之前、助手消息入库之前、压缩历史落盘之前、工具入参进审计与事件投影之前；生成中的流式增量不审查（下发与提醒场景的实时回复可含当日密码，落库副本仍是打码形态）。默认打码三类（`DEFAULT_MASK_CATEGORIES`）：密码整值占位（`密码：[已打码]`，匹配"字段标记 + 分隔符 + 含数字且长度≥4 的值"），身份证保前 6 后 4、手机号保前 3 后 4、中间等长打码（`110101********1234` / `138****5678`）——最小化且保留可读，完整形态被打码后不再匹配敏感正则。打码类别可配置、未知类别显式失败。约束并入开头系统提示（不新增消息，历史索引不变）。已知边界：客人自己输入的消息在接入侧即落库、不经过本工位；模型生成的工具调用入参（AIMessage.tool_calls.args）随图状态进检查点，打码只覆盖审计与投影副本（改写状态会破坏 resume 重放语义）。
 
 ToolGuard 的幂等口径（P4.5）：副作用判定取注册元数据（`read_only=False` 或 `dangerous=True`），只读工具完全不设防。幂等键 `toolguard:{run_id}:{tool}:{sha256(规范化入参)[:16]}` 从**打码后的入参副本**计算——审计里既无明文、也不构成口令枚举面（哈希前缀对低熵输入可暴破）；由此的已知边界：若未来出现「敏感字段作为入参、不同值代表不同副作用」的写工具（当前锁凭证由服务端生成、不接受密码入参，故不触发），该键会把它们并成同一次调用，届时需单独评估。执行中的同键调用拦下（失败事实 + 模型可见错误结果，Run 不中断）；已完成的同键调用复用既有结果，复用仍经 `after_tool` 复走打码链后才进入会话状态，事实记 completed、耗时 0、同键；执行失败释放键允许重试。本工位在内存里拦「同一 Run 内模型重复点名」；进程重启或 Run 恢复重放由持久层幂等键兜底（订单列内唯一约束、`checkin:{order_id}`），两层都不可省。幂等键经 `ToolResult.metadata` 交给注册骨架写进 `tool_audit.idempotency_key`。
+
+### 3.1 为什么三个工位自研而非直接用框架能力
+
+HaoChen 用 `langgraph~=1.0` / `langchain-openai` 承载图与模型接入，但 `patch_tool_calls`、`model_retry`、`token_usage` 三个工位是自研实现。逐工位登记理由与代码锚点（评审常追问"为什么不用框架自带"）：
+
+| 工位 | 框架似有能力 | 自研理由 | 代码锚点 |
+| --- | --- | --- | --- |
+| PatchToolCalls | LangGraph 预建工具节点对悬空 `tool_calls` 的规范化 | 本项目的对话事实来自 **PostgreSQL 消息表整体重放**（非从框架检查点续跑），叠加摘要折叠与外部写入，历史里会出现悬空 `tool_calls` 或孤立 ToolMessage；OpenAI 兼容接口对此直接返回 400。框架的规范化不覆盖"从外部重放的历史被截断"这条路径 | `app/agents/middlewares/patch_tool_calls.py:1-6`（docstring 说明触发场景）、`app/services/run_body.py:104-105,143-144`（历史重放） |
+| ModelRetry | `ChatOpenAI(max_retries=...)` 原生重试 | 模型层**显式关闭** `max_retries=0`，为的是让**每次尝试各写一条审计事实**（成功与失败都留痕，供可观测与失败归因）；框架内建重试不落审计 | `app/agents/models.py:111`、`app/agents/middlewares/model_retry.py:1-4`；证据 `tests/integration/test_agent_runtime.py::test_model_failure_leaves_audit_fact_and_fails_run`（默认 3 次尝试 = 3 条失败事实） |
+| TokenUsage | LangChain 的 `usage_metadata` | 该工位做**两件事**：① Provider **实际用量**（复用 `usage_metadata`，含缓存命中 `input_token_details.cache_read`，供缓存命中率与成本报表）；② **近似上下文 token 估算**（CJK 按 1 字符、其余 4 字符）与 `summarization` 的阈值判断**同口径**——框架没有这个估算 | `app/agents/middlewares/token_usage.py:30-34`（估算）、`app/agents/models.py:57-68`（实际用量）、`app/config.py:61`（`summary_threshold`） |
+
+结论：三者中只有"实际用量"一项是框架现成能力；其余（外部历史重放的消息形态修复、逐次留痕的重试、与压缩阈值同口径的近似估算）都是本项目可观测性与上下文治理口径的一部分，收敛掉会丢语义。因此**保留自研**，仅在此登记理由，不做收敛。
 
 ## 4. 裁剪清单（明确不做）
 
