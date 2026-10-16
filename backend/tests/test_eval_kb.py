@@ -13,6 +13,7 @@ import pytest
 
 from app.config import get_settings
 from app.eval.kb_dataset import (
+    ChunkRef,
     EvalItem,
     EvalSetError,
     dataset_fingerprint,
@@ -28,7 +29,7 @@ from app.eval.kb_runner import (
     retrieval_config_snapshot,
 )
 from app.knowledge.retrieval import RetrievedChunk, RetrievedContext
-from app.knowledge.seed import KB_CODE, SAMPLE_TITLES
+from app.knowledge.seed import KB_CODE, SAMPLE_README, SAMPLE_TITLES, SAMPLES_DIR
 
 
 def _item_payload(item_id: str, *, question: str = "早餐几点开始？") -> dict[str, Any]:
@@ -157,15 +158,97 @@ def test_dataset_fingerprint_is_stable_and_content_sensitive(tmp_path: Path) -> 
     assert fingerprint({"a": 1, "b": 2}) == fingerprint({"b": 2, "a": 1})
 
 
-def test_shipped_eval_set_aligns_with_sample_titles() -> None:
+def test_sample_titles_cover_all_sample_documents() -> None:
+    """样例目录里的每篇文档都必须有中文标题映射：缺映射会退化成英文文件名进检索引用。"""
+    files = {path.name for path in SAMPLES_DIR.glob("*.md")} - {SAMPLE_README}
+    assert files == set(SAMPLE_TITLES), files ^ set(SAMPLE_TITLES)
+
+
+def test_shipped_eval_set_aligns_with_sample_titles_and_carries_anchors() -> None:
     items = load_eval_set(DEFAULT_SET_PATH)
-    assert len(items) >= 50
+    assert len(items) >= 150
     assert len({item.id for item in items}) == len(items)
     assert {item.kb_code for item in items} == {KB_CODE}
     titles = set(SAMPLE_TITLES.values())
     for item in items:
         assert set(item.gold_titles) <= titles, item.id
         assert item.question.strip() and item.gold_answer.strip()
+        assert item.gold_chunks, f"{item.id} 缺分块级黄金锚点"
+        assert {ref.document_title for ref in item.gold_chunks} <= set(item.gold_titles), item.id
+
+
+def test_gold_chunks_parse_and_validate(tmp_path: Path) -> None:
+    payload = _item_payload("q1")
+    payload["gold_chunks"] = [{"document_title": "【样例】早餐与餐饮", "ordinal": 2}]
+    item = load_eval_set(_write_set(tmp_path, "chunks.jsonl", [payload]))[0]
+    assert item.gold_chunks == (ChunkRef(document_title="【样例】早餐与餐饮", ordinal=2),)
+
+    detached = _item_payload("q1")
+    detached["gold_chunks"] = [{"document_title": "别的文档", "ordinal": 0}]
+    with pytest.raises(EvalSetError, match="标题不在 gold_titles"):
+        load_eval_set(_write_set(tmp_path, "detached.jsonl", [detached]))
+
+    for bad in (-1, "0", 1.5, True):
+        payload = _item_payload("q1")
+        payload["gold_chunks"] = [{"document_title": "【样例】早餐与餐饮", "ordinal": bad}]
+        with pytest.raises(EvalSetError, match="ordinal 必须是非负整数"):
+            load_eval_set(_write_set(tmp_path, f"bad-{bad}.jsonl", [payload]))
+
+    empty = _item_payload("q1")
+    empty["gold_chunks"] = []
+    with pytest.raises(EvalSetError, match="缺少非空数组字段：gold_chunks"):
+        load_eval_set(_write_set(tmp_path, "empty-chunks.jsonl", [empty]))
+
+
+def test_score_question_chunk_level_metrics() -> None:
+    item = replace(
+        _item("q1", "早餐几点开始？", gold=("A",), primary="A"),
+        gold_chunks=(ChunkRef("A", 0), ChunkRef("A", 2)),
+    )
+    retrieved = [
+        chunk_digest(_chunk(2, "A")),
+        chunk_digest(_chunk(0, "B")),
+        chunk_digest(_chunk(0, "A")),
+    ]
+    outcome = score_question(item, ["A", "B"], k=3, retrieved=retrieved)
+    assert outcome.chunk_recall == 1.0
+    assert outcome.chunk_precision == pytest.approx(2 / 3)
+    assert outcome.chunk_f1 == pytest.approx(0.8)
+    assert outcome.as_dict()["gold_chunks"] == [
+        {"document_title": "A", "ordinal": 0},
+        {"document_title": "A", "ordinal": 2},
+    ]
+
+    miss = score_question(item, ["B"], k=3, retrieved=[chunk_digest(_chunk(0, "B"))])
+    assert miss.chunk_recall == 0.0
+
+    # 未标注分块 → 三项均记 None，且不写入报告明细
+    plain = score_question(
+        _item("q2", "问题", gold=("A",), primary="A"),
+        ["A"],
+        k=3,
+        retrieved=[chunk_digest(_chunk(0, "A"))],
+    )
+    assert (plain.chunk_recall, plain.chunk_precision, plain.chunk_f1) == (None, None, None)
+    assert "gold_chunks" not in plain.as_dict()
+
+
+def test_aggregate_includes_chunk_level_means() -> None:
+    hit_item = replace(_item("q1", "一", gold=("A",), primary="A"), gold_chunks=(ChunkRef("A", 0),))
+    miss_item = replace(
+        _item("q2", "二", gold=("A",), primary="A"), gold_chunks=(ChunkRef("A", 0),)
+    )
+    hit = score_question(hit_item, ["A"], k=3, retrieved=[chunk_digest(_chunk(0, "A"))])
+    miss = score_question(miss_item, ["A"], k=3, retrieved=[chunk_digest(_chunk(1, "A"))])
+    metrics = aggregate([hit, miss], k=3)
+    assert metrics.chunk_recall_at_k == 0.5
+    assert metrics.as_dict()["chunk_recall_at_k"] == 0.5
+
+    unmarked = aggregate(
+        [score_question(_item("q3", "三", gold=("A",), primary="A"), ["A"], k=3)], k=3
+    )
+    assert unmarked.chunk_recall_at_k is None
+    assert unmarked.as_dict()["chunk_recall_at_k"] is None
 
 
 def test_score_question_metrics_follow_documented_denominators() -> None:

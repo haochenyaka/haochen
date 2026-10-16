@@ -9,8 +9,8 @@
   模型时不生成答案与评判，报告记 answer_correctness=null，overall_score 取 recall@K；
 - 报告不可变：新报告落库时，同数据集下内容或配置指纹不一致的旧报告被标记作废
   （superseded_by + invalidated_reason），指纹一致的旧报告保持有效并记入可比清单；
-- 可比性三要素：dataset_fingerprint（评估集）、content_fingerprint（文档 checksum 与
-  分块数）、config_fingerprint（检索参数 + 评判模型）。
+- 可比性三要素：dataset_fingerprint（评估集）、content_fingerprint（文档 checksum、
+  分块数与逐分块 content_hash）、config_fingerprint（检索参数 + 评判模型）。
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from app.eval.kb_metrics import QuestionOutcome, aggregate, chunk_digest, score_
 from app.knowledge.embedding import DEV_EMBEDDING_DIMENSIONS
 from app.knowledge.retrieval import KnowledgeRetriever, RetrievedContext
 from app.models.eval import KbEvalReport
-from app.repositories import KbDocumentRepository, KnowledgeBaseRepository
+from app.repositories import KbChunkRepository, KbDocumentRepository, KnowledgeBaseRepository
 from app.repositories.eval_repository import KbEvalReportRepository
 
 logger = logging.getLogger(__name__)
@@ -141,26 +141,32 @@ def retrieval_config_snapshot(
 
 
 async def collect_content_fingerprint(session: AsyncSession, kb_ids: Mapping[str, UUID]) -> str:
-    """内容指纹：每库全部文档的标题、状态、checksum 与分块数，任一变化即失配。"""
+    """内容指纹：每库全部文档的标题、状态、checksum 与逐分块 content_hash。
+
+    逐分块哈希是分块级黄金锚点（document_title, ordinal）的稳定性兜底：仅比对分块数会漏掉
+    「改了内容但分块数不变」，导致锚点静默指向错误段落。
+    """
     documents = KbDocumentRepository(session)
+    chunks = KbChunkRepository(session)
     payload: list[dict[str, object]] = []
     for code, kb_id in sorted(kb_ids.items()):
         rows = await documents.list_by_kb(kb_id, limit=CONTENT_DOCUMENT_LIMIT)
+        entries: list[dict[str, object]] = []
+        for row in rows:
+            chunk_rows = await chunks.list_by_document(row.id)
+            entries.append(
+                {
+                    "title": row.title,
+                    "status": row.status,
+                    "checksum": row.checksum,
+                    "chunk_count": row.chunk_count,
+                    "chunks": [[chunk.ordinal, chunk.content_hash] for chunk in chunk_rows],
+                }
+            )
         payload.append(
             {
                 "kb_code": code,
-                "documents": sorted(
-                    (
-                        {
-                            "title": row.title,
-                            "status": row.status,
-                            "checksum": row.checksum,
-                            "chunk_count": row.chunk_count,
-                        }
-                        for row in rows
-                    ),
-                    key=lambda item: str(item["title"]),
-                ),
+                "documents": sorted(entries, key=lambda item: str(item["title"])),
             }
         )
     return fingerprint(payload)
@@ -358,6 +364,15 @@ def _log_summary(report: EvalReport) -> None:
         metrics["primary_top1_rate"],
         metrics["hit_rate"],
         metrics["answer_correctness"],
+    )
+    logger.info(
+        "chunk_recall@%d=%s chunk_precision@%d=%s chunk_f1@%d=%s",
+        report.k,
+        metrics.get("chunk_recall_at_k"),
+        report.k,
+        metrics.get("chunk_precision_at_k"),
+        report.k,
+        metrics.get("chunk_f1_at_k"),
     )
     logger.info(
         "overall_score=%s（%s）评判模型=%s",

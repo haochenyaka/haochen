@@ -8,8 +8,8 @@ cases:
     message: "我要办理入住，预订编号是 BK20260901"
     expected:
       tool_sequence:
-        - name: "check_in"
-          args_contain: { "booking_ref": "BK20260901" }
+        - name: "get_checkin_info"
+          args_contain: { "order_no": "BK20260901" }
       task_success: true
       answer_contains: ["入住"]
     tags: ["checkin", "happy-path"]
@@ -18,8 +18,7 @@ cases:
     name: "退房"
     message: "我要退房"
     expected:
-      tool_sequence:
-        - name: "check_out"
+      tool_sequence: []
       task_success: true
     tags: ["checkin", "checkout"]
 

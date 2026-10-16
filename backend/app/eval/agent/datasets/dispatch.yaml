@@ -8,7 +8,7 @@ cases:
     message: "我需要打扫房间"
     expected:
       tool_sequence:
-        - name: "dispatch_cleaning"
+        - name: "request_room_clean"
       task_success: true
     tags: ["dispatch", "happy-path"]
 

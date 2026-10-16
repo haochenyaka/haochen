@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import pytest
 import yaml
 
+from app.config import get_settings
 from app.eval.agent.dataset import (
     AgentEvalItem,
     EvalSetError,
@@ -16,12 +19,17 @@ from app.eval.agent.dataset import (
     fingerprint,
     load_eval_set,
 )
+from app.eval.agent.executor import RealCaseExecutor, task_success_from, tool_calls_from_audit
 from app.eval.agent.metrics import aggregate, score_question
 from app.eval.agent.runner import (
     DEFAULT_DATASET_DIR,
+    EvalRunError,
     ScriptedCaseExecutor,
+    config_fingerprint_value,
     evaluate_items,
+    executor_identity,
 )
+from app.repositories.audit_repository import AuditEntry
 
 
 def _make_item(
@@ -246,6 +254,94 @@ class TestMetrics:
         assert d["tool_accuracy"] == 1.0
         assert d["task_success"] is True
         assert d["item_id"] == "test-001"
+
+
+class TestDatasetToolAlignment:
+    @pytest.mark.eval
+    def test_eval_dataset_tools_registered(self) -> None:
+        """防漂移：出厂数据集期望的工具名必须已在注册表注册。
+
+        数据集引用了不存在（或已改名）的工具时，评测比对的是永远匹配不上的名字，
+        指标会静默失真；此守卫在数据集与工具注册表之间拉一条硬连线。
+        """
+        from app.agents.toolkits.registry import default_registry
+
+        registered = set(default_registry().names())
+        missing: list[str] = []
+        for fpath in sorted(DEFAULT_DATASET_DIR.glob("*.yaml")):
+            for item in load_eval_set(fpath):
+                if item.expected is None or not item.expected.tool_sequence:
+                    continue
+                for spec in item.expected.tool_sequence:
+                    if spec.name not in registered:
+                        missing.append(f"{fpath.name}:{item.id}:{spec.name}")
+        assert not missing, f"数据集引用了未注册的工具：{missing}"
+
+
+def _audit_entry(
+    *,
+    kind: Literal["model", "tool"] = "tool",
+    seq: int = 1,
+    status: str = "completed",
+    tool_name: str | None = None,
+    args_digest: dict[str, object] | None = None,
+) -> AuditEntry:
+    return AuditEntry(
+        kind=kind,
+        id=seq,
+        run_id="run-1",
+        seq=seq,
+        agent_slug="front-desk",
+        status=status,
+        created_at=datetime(2026, 10, 16, tzinfo=UTC),
+        tool_name=tool_name,
+        args_digest=args_digest,
+    )
+
+
+class TestRealExecutorAuditReadback:
+    """真实执行器的审计回读口径（纯函数，不触库不触图）。"""
+
+    pytestmark = pytest.mark.eval
+
+    def test_tool_calls_ordered_by_seq_and_filtered(self) -> None:
+        entries = [
+            _audit_entry(seq=3, tool_name="create_order", args_digest={"room_type_code": "A"}),
+            _audit_entry(kind="model", seq=2),
+            _audit_entry(seq=1, tool_name="list_room_types"),
+        ]
+        calls = tool_calls_from_audit(entries)
+        assert [call["name"] for call in calls] == ["list_room_types", "create_order"]
+        assert calls[0]["args"] == {}
+        assert calls[1]["args"] == {"room_type_code": "A"}
+
+    def test_task_success_rules(self) -> None:
+        failed = [_audit_entry(seq=1, status="failed", tool_name="create_order")]
+        ok = [_audit_entry(seq=1, status="completed", tool_name="list_room_types")]
+        assert task_success_from("completed", ok) is True
+        assert task_success_from("completed", []) is True
+        assert task_success_from("completed", failed) is False
+        assert task_success_from("failed", ok) is False
+        assert task_success_from("cancelled", ok) is False
+
+    def test_executor_identity_distinguishes_scripted_and_real(self) -> None:
+        assert executor_identity(ScriptedCaseExecutor()) == "scripted"
+        assert executor_identity(RealCaseExecutor()) == "real-graph"
+
+    def test_config_fingerprint_covers_executor_and_judge(self) -> None:
+        settings = get_settings()
+        scripted = config_fingerprint_value(settings, "scripted", "judge-a")
+        real = config_fingerprint_value(settings, "real-graph", "judge-a")
+        other_judge = config_fingerprint_value(settings, "real-graph", "judge-b")
+        assert scripted != real
+        assert real != other_judge
+
+    @pytest.mark.anyio
+    async def test_execute_without_model_key_fails_loudly(self) -> None:
+        settings = get_settings().model_copy(update={"model_api_key": ""})
+        executor = RealCaseExecutor(settings=settings)
+        with pytest.raises(EvalRunError, match="模型密钥"):
+            await executor.execute(_make_item("no-key"))
 
 
 class TestRunner:

@@ -1,0 +1,1250 @@
+{
+  "meal-01": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 0,
+      "coverage": 0.9143
+    }
+  ],
+  "meal-02": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 0,
+      "coverage": 0.9271
+    }
+  ],
+  "meal-03": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "meal-04": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "meal-05": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 0,
+      "coverage": 0.9037
+    }
+  ],
+  "meal-06": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 0,
+      "coverage": 0.8148
+    }
+  ],
+  "meal-07": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 1,
+      "coverage": 0.934
+    }
+  ],
+  "meal-08": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "meal-09": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 2,
+      "coverage": 0.9381
+    }
+  ],
+  "meal-10": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 3,
+      "coverage": 0.6698
+    }
+  ],
+  "meal-11": [
+    {
+      "document_title": "【样例】早餐与餐饮",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-01": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 0,
+      "coverage": 0.7616
+    }
+  ],
+  "wifi-02": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 0,
+      "coverage": 0.9333
+    }
+  ],
+  "wifi-03": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 0,
+      "coverage": 0.9
+    }
+  ],
+  "wifi-04": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-05": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 1,
+      "coverage": 0.8974
+    },
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 1,
+      "coverage": 0.7778
+    }
+  ],
+  "wifi-06": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-07": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-08": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-09": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-10": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 2,
+      "coverage": 0.9188
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 1,
+      "coverage": 0.9103
+    }
+  ],
+  "wifi-11": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "wifi-12": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 2,
+      "coverage": 0.8889
+    }
+  ],
+  "wifi-13": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 3,
+      "coverage": 0.961
+    }
+  ],
+  "wifi-14": [
+    {
+      "document_title": "【样例】网络与智能设备",
+      "ordinal": 3,
+      "coverage": 0.7389
+    }
+  ],
+  "stay-01": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 1,
+      "coverage": 0.835
+    }
+  ],
+  "stay-02": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "stay-03": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "stay-04": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "stay-05": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "stay-06": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "stay-07": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 5,
+      "coverage": 0.9062
+    },
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 0.8095
+    }
+  ],
+  "stay-08": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 1.0
+    }
+  ],
+  "stay-09": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 1.0
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 5,
+      "coverage": 1.0
+    }
+  ],
+  "stay-10": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 5,
+      "coverage": 0.798
+    },
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 0.7475
+    }
+  ],
+  "stay-11": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 1.0
+    }
+  ],
+  "stay-12": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 5,
+      "coverage": 1.0
+    }
+  ],
+  "stay-13": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 3,
+      "coverage": 1.0
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "stay-14": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 3,
+      "coverage": 0.9259
+    }
+  ],
+  "stay-15": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 4,
+      "coverage": 1.0
+    },
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 4,
+      "coverage": 0.9398
+    }
+  ],
+  "stay-16": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "checkout-01": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 2,
+      "coverage": 0.888
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 4,
+      "coverage": 0.8506
+    }
+  ],
+  "checkout-02": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "checkout-03": [
+    {
+      "document_title": "【样例】入住政策与押金",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "intro-01": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "intro-02": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "intro-03": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 0,
+      "coverage": 0.6656
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 0,
+      "coverage": 0.6477
+    }
+  ],
+  "intro-04": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 1,
+      "coverage": 0.8879
+    }
+  ],
+  "intro-05": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "intro-06": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "intro-07": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 0,
+      "coverage": 0.939
+    }
+  ],
+  "intro-08": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "intro-09": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "intro-10": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 3,
+      "coverage": 0.75
+    }
+  ],
+  "intro-11": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 3,
+      "coverage": 0.7646
+    }
+  ],
+  "intro-12": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 3,
+      "coverage": 0.9006
+    }
+  ],
+  "intro-13": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 4,
+      "coverage": 0.7996
+    }
+  ],
+  "intro-14": [
+    {
+      "document_title": "【样例】酒店介绍与设施",
+      "ordinal": 4,
+      "coverage": 0.8431
+    }
+  ],
+  "service-01": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 0,
+      "coverage": 0.8824
+    }
+  ],
+  "service-02": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 0,
+      "coverage": 0.9539
+    }
+  ],
+  "service-03": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "service-04": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 1,
+      "coverage": 0.8302
+    }
+  ],
+  "service-05": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "service-06": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "service-07": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 2,
+      "coverage": 0.5302
+    },
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 2,
+      "coverage": 0.4826
+    }
+  ],
+  "service-08": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 2,
+      "coverage": 0.5843
+    },
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 2,
+      "coverage": 0.5221
+    }
+  ],
+  "service-09": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "service-10": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "service-11": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "service-12": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 4,
+      "coverage": 0.9664
+    }
+  ],
+  "service-13": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "service-14": [
+    {
+      "document_title": "【样例】客房服务与清洁",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "faq-01": [
+    {
+      "document_title": "【样例】常见问题",
+      "ordinal": 5,
+      "coverage": 1.0
+    }
+  ],
+  "book-01": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 0,
+      "coverage": 0.8804
+    }
+  ],
+  "book-02": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "book-03": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "book-04": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "book-05": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 2,
+      "coverage": 0.8788
+    }
+  ],
+  "book-06": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 2,
+      "coverage": 0.9538
+    }
+  ],
+  "book-07": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "book-08": [
+    {
+      "document_title": "【样例】预订与保留规则",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "resched-01": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "resched-02": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "resched-03": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "resched-04": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "resched-05": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "resched-06": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "resched-07": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "resched-08": [
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 3,
+      "coverage": 0.539
+    },
+    {
+      "document_title": "【样例】改期与取消规则",
+      "ordinal": 4,
+      "coverage": 0.5027
+    }
+  ],
+  "group-01": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "group-02": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "group-03": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "group-04": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "group-05": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "group-06": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "group-07": [
+    {
+      "document_title": "【样例】团体与长住预订",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "invoice-01": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 0,
+      "coverage": 0.913
+    }
+  ],
+  "invoice-02": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "invoice-03": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 1,
+      "coverage": 0.9214
+    }
+  ],
+  "invoice-04": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "invoice-05": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "invoice-06": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "invoice-07": [
+    {
+      "document_title": "【样例】发票与企业结算",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "park-01": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 0,
+      "coverage": 0.91
+    }
+  ],
+  "park-02": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "park-03": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "park-04": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "park-05": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "park-06": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "park-07": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "park-08": [
+    {
+      "document_title": "【样例】停车与接送服务",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "meet-01": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "meet-02": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "meet-03": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "meet-04": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "meet-05": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "meet-06": [
+    {
+      "document_title": "【样例】会议室与活动场地",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "access-01": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "access-02": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 1,
+      "coverage": 0.9415
+    }
+  ],
+  "access-03": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "access-04": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "access-05": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 3,
+      "coverage": 0.8655
+    }
+  ],
+  "access-06": [
+    {
+      "document_title": "【样例】无障碍与亲子设施",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "safety-01": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 0,
+      "coverage": 0.5865
+    },
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 4,
+      "coverage": 0.5844
+    }
+  ],
+  "safety-02": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 0,
+      "coverage": 0.9183
+    }
+  ],
+  "safety-03": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "safety-04": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "safety-05": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "safety-06": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "safety-07": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "safety-08": [
+    {
+      "document_title": "【样例】安全与应急指引",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "member-01": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 0,
+      "coverage": 0.8531
+    }
+  ],
+  "member-02": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "member-03": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "member-04": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "member-05": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "member-06": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "member-07": [
+    {
+      "document_title": "【样例】会员与积分",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "complain-01": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "complain-02": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 1,
+      "coverage": 0.8664
+    }
+  ],
+  "complain-03": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "complain-04": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "complain-05": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "complain-06": [
+    {
+      "document_title": "【样例】投诉与补偿标准",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "lost-01": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "lost-02": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 1,
+      "coverage": 0.8959
+    }
+  ],
+  "lost-03": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "lost-04": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "lost-05": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "lost-06": [
+    {
+      "document_title": "【样例】失物招领",
+      "ordinal": 4,
+      "coverage": 0.9343
+    }
+  ],
+  "nearby-01": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "nearby-02": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 1,
+      "coverage": 0.941
+    }
+  ],
+  "nearby-03": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 1,
+      "coverage": 0.9043
+    }
+  ],
+  "nearby-04": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "nearby-05": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "nearby-06": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 1,
+      "coverage": 0.9133
+    }
+  ],
+  "nearby-07": [
+    {
+      "document_title": "【样例】周边配套与景点",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "diet-01": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "diet-02": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "diet-03": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "diet-04": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "diet-05": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ],
+  "diet-06": [
+    {
+      "document_title": "【样例】特殊饮食与过敏须知",
+      "ordinal": 4,
+      "coverage": 1.0
+    }
+  ],
+  "eco-01": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "eco-02": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 0,
+      "coverage": 1.0
+    }
+  ],
+  "eco-03": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "eco-04": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 1,
+      "coverage": 1.0
+    }
+  ],
+  "eco-05": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 2,
+      "coverage": 1.0
+    }
+  ],
+  "eco-06": [
+    {
+      "document_title": "【样例】环保与清洁偏好",
+      "ordinal": 3,
+      "coverage": 1.0
+    }
+  ]
+}

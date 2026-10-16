@@ -9,9 +9,7 @@ cases:
     message: "我要订一间大床房，今晚入住"
     expected:
       tool_sequence:
-        - name: "inquire_room_type"
-          args_contain: { "room_type": "大床房" }
-        - name: "inquire_room"
+        - name: "list_room_types"
         - name: "create_order"
       task_success: true
       answer_contains: ["已为您创建订单"]
@@ -22,8 +20,7 @@ cases:
     message: "大床房多少钱一晚？"
     expected:
       tool_sequence:
-        - name: "inquire_room_type"
-          args_contain: { "room_type": "大床房" }
+        - name: "list_room_types"
       task_success: true
     tags: ["order", "inquiry"]
 

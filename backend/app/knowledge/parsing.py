@@ -3,7 +3,8 @@
 不变量：
 - 解析失败一律抛出 `ParseError`（携带可读原因），由任务层收敛为 error_parsing；
 - 分块正文 = 原件文本的连续切片，`char_start/char_end` 指向原文档，引用可回溯；
-- 分块只按段落边界切分，超长段落按句读再切；重叠区保证跨块语义不被截断。
+- 先按 markdown 标题切小节、再在小节内按段落边界聚合，超长段落按句读再切；重叠区只在
+  小节内保留——跨小节重叠会把两个主题混进同一分块，破坏分块级黄金标注的语义。
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ _EXTENSION_SOURCE_TYPES: dict[str, str] = {
 
 _PARAGRAPH_SPLIT = re.compile(r"\n\s*\n+")
 _SENTENCE_SPLIT = re.compile(r"(?<=[。！？!?；;.\n])")
+_HEADING_START = re.compile(r"(?m)^(?=#{1,6}\s)")
+_LEADING_HEADING = re.compile(r"^#{1,6}\s+.*?(?:\n|$)")
 
 
 class ParseError(Exception):
@@ -94,7 +97,7 @@ def chunk_text(
     max_chars: int = 700,
     overlap_chars: int = 80,
 ) -> list[ChunkDraft]:
-    """按段落聚合分块；超长段落按句读切分；相邻分块保留重叠区。
+    """按 markdown 标题分小节，小节内按段落聚合分块；超长段落按句读切分。
 
     `char_start/char_end` 指向解析产物（而非原件字节），引用可按偏移回溯到原文；
     每个分块的长度（去首尾空白后）不超过 `max_chars`。
@@ -104,14 +107,63 @@ def chunk_text(
     if overlap_chars < 0 or overlap_chars >= max_chars:
         raise ValueError("overlap_chars 必须落在 [0, max_chars)")
 
-    pieces = _split_to_pieces(text, max_chars=max_chars)
     drafts: list[ChunkDraft] = []
+    for start, end in _section_ranges(text):
+        _chunk_range(
+            text,
+            start=start,
+            end=end,
+            max_chars=max_chars,
+            overlap_chars=overlap_chars,
+            drafts=drafts,
+        )
+    if not drafts:
+        raise ParseError("解析结果无法分块：正文为空")
+    return drafts
+
+
+def _section_ranges(text: str) -> list[tuple[int, int]]:
+    """按 markdown 标题行切分整篇文本，返回 [start, end) 区间。
+
+    「只有标题行、没有正文」的小节并入下一节，避免产生纯标题分块（如 `# 标题` 单独一行）。
+    """
+    starts = [match.start() for match in _HEADING_START.finditer(text)]
+    if not starts:
+        return [(0, len(text))]
+    bounds = ([0] if starts[0] > 0 else []) + starts + [len(text)]
+    sections = [(bounds[index], bounds[index + 1]) for index in range(len(bounds) - 1)]
+    merged: list[tuple[int, int]] = []
+    for start, end in sections:
+        if (
+            merged
+            and not _LEADING_HEADING.sub("", text[merged[-1][0] : merged[-1][1]], count=1).strip()
+        ):
+            merged[-1] = (merged[-1][0], end)
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _chunk_range(
+    text: str,
+    *,
+    start: int,
+    end: int,
+    max_chars: int,
+    overlap_chars: int,
+    drafts: list[ChunkDraft],
+) -> None:
+    """在 [start, end) 区间内聚合分块，偏移量换算回整篇文本的绝对下标。"""
+    pieces = [
+        (piece, start + offset)
+        for piece, offset in _split_to_pieces(text[start:end], max_chars=max_chars)
+    ]
     current: list[tuple[str, int]] = []
 
     def _append(pieces_in_chunk: list[tuple[str, int]]) -> None:
-        start = pieces_in_chunk[0][1]
-        end = pieces_in_chunk[-1][1] + len(pieces_in_chunk[-1][0])
-        raw = text[start:end]
+        chunk_start = pieces_in_chunk[0][1]
+        chunk_end = pieces_in_chunk[-1][1] + len(pieces_in_chunk[-1][0])
+        raw = text[chunk_start:chunk_end]
         content = raw.strip()
         if not content:
             return
@@ -121,8 +173,8 @@ def chunk_text(
                 ordinal=len(drafts),
                 content=content,
                 content_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
-                char_start=start + lead,
-                char_end=start + lead + len(content),
+                char_start=chunk_start + lead,
+                char_end=chunk_start + lead + len(content),
             )
         )
 
@@ -135,9 +187,6 @@ def chunk_text(
 
     if current:
         _append(current)
-    if not drafts:
-        raise ParseError("解析结果无法分块：正文为空")
-    return drafts
 
 
 def _overlap_tail(pieces: list[tuple[str, int]], *, overlap_chars: int) -> list[tuple[str, int]]:
