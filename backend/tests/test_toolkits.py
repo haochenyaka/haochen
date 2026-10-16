@@ -191,6 +191,7 @@ def test_default_registry_ships_read_only_builtin_tools() -> None:
         "request_robot_delivery",
         "request_room_clean",
         "submit_complaint",
+        "request_handoff",
         "get_current_time",
     )
     assert registry.read_only_names() == (
@@ -207,6 +208,8 @@ def test_default_registry_ships_read_only_builtin_tools() -> None:
     described = {item["name"]: item for item in registry.describe()}
     assert described["create_order"]["read_only"] is False
     assert described["create_order"]["category"] == "order"
+    assert described["request_handoff"]["read_only"] is False
+    assert described["request_handoff"]["category"] == "handoff"
     assert described["get_checkin_info"]["read_only"] is True
     assert described["get_checkin_info"]["skill"] == "checkin-flow"
     assert described["get_checkin_info"]["credential_delivery"] is False

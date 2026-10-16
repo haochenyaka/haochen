@@ -42,6 +42,16 @@ class AuditRecorder:
         self._agent_slug = agent_slug
         self._session_factory = session_factory
 
+    def with_agent(self, agent_slug: str) -> AuditRecorder:
+        """派生归属不同的记录器：同一 Run 与写入口径，只改事实的 agent_slug。
+
+        supervisor 及其子图共用一条流水线，各子图按本器派生实例写事实，归属随装配期确定，
+        不依赖运行期上下文传递。
+        """
+        return AuditRecorder(
+            run_id=self._run_id, agent_slug=agent_slug, session_factory=self._session_factory
+        )
+
     async def model_call(
         self,
         *,
@@ -93,6 +103,29 @@ class AuditRecorder:
                 idempotency_key=idempotency_key,
                 duration_ms=duration_ms,
                 error=error,
+            )
+            await session.commit()
+
+    async def route_decision(
+        self,
+        *,
+        decided_route: str,
+        source: str,
+        dispatched_route: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        """记录一次路由决策事实：判定值、判定来源（llm/keyword）与最终派发目标。
+
+        dispatched_route 与 decided_route 不同即发生过授权感知改派；为 None 表示未派发（收尾）。
+        """
+        async with self._session_factory() as session:
+            await AuditRepository(session).append_route(
+                run_id=self._run_id,
+                agent_slug=self._agent_slug,
+                decided_route=decided_route,
+                dispatched_route=dispatched_route,
+                source=source,
+                reason=reason,
             )
             await session.commit()
 

@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.middlewares.base import SteerSuperseded
 from app.db import SessionFactory
+from app.memory.service import submit_memory_extraction
 from app.repositories import (
     AgentRunRepository,
     AuditRepository,
@@ -37,6 +38,7 @@ from app.services.run_dispatch import NullRunDispatcher, RunDispatcher, dispatch
 from app.services.run_event_bus import RunEventBus
 from app.services.run_events import RunEventEmitter
 from app.services.run_types import RunIdentity, RunInterrupted, RunResult
+from app.services.task_dispatch import NullTaskDispatcher, TaskDispatcher, dispatch_task
 from app.services.thread_dispatch import DispatchPlan, promote_head_if_idle
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,7 @@ class RunExecutor:
         body: RunBody,
         *,
         dispatcher: RunDispatcher | None = None,
+        task_dispatcher: TaskDispatcher | None = None,
         session_factory: async_sessionmaker[AsyncSession] = SessionFactory,
         lease_seconds: int = LEASE_SECONDS,
         heartbeat_interval_seconds: float = HEARTBEAT_INTERVAL_SECONDS,
@@ -120,6 +123,7 @@ class RunExecutor:
     ) -> None:
         self._body = body
         self._dispatcher = dispatcher
+        self._task_dispatcher = task_dispatcher
         self._session_factory = session_factory
         self._lease_seconds = lease_seconds
         self._heartbeat_interval_seconds = heartbeat_interval_seconds
@@ -305,6 +309,18 @@ class RunExecutor:
             )
             await AuditRepository(session).mark_run_reconciled(identity.run_id)
             plan = await promote_head_if_idle(session, identity.thread_id)
+            # 记忆抽取：仅 completed 触发；与终态同事务提交任务意图，提交后再投递
+            memory_task = (
+                await submit_memory_extraction(
+                    session,
+                    run_id=identity.run_id,
+                    thread_id=identity.thread_id,
+                    user_id=identity.user_id,
+                    agent_slug=identity.agent_slug,
+                )
+                if status == "completed"
+                else None
+            )
             await session.commit()
 
         # 终态事件在提交之后发射；终态写入被拒时不发射（由 reconciler 收敛后再投影）
@@ -314,6 +330,8 @@ class RunExecutor:
             error_class=error_class,
             token_usage=result.token_usage if result is not None else None,
         )
+        if memory_task is not None and memory_task.should_dispatch:
+            await dispatch_task(self._task_dispatcher, memory_task.task_id)
         await dispatch_run(self._dispatcher, plan.run_id if plan is not None else None)
         return cast(RunOutcome, status)
 
@@ -422,15 +440,26 @@ def context_event_bus(ctx: dict[str, Any]) -> RunEventBus | None:
     return cast(RunEventBus | None, ctx.get("run_event_bus"))
 
 
+def context_task_dispatcher(ctx: dict[str, Any]) -> TaskDispatcher:
+    """Run 终态后的记忆抽取任务投递口：缺省落 Null（任务留 pending 由恢复补发）。"""
+    dispatcher = ctx.get("task_dispatcher")
+    if dispatcher is None:
+        dispatcher = NullTaskDispatcher()
+        ctx["task_dispatcher"] = dispatcher
+    return cast(TaskDispatcher, dispatcher)
+
+
 async def execute_agent_run(ctx: dict[str, Any], run_id: str) -> str:
     """ARQ 作业入口：执行一次 Run；job 名与 run_dispatch.RUN_JOB_NAME 一致。
 
     可用 `ctx["checkpointer"]` 注入检查点实现（测试用内存实现），默认取进程级
-    PostgreSQL 检查点；`ctx["run_event_bus"]` 缺省时事件不发射（投影可缺失）。
+    PostgreSQL 检查点；`ctx["run_event_bus"]` 缺省时事件不发射（投影可缺失）；
+    `ctx["task_dispatcher"]` 供终态后记忆抽取任务投递，缺省落 Null。
     """
     executor = RunExecutor(
         AgentRunBody(checkpointer=ctx.get("checkpointer")),
         dispatcher=context_dispatcher(ctx),
+        task_dispatcher=context_task_dispatcher(ctx),
         session_factory=context_session_factory(ctx),
         event_bus=context_event_bus(ctx),
     )

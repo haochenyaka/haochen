@@ -20,10 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents import StaticResourcePolicy
 from app.agents.buildin.front_desk.agent import FrontDeskAgent
 from app.agents.models import STUB_MODEL_NAME, STUB_REPLY_PREFIX
+from app.agents.supervisor.graph import SUB_AGENT_TYPES, SUPERVISOR_SLUG
+from app.agents.supervisor.routing import ROUTE_FINISH, ROUTE_ORDER, ROUTE_ROOM_SERVICE
 from app.agents.toolkits import ToolRegistry, builtin_tool
 from app.config import get_settings
 from app.models.audit import ModelAudit, ToolAudit
 from app.models.runtime import AgentRunAttempt, Message
+from app.repositories import AuditRepository
 from app.services.audit_service import (
     MODEL_STATUS_COMPLETED,
     MODEL_STATUS_FAILED,
@@ -192,6 +195,74 @@ def test_agent_run_body_replays_history_and_writes_checkpoint(
     )
     assert prompt is not None and prompt > 0
     assert completion is not None and completion > 0
+
+
+def test_supervisor_route_facts_and_sub_agent_attribution(
+    runtime_db_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """真实 supervisor 图：决策事实落 route_audit，模型事实归属到具体子 Agent。"""
+    force_stub_model(monkeypatch)
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        pool, checkpointer = await _open_saver(runtime_db_url)
+        try:
+            executor = RunExecutor(
+                AgentRunBody(checkpointer=checkpointer),
+                dispatcher=RecordingDispatcher(),
+                session_factory=factory,
+            )
+            async with factory() as session:
+                intake = await intake_message(
+                    session,
+                    username="supervisor-audit-tester",
+                    text="我要订房，顺便叫一份早餐到房间",
+                )
+            assert intake.run_id is not None
+            outcome = await executor.execute(intake.run_id)
+
+            async with factory() as session:
+                routes = await AuditRepository(session).list_routes(intake.run_id)
+                audits = (
+                    (
+                        await session.execute(
+                            select(ModelAudit)
+                            .where(ModelAudit.run_id == str(intake.run_id))
+                            .order_by(ModelAudit.seq)
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+            return {
+                "outcome": outcome,
+                "route_rows": [
+                    (row.agent_slug, row.decided_route, row.dispatched_route, row.source)
+                    for row in routes
+                ],
+                "model_slugs": [row.agent_slug for row in audits],
+            }
+        finally:
+            await pool.close()
+
+    result = run_with_session_factory(runtime_db_url, _body)
+    assert result["outcome"] == "completed"
+
+    route_rows = result["route_rows"]
+    assert route_rows, "supervisor 未落路由决策事实"
+    # 决策事实归决策节点；判定来源为关键词兜底（stub 模型无结构化输出能力）
+    assert {slug for slug, *_ in route_rows} == {SUPERVISOR_SLUG}
+    assert {source for *_, source in route_rows} == {"keyword"}
+    # 复合请求被拆分派发，收尾决策 recorded 为 finish 且无派发目标
+    dispatched = [target for _, _, target, _ in route_rows if target is not None]
+    assert {ROUTE_ORDER, ROUTE_ROOM_SERVICE} <= set(dispatched)
+    assert route_rows[-1][1:] == (ROUTE_FINISH, None, "keyword")
+    assert len(set(dispatched)) == len(dispatched), "同一子 Agent 不应被派发两次"
+
+    # 归属：模型事实按子 Agent 记，不再是入口 slug
+    sub_agent_slugs = {agent_type.slug for agent_type in SUB_AGENT_TYPES.values()}
+    assert result["model_slugs"]
+    assert set(result["model_slugs"]) <= sub_agent_slugs
+    assert FrontDeskAgent.slug not in result["model_slugs"]
 
 
 def test_checkpoint_tables_are_migration_managed(runtime_db_url: str) -> None:

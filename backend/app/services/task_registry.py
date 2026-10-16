@@ -30,6 +30,7 @@ HANDLER_MODULES: tuple[str, ...] = (
     "app.lock.task_handlers",
     "app.lock.rotation_task",
     "app.data_pipeline.task_handlers",
+    "app.memory.task_handlers",
 )
 
 

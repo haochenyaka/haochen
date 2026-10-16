@@ -1,28 +1,22 @@
-"""front-desk 占位图：模型直答 + 工具回环，中间件流水线包裹模型与工具调用（P1）。
+"""front-desk 前台入口（supervisor）：把客人诉求路由到咨询/订单/客房服务/转人工子 Agent。
 
-模型调用前按工位顺序准备请求（大结果卸载、技能门控、记忆注入、阈值摘要、工具调用
-形态修正），调用由 ModelRetry 与 TokenUsage 工位包裹；模型请求的工具调用经 ToolNode
-执行（执行处复验门控、写 tool_audit 事实），结果回灌模型后再次作答，直到不再调用工具。
-用量与摘要事件随图状态写回，供 Run 终态与检查点引用；面向客户端的事件（message.delta、
-tool.call、tool.result）经运行事件发射器投影，事实仍以数据库为准。
+对外契约与单 Agent 时期一致：入口仍是本 Agent 的编译图，输入历史消息、输出含 messages
+与 token_usage；差别只在图内部是多层拓扑——supervisor 决策节点按诉求派发子图，子图产出后
+回到 supervisor 决定是否继续派发。管理端对本 slug 的 system_prompt 覆盖作用于默认子 Agent
+（咨询），模型与温度作用于全图。
 """
 
 from __future__ import annotations
 
-import operator
 from dataclasses import dataclass, field
-from functools import partial
-from typing import TYPE_CHECKING, Annotated, Any, TypedDict
-
-from langchain_core.messages import BaseMessage, SystemMessage
-from langgraph.graph import END, START, StateGraph
+from typing import TYPE_CHECKING, Any
 
 from app.agents.base import BaseAgent
 from app.agents.context import BaseContext, config_item
-from app.agents.middlewares import ModelCallRequest, build_middleware_pipeline
-from app.agents.models import bind_tools, build_chat_model, invoke_with_audit
+from app.agents.models import build_chat_model
 from app.agents.runtime import RuntimeContext
-from app.agents.toolkits import build_tool_node, default_registry
+from app.agents.supervisor.assembly import build_agent_pipeline
+from app.agents.supervisor.graph import SUPERVISOR_TOOL_IDS, build_supervisor_graph
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -53,119 +47,29 @@ class FrontDeskContext(BaseContext):
     )
 
 
-class FrontDeskState(TypedDict):
-    """图状态：messages 以数据库历史整体覆盖；用量与摘要事件随 Run 写回检查点。"""
-
-    messages: list[BaseMessage]
-    token_usage: dict[str, object] | None
-    summarization_events: Annotated[list[dict[str, Any]], operator.add]
-
-
 class FrontDeskAgent(BaseAgent):
     slug = "front-desk"
     name = "前台助理"
-    description = "面向客人的咨询与前台事务：知识咨询、房型与订单查询、预订与订单变更"
+    description = "面向客人的前台入口（supervisor）：咨询、订单、客房服务与转人工的分派与协作"
     context_schema = FrontDeskContext
-    tool_ids = (
-        "get_current_time",
-        "list_kbs",
-        "query_kb",
-        "list_room_types",
-        "list_my_orders",
-        "create_order",
-        "reschedule_order",
-        "renew_order",
-        "cancel_order",
-        "apply_invoice",
-        "get_checkin_info",
-        "deliver_room_password",
-    )
+    default_system_prompt = DEFAULT_SYSTEM_PROMPT
+    tool_ids = SUPERVISOR_TOOL_IDS
+    """supervisor 声明的工具并集（子 Agent 声明的合取）；各子图再按声明取子集。"""
     knowledge_base_ids = (HOTEL_KNOWLEDGE_BASE,)
     skill_ids = ("checkin-flow",)
 
-    async def build_graph(
-        self, runtime: RuntimeContext
-    ) -> CompiledStateGraph[FrontDeskState, RuntimeContext, FrontDeskState, FrontDeskState]:
+    async def build_graph(self, runtime: RuntimeContext) -> CompiledStateGraph[Any, Any, Any, Any]:
         context = FrontDeskContext.from_config(runtime.config)
         model = build_chat_model(
             config={"model": context.model, "temperature": context.temperature}
         )
-        pipeline = build_middleware_pipeline(
-            config=runtime.middleware_config,
-            workdir=runtime.workdir,
-            thread_id=runtime.thread_id,
-            user_id=runtime.user_id,
-            run_id=runtime.run_id,
-            recorder=runtime.recorder,
-            actor_id=runtime.actor_id,
-            skills=runtime.skills,
-            preload_skills=runtime.resources.ids("skill"),
-            memory_provider=runtime.memory_provider,
-            steer_session_factory=runtime.session_factory,
-            steer_cancel_signal=(
-                runtime.cancel_event.set if runtime.cancel_event is not None else None
-            ),
-            approval_interrupt_enabled=runtime.checkpointer is not None,
+        pipeline = build_agent_pipeline(runtime)
+        return await build_supervisor_graph(
+            runtime,
+            model=model,
+            pipeline=pipeline,
+            default_agent_prompt=context.system_prompt,
         )
-        system_prompt = "\n\n".join(
-            part
-            for part in (context.system_prompt, runtime.prompt_docs, pipeline.skill_prompt)
-            if part
-        )
-        registry = runtime.tool_registry or default_registry()
-        tools = registry.select(runtime.resources.ids("tool"))
 
-        async def respond(state: FrontDeskState) -> dict[str, Any]:
-            emitted_events = len(pipeline.summarization_events)
-            request = await pipeline.prepare_model_call(
-                ModelCallRequest(
-                    messages=[SystemMessage(content=system_prompt), *state["messages"]],
-                    tools=tools,
-                )
-            )
-            visible_model = bind_tools(model, request.tools)
-            on_delta = runtime.events.message_delta if runtime.events is not None else None
-            reply = await pipeline.invoke_model(
-                request,
-                base=partial(
-                    invoke_with_audit,
-                    visible_model,
-                    request.messages,
-                    recorder=runtime.recorder,
-                    actor_id=runtime.actor_id,
-                    on_delta=on_delta,
-                    retrieval_refs=runtime.retrieval_refs.drain,
-                ),
-            )
-            reply = await pipeline.after_model(request, reply)
-            return {
-                "messages": [*state["messages"], reply],
-                "token_usage": pipeline.token_usage,
-                "summarization_events": pipeline.summarization_events[emitted_events:],
-            }
 
-        def next_step(state: FrontDeskState) -> str:
-            reply = state["messages"][-1]
-            return "tools" if getattr(reply, "tool_calls", None) else END
-
-        builder = StateGraph(FrontDeskState, context_schema=RuntimeContext)
-        builder.add_node("respond", respond)
-        builder.add_edge(START, "respond")
-        if tools:
-            tool_node = build_tool_node(
-                tools=tools,
-                pipeline=pipeline,
-                recorder=runtime.recorder,
-                events=runtime.events,
-            )
-
-            async def run_tools(state: FrontDeskState) -> dict[str, Any]:
-                output = await tool_node.ainvoke({"messages": state["messages"]})
-                return {"messages": [*state["messages"], *output["messages"]]}
-
-            builder.add_node("tools", run_tools)
-            builder.add_conditional_edges("respond", next_step, {"tools": "tools", END: END})
-            builder.add_edge("tools", "respond")
-        else:
-            builder.add_edge("respond", END)
-        return builder.compile(checkpointer=runtime.checkpointer)
+__all__ = ["DEFAULT_SYSTEM_PROMPT", "HOTEL_KNOWLEDGE_BASE", "FrontDeskAgent", "FrontDeskContext"]

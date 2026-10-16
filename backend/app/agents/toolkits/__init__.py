@@ -5,7 +5,14 @@
 新增领域工具模块时在此显式登记，模块间有相互导入时被依赖方排在前面。
 """
 
-from app.agents.toolkits import knowledge, orders, checkin, room_service, system  # noqa: F401,I001  （顺序即注册顺序）
+from app.agents.toolkits import (  # noqa: F401,I001  （顺序即注册顺序）
+    knowledge,
+    orders,
+    checkin,
+    room_service,
+    handoff,
+    system,
+)
 from app.agents.toolkits.registry import (
     CATEGORY_METADATA_KEY,
     DISPLAY_NAME_METADATA_KEY,

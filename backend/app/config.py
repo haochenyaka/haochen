@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     kb_rerank_enabled: bool = False
     kb_rerank_timeout_seconds: float = 30.0
 
+    # P1.4 长期记忆写入：Run 终态后按策略抽取候选记忆写 GuestMemory；默认关（LLM 成本）
+    memory_extract_enabled: bool = False
+    memory_extract_max_items: int = 5
+    memory_extract_min_chars: int = 4
+    memory_extract_max_chars: int = 200
+
     device_sim_base_url: str = "http://localhost:9100"
     device_sim_signing_secret: str = "dev-signing-secret"
 
