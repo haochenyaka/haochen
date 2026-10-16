@@ -33,6 +33,7 @@ from sqlalchemy.pool import NullPool
 from app.db import get_session
 from app.lock.service import LockCredentialService
 from app.main import app
+from app.models import Base
 from app.models.admin_log import AdminActionLog
 from app.repositories import UserRepository
 from app.security import hash_password
@@ -78,6 +79,41 @@ def _get_row_counts(factory: SessionFactoryArg, tables: list[str]) -> dict[str, 
     return asyncio.run(_query())
 
 
+def _missing_tables(factory: SessionFactoryArg, tables: list[str]) -> list[str]:
+    """返回在 public schema 中不存在的表名（DROP 之后用于校验表确实已删除）。"""
+
+    async def _query() -> list[str]:
+        async with factory() as session:
+            result = await session.execute(
+                text(
+                    "SELECT tablename FROM pg_tables "
+                    "WHERE schemaname = 'public' AND tablename = ANY(:names)"
+                ),
+                {"names": tables},
+            )
+            present = {row[0] for row in result.all()}
+        return [name for name in tables if name not in present]
+
+    return asyncio.run(_query())
+
+
+def _repair_schema_if_missing(factory: SessionFactoryArg, db_url: str, tables: list[str]) -> None:
+    """兜底：临时库为会话级共享，若演练中途失败把表删了没恢复，后续用例会连锁缺表失败。
+    这里按模型元数据补建缺失的表（checkfirst 语义：只建不存在的），保证后续用例跑得下去。"""
+    if not _missing_tables(factory, tables):
+        return
+    engine = create_async_engine(db_url, poolclass=NullPool)
+
+    async def _create() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    try:
+        asyncio.run(_create())
+    finally:
+        asyncio.run(engine.dispose())
+
+
 def test_drill_backup_restore(runtime_db_url: str) -> None:
     """D7 备份恢复演练：pg_dump 全量备份 → 模拟数据丢失 → pg_restore 恢复 →
     验证行数与 alembic 版本一致。
@@ -100,6 +136,7 @@ def test_drill_backup_restore(runtime_db_url: str) -> None:
 
     engine = create_async_engine(runtime_db_url, poolclass=NullPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
+    backup_file: str | None = None
 
     try:
         # 1. 获取恢复前行数
@@ -120,46 +157,52 @@ def test_drill_backup_restore(runtime_db_url: str) -> None:
         if dump_result.returncode != 0:
             pytest.fail(f"pg_dump 失败：\n{dump_result.stderr}")
 
-        # 3. 模拟数据丢失：逐个 DROP 表
-        async def _destroy() -> None:
-            async with factory() as session:
-                for table in key_tables:
-                    await session.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
-                await session.commit()
+        try:
+            # 3. 模拟数据丢失：逐个 DROP 表
+            async def _destroy() -> None:
+                async with factory() as session:
+                    for table in key_tables:
+                        await session.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
+                    await session.commit()
 
-        asyncio.run(_destroy())
+            asyncio.run(_destroy())
 
-        # 验证表已清空
-        after_drop = _get_row_counts(factory, key_tables)
-        for table in key_tables:
-            assert after_drop[table] == 0, f"DROP 后 {table} 应为空，实际 {after_drop[table]} 行"
-
-        # 4. 执行 pg_restore 恢复
-        restore_result = subprocess.run(
-            [pg_restore, "--clean", "--if-exists", "--dbname=" + dsn, backup_file],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        if restore_result.returncode != 0:
-            pytest.fail(f"pg_restore 失败：\n{restore_result.stderr}")
-
-        # 5. 验证行数一致
-        after = _get_row_counts(factory, key_tables + ["alembic_version"])
-        for table in key_tables:
-            assert before[table] == after[table], (
-                f"{table} 行数不匹配：恢复前 {before[table]}，恢复后 {after[table]}"
+            # 验证表已删除（DROP 后表不存在，而非 0 行）
+            missing = _missing_tables(factory, key_tables)
+            assert sorted(missing) == sorted(key_tables), (
+                f"DROP 后应缺失 {key_tables}，实际缺失 {missing}"
             )
 
-        # 6. 验证 alembic 版本一致
-        assert before["alembic_version"] == after["alembic_version"], (
-            f"alembic_version 行数变化：恢复前 {before['alembic_version']}，"
-            f"恢复后 {after['alembic_version']}"
-        )
+            # 4. 执行 pg_restore 恢复
+            restore_result = subprocess.run(
+                [pg_restore, "--clean", "--if-exists", "--dbname=" + dsn, backup_file],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            if restore_result.returncode != 0:
+                pytest.fail(f"pg_restore 失败：\n{restore_result.stderr}")
+
+            # 5. 验证行数一致
+            after = _get_row_counts(factory, key_tables + ["alembic_version"])
+            for table in key_tables:
+                assert before[table] == after[table], (
+                    f"{table} 行数不匹配：恢复前 {before[table]}，恢复后 {after[table]}"
+                )
+
+            # 6. 验证 alembic 版本一致
+            assert before["alembic_version"] == after["alembic_version"], (
+                f"alembic_version 行数变化：恢复前 {before['alembic_version']}，"
+                f"恢复后 {after['alembic_version']}"
+            )
+        finally:
+            # 兜底：临时库为会话级共享，上面任一步失败（尤其 pg_restore 未跑成）都会留下缺表，
+            # 连锁污染后续用例——这里补建缺失的表，让失败只落在这一个用例上。
+            _repair_schema_if_missing(factory, runtime_db_url, key_tables)
     finally:
         asyncio.run(engine.dispose())
-        if os.path.exists(backup_file):
+        if backup_file and os.path.exists(backup_file):
             os.remove(backup_file)
 
 
