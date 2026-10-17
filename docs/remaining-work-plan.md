@@ -19,7 +19,7 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准），下一入口为 P4
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；P4.2 安全加固已交付（2026-10-17），P4 其余子项待启动
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
@@ -172,7 +172,12 @@
 ### Phase 4 — 生产面
 
 - [ ] **P4.1 外部系统（只能到模拟器的诚实处理）**：无法真接微信/门锁/机器人 → 如实叙述「含 device-sim 契约模拟器（故障注入），为真机联调预留契约」；`docs/contracts/external-systems-v0.md` 补「真实厂商对接 checklist」（微信支付 v3 证书签名、门锁协议差异、设备离线处置）；补门锁/机器人失败的人工兜底预案（半夜开不了门的 on-call 流程）。
-- [ ] **P4.2 安全加固**：`config.py` 去掉默认弱口令（`database_url`/`neo4j_password`/`lock_master_key` 生产必须显式提供，缺失即启动失败）；`docker-compose.yml` 生产 profile 不把 PG/Redis/Neo4j/MinIO 暴露到宿主；加反向代理 + TLS；限流加 per-user / per-tenant 配额（现按 IP）；`cors_origins` 默认 `["*"]` → 生产收紧。
+- [x] **P4.2 安全加固**（2026-10-17 交付）：
+  - **生产配置守卫**：`ENV=production` 时，`DATABASE_URL`/`NEO4J_PASSWORD`/`MINIO_SECRET_KEY`/`LOCK_MASTER_KEY`/`DEVICE_SIM_SIGNING_SECRET` 仍为开发默认值或弱口令、`CORS_ORIGINS` 为空/通配、`DEV_IDENTITY_ENABLED=true`、关闭限流，任一命中即 `create_app()` 启动期抛 `RuntimeError` 拒绝启动（`Settings.production_issues` / `validate_production`）。
+  - **CORS 收紧**：通配符来源下自动关闭 `allow_credentials`（浏览器规范），生产必须显式配置具体域名。
+  - **限流分层**：Bearer 会话经 Redis 解析到用户，已认证请求同时计入「用户 + IP」两个滑动窗口；新增部署级租户总额度（分组限额 × `RATE_LIMIT_TENANT_MULTIPLIER`，默认 10，0 关闭）；`X-Forwarded-For` 仅在 `RATE_LIMIT_TRUST_FORWARDED_FOR=true` 时采信。
+  - **生产部署形态**：新增 `deploy/docker-compose.prod.yml` 覆盖层，PG/Redis/MinIO/Milvus/Neo4j/device-sim/API 一律不发布宿主端口，仅 nginx 暴露 80/443；密钥用 `${VAR:?}` 强制显式提供。nginx 模板提供 TLS 1.2/1.3、HTTP→HTTPS、HSTS 与安全头、SSE 关闭缓冲，并覆盖写入 XFF（防伪造）。
+  - **验证**：ruff / mypy 全绿，后端单测 392 passed；本地集成套件 325 passed / 3 skipped（D7 本机无 `pg_dump` 必然 skip，仍以 CI 为准）；base 与 prod compose `config --quiet` 通过；nginx 模板 `nginx -t` 通过。
 - [ ] **P4.3 可观测与告警**：Langfuse 支持 self-host 或**强制脱敏后再外发**；告警规则（Run 卡死、租约过期率、SSE 断流、DB 连接池耗尽）；SLO + on-call 手册。
 - [ ] **P4.4 可靠性与容量**：checkpoint 连接池固定 4（`runtime.py:40-42`）→ 可配置；长会话静默截断（`run_body.py:105` `limit=200`）→ 显式告警 + 接入摘要（当前摘要阈值 10 万 token 几乎不触发）；审计「每次调用单开事务」（`audit_service.py`）→ 批量/复用连接。
 - [ ] **P4.5 备份与合规**：备份定时 + 异地 + 恢复演练纳入 CI（`deploy/backup.sh` / `restore.sh` 已存在）；PIPL 告知同意、最小必要、出境；客人身份/证件/人脸字段的存储与脱敏方案（**当前完全空白**）。

@@ -11,8 +11,11 @@ from app.config import Settings
 from app.main import create_app
 from app.security.rate_limiter import (
     RateLimiter,
+    _client_ip,
     _rate_limit_key,
     _route_group,
+    _tenant_key,
+    _user_key,
 )
 
 
@@ -71,10 +74,10 @@ def test_route_group_default() -> None:
 
 
 def test_rate_limit_key_format() -> None:
-    """限流键格式为 ratelimit:{group}:{ip}。"""
+    """IP 限流键格式为 ratelimit:{group}:ip:{ip}。"""
     request = _make_request("/api/guest/rooms", client_host="192.168.1.1")
     key = _rate_limit_key(request, "guest")
-    assert key == "ratelimit:guest:192.168.1.1"
+    assert key == "ratelimit:guest:ip:192.168.1.1"
 
 
 def test_rate_limit_key_x_forwarded_for() -> None:
@@ -85,7 +88,7 @@ def test_rate_limit_key_x_forwarded_for() -> None:
         headers={"x-forwarded-for": "203.0.113.5, 10.0.0.1"},
     )
     key = _rate_limit_key(request, "admin")
-    assert key == "ratelimit:admin:203.0.113.5"
+    assert key == "ratelimit:admin:ip:203.0.113.5"
 
 
 def test_limit_settings_guest() -> None:
@@ -180,6 +183,151 @@ def test_middleware_guest_route_ok() -> None:
         resp = client.get("/api/guest/rooms")
     # 即使 404（无路由），中间件也不应返回 429
     assert resp.status_code in (200, 401, 404)
+
+
+def test_client_ip_ignores_forwarded_header_when_untrusted() -> None:
+    request = _make_request(
+        "/api/guest/rooms",
+        client_host="10.0.0.1",
+        headers={"x-forwarded-for": "203.0.113.5"},
+    )
+    assert _client_ip(request, trust_forwarded_for=False) == "10.0.0.1"
+    assert _client_ip(request, trust_forwarded_for=True) == "203.0.113.5"
+
+
+def test_user_and_tenant_key_formats() -> None:
+    assert _user_key("guest", "u-1") == "ratelimit:guest:user:u-1"
+    assert _tenant_key("chat", "haochen") == "ratelimit:chat:tenant:haochen"
+
+
+def test_targets_include_user_ip_and_tenant() -> None:
+    limiter = RateLimiter()
+    settings = Settings()
+    request = _make_request(
+        "/api/guest/rooms",
+        client_host="10.0.0.1",
+        headers={"x-forwarded-for": "203.0.113.5"},
+    )
+    targets = dict(limiter._targets(request, settings, "guest", "u-1", 30))
+    assert targets == {
+        "ratelimit:guest:user:u-1": 30,
+        "ratelimit:guest:ip:203.0.113.5": 30,
+        "ratelimit:guest:tenant:haochen": 30 * settings.rate_limit_tenant_multiplier,
+    }
+
+
+def test_targets_without_user_or_tenant() -> None:
+    limiter = RateLimiter()
+    settings = Settings(rate_limit_tenant_multiplier=0)
+    request = _make_request("/api/guest/rooms")
+    targets = [key for key, _ in limiter._targets(request, settings, "guest", None, 30)]
+    assert targets == ["ratelimit:guest:ip:127.0.0.1"]
+
+
+def test_targets_skip_user_when_disabled() -> None:
+    limiter = RateLimiter()
+    settings = Settings(rate_limit_user_enabled=False, rate_limit_tenant_multiplier=0)
+    request = _make_request("/api/guest/rooms")
+    targets = [key for key, _ in limiter._targets(request, settings, "guest", "u-1", 30)]
+    assert "ratelimit:guest:user:u-1" not in targets
+
+
+def test_check_blocks_on_user_quota() -> None:
+    """已认证请求按会话用户计数：用户额度用尽即 429，即使 IP 计数为 0。"""
+    limiter = RateLimiter()
+    settings = Settings(rate_limit_tenant_multiplier=0)
+    redis = _FakeRedis(user_id="u-1", counts={"ratelimit:guest:user:u-1": 30})
+    request = _make_request(
+        "/api/guest/rooms",
+        headers={"authorization": "Bearer session-token"},
+    )
+    with (
+        patch("app.security.rate_limiter.get_settings", return_value=settings),
+        patch.object(limiter, "_get_redis", return_value=redis),
+    ):
+        assert asyncio_run(limiter.check(request)) is False
+    assert ("zcard", "ratelimit:guest:user:u-1") in redis.last_pipeline.ops
+
+
+def test_check_blocks_on_tenant_quota() -> None:
+    """部署级总额度独立生效：单 IP/单用户都未超限，租户合计超限仍拒绝。"""
+    limiter = RateLimiter()
+    settings = Settings()
+    tenant_limit = 30 * settings.rate_limit_tenant_multiplier
+    redis = _FakeRedis(counts={_tenant_key("guest", settings.rate_limit_tenant_id): tenant_limit})
+    request = _make_request("/api/guest/rooms")
+    with (
+        patch("app.security.rate_limiter.get_settings", return_value=settings),
+        patch.object(limiter, "_get_redis", return_value=redis),
+    ):
+        assert asyncio_run(limiter.check(request)) is False
+
+
+def test_invalid_session_token_falls_back_to_ip() -> None:
+    limiter = RateLimiter()
+    settings = Settings(rate_limit_tenant_multiplier=0)
+    redis = _FakeRedis(user_id=None)
+    request = _make_request(
+        "/api/guest/rooms",
+        headers={"authorization": "Bearer unknown-token"},
+    )
+    with (
+        patch("app.security.rate_limiter.get_settings", return_value=settings),
+        patch.object(limiter, "_get_redis", return_value=redis),
+    ):
+        assert asyncio_run(limiter.check(request)) is True
+    keys = [key for op, key in redis.last_pipeline.ops if op == "zcard"]
+    assert keys == ["ratelimit:guest:ip:127.0.0.1"]
+
+
+class _FakePipeline:
+    """最小 Redis pipeline：记录命令并按 zcard 键回放计数。"""
+
+    def __init__(self, redis: _FakeRedis) -> None:
+        self._redis = redis
+        self.ops: list[tuple[str, str]] = []
+
+    async def __aenter__(self) -> _FakePipeline:
+        return self
+
+    async def __aexit__(self, *exc: object) -> bool:
+        return False
+
+    async def zremrangebyscore(self, key: str, minimum: object, maximum: object) -> None:
+        self.ops.append(("zrem", key))
+
+    async def zcard(self, key: str) -> None:
+        self.ops.append(("zcard", key))
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> None:
+        self.ops.append(("zadd", key))
+
+    async def expire(self, key: str, seconds: int) -> None:
+        self.ops.append(("expire", key))
+
+    async def execute(self) -> list[int]:
+        return [self._redis.counts.get(key, 0) if op == "zcard" else 0 for op, key in self.ops]
+
+
+class _FakeRedis:
+    def __init__(
+        self,
+        *,
+        user_id: str | None = None,
+        counts: dict[str, int] | None = None,
+    ) -> None:
+        self.user_id = user_id
+        self.counts = counts or {}
+        self.last_pipeline: _FakePipeline | None = None
+
+    async def get(self, key: str) -> str | None:
+        if key == "session:session-token":
+            return self.user_id
+        return None
+
+    def pipeline(self, transaction: bool = True) -> _FakePipeline:
+        self.last_pipeline = _FakePipeline(self)
+        return self.last_pipeline
 
 
 def _make_request(

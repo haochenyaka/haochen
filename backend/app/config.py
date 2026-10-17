@@ -3,6 +3,26 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
+# 仅用于本地开发的默认凭据：生产环境启动时必须显式覆盖
+DEV_DATABASE_URL = "postgresql+asyncpg://haochen:haochen@localhost:5432/haochen"
+DEV_NEO4J_PASSWORD = "haochen-dev-secret"
+DEV_MINIO_SECRET = "haochen-dev-secret"
+DEV_LOCK_MASTER_KEY = "change-me"
+DEV_DEVICE_SIM_SECRET = "dev-signing-secret"
+
+_WEAK_PASSWORDS = {
+    "",
+    "haochen",
+    "neo4j",
+    "postgres",
+    "password",
+    "change-me",
+    "changeme",
+    "dev-signing-secret",
+    "haochen-dev-secret",
+}
+_PRODUCTION_ENV_NAMES = {"prod", "production"}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -11,12 +31,12 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     env: str = "local"
 
-    database_url: str = "postgresql+asyncpg://haochen:haochen@localhost:5432/haochen"
+    database_url: str = DEV_DATABASE_URL
     redis_url: str = "redis://localhost:6379/0"
 
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "haochen"
-    minio_secret_key: str = "haochen-dev-secret"
+    minio_secret_key: str = DEV_MINIO_SECRET
     minio_secure: bool = False
     minio_bucket_knowledge: str = "haochen-knowledge"
 
@@ -24,7 +44,7 @@ class Settings(BaseSettings):
     milvus_collection_prefix: str = "haochen_kb"
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "haochen-dev-secret"
+    neo4j_password: str = DEV_NEO4J_PASSWORD
     neo4j_database: str = "neo4j"
     neo4j_timeout_seconds: float = 20.0
 
@@ -61,7 +81,7 @@ class Settings(BaseSettings):
     memory_extract_max_chars: int = 200
 
     device_sim_base_url: str = "http://localhost:9100"
-    device_sim_signing_secret: str = "dev-signing-secret"
+    device_sim_signing_secret: str = DEV_DEVICE_SIM_SECRET
 
     model_name: str = ""
     model_base_url: str = ""
@@ -102,7 +122,7 @@ class Settings(BaseSettings):
     # （deploy/docker-compose.yml 默认 false）
     dev_identity_enabled: bool = True
 
-    lock_master_key: str = "change-me"
+    lock_master_key: str = DEV_LOCK_MASTER_KEY
     lock_master_key_previous: str = ""
     lock_master_key_active_version: int = 1
     wechat_pay_mchid: str = ""
@@ -128,6 +148,69 @@ class Settings(BaseSettings):
     rate_limit_chat_per_minute: int = 20
     rate_limit_admin_per_minute: int = 120
     rate_limit_auth_per_minute: int = 10
+    # 已认证请求按会话用户计数（同时保留 IP 层），未认证请求只按 IP 计数
+    rate_limit_user_enabled: bool = True
+    # 部署级租户总额度 = 分组限额 × 倍数；0 表示不设总额度
+    rate_limit_tenant_multiplier: int = 10
+    rate_limit_tenant_id: str = "haochen"
+    # 仅在可信反向代理（覆盖写入 X-Forwarded-For）之后才信任该头
+    rate_limit_trust_forwarded_for: bool = True
+
+    @property
+    def is_production(self) -> bool:
+        return self.env.strip().lower() in _PRODUCTION_ENV_NAMES
+
+    def production_issues(self) -> list[str]:
+        """生产环境启动前的失败关闭检查：返回不安全项，空列表表示通过。"""
+        if not self.is_production:
+            return []
+
+        issues: list[str] = []
+        if self.database_url == DEV_DATABASE_URL:
+            issues.append("DATABASE_URL 仍为开发默认值，必须显式提供生产连接串")
+        else:
+            try:
+                password = make_url(self.database_url).password or ""
+            except Exception:
+                issues.append("DATABASE_URL 无法解析")
+            else:
+                if password.lower() in _WEAK_PASSWORDS:
+                    issues.append("DATABASE_URL 使用弱口令")
+
+        if self.neo4j_password == DEV_NEO4J_PASSWORD:
+            issues.append("NEO4J_PASSWORD 仍为开发默认值")
+        elif self.neo4j_password.strip().lower() in _WEAK_PASSWORDS:
+            issues.append("NEO4J_PASSWORD 为空或使用弱口令")
+
+        if self.minio_secret_key == DEV_MINIO_SECRET:
+            issues.append("MINIO_SECRET_KEY 仍为开发默认值")
+        elif self.minio_secret_key.strip().lower() in _WEAK_PASSWORDS:
+            issues.append("MINIO_SECRET_KEY 为空或使用弱口令")
+
+        if self.lock_master_key == DEV_LOCK_MASTER_KEY:
+            issues.append("LOCK_MASTER_KEY 仍为开发默认值")
+        elif len(self.lock_master_key) < 16:
+            issues.append("LOCK_MASTER_KEY 长度不足 16 字符")
+
+        if self.device_sim_signing_secret == DEV_DEVICE_SIM_SECRET:
+            issues.append("DEVICE_SIM_SIGNING_SECRET 仍为开发默认值")
+
+        if not self.cors_origins or "*" in self.cors_origins:
+            issues.append("CORS_ORIGINS 必须显式配置具体域名，不能为空或使用通配符")
+
+        if self.dev_identity_enabled:
+            issues.append("DEV_IDENTITY_ENABLED 必须在生产环境关闭")
+
+        if not self.rate_limit_enabled:
+            issues.append("RATE_LIMIT_ENABLED 必须在生产环境开启")
+
+        return issues
+
+    def validate_production(self) -> None:
+        issues = self.production_issues()
+        if issues:
+            detail = "\n".join(f"- {issue}" for issue in issues)
+            raise RuntimeError(f"生产配置不安全，拒绝启动：\n{detail}")
 
     @property
     def psycopg_dsn(self) -> str:

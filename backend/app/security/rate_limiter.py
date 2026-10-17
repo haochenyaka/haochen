@@ -1,10 +1,12 @@
-"""基于 Redis 的速率限制中间件：按 IP/用户/路由组分级限流。
+"""基于 Redis 的速率限制中间件：按路由组、用户、IP 与部署租户分级限流。
 
 不变量：
 - 未配置 Redis 时不阻断业务（限流降级跳过）；
 - 限流状态以 Redis 滑动窗口计数为唯一事实，本地不持有计数器；
 - 被限流的请求仍进入正常认证流水线，在中间件层以 429 拒绝（非授权拒绝）；
-- 429 响应含 Retry-After 头（秒），调用方应据此退避。
+- 429 响应含 Retry-After 头（秒），调用方应据此退避；
+- 已认证请求同时计入「用户」与「IP」两个键，未认证请求只计入 IP；
+- 部署级租户总额度独立于单主体配额，避免多主体合计打爆上游。
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.config import Settings, get_settings
+from app.security.session_service import SESSION_KEY_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -45,17 +48,37 @@ def _route_group(request: Request) -> str:
     return "default"
 
 
-def _rate_limit_key(request: Request, group: str) -> str:
-    """限流键：按 (路由组, IP) 区分。
+def _client_ip(request: Request, *, trust_forwarded_for: bool = True) -> str:
+    """客户端 IP：仅当信任反向代理时使用 X-Forwarded-For，回退到 remote_addr。"""
+    if trust_forwarded_for:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # 取第一个 IP（X-Forwarded-For 可能是逗号分隔的链）
+            return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
-    优先使用 X-Forwarded-For 取真实客户端 IP，回退到 remote_addr。
-    """
-    ip = request.headers.get(
-        "x-forwarded-for", request.client.host if request.client else "unknown"
-    )
-    # 取第一个 IP（X-Forwarded-For 可能是逗号分隔的链）
-    client_ip = ip.split(",")[0].strip()
-    return f"ratelimit:{group}:{client_ip}"
+
+def _rate_limit_key(request: Request, group: str, *, trust_forwarded_for: bool = True) -> str:
+    """IP 层限流键：按 (路由组, IP) 区分。"""
+    return f"ratelimit:{group}:ip:{_client_ip(request, trust_forwarded_for=trust_forwarded_for)}"
+
+
+def _user_key(group: str, user_id: str) -> str:
+    return f"ratelimit:{group}:user:{user_id}"
+
+
+def _tenant_key(group: str, tenant_id: str) -> str:
+    return f"ratelimit:{group}:tenant:{tenant_id}"
+
+
+def _bearer_token(request: Request) -> str | None:
+    authorization = request.headers.get("authorization")
+    if not authorization:
+        return None
+    scheme, _, credentials = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not credentials.strip():
+        return None
+    return credentials.strip()
 
 
 class RateLimitExceeded(Exception):
@@ -94,6 +117,49 @@ class RateLimiter:
             self._redis = None
         return self._redis
 
+    async def _resolve_user_id(self, request: Request, redis: Any) -> str | None:
+        """从 Bearer 会话解析用户 ID；无令牌/无效令牌/Redis 异常时返回 None。"""
+        token = _bearer_token(request)
+        if token is None:
+            return None
+        try:
+            value = await redis.get(f"{SESSION_KEY_PREFIX}{token}")
+        except Exception as exc:
+            logger.warning("限流用户解析失败，按 IP 计数：%s", exc)
+            return None
+        return str(value) if value else None
+
+    def _targets(
+        self,
+        request: Request,
+        settings: Settings,
+        group: str,
+        user_id: str | None,
+        max_requests: int,
+    ) -> list[tuple[str, int]]:
+        """本次请求需要计入的 (限流键, 上限) 列表。"""
+        targets: list[tuple[str, int]] = []
+        if settings.rate_limit_user_enabled and user_id is not None:
+            targets.append((_user_key(group, user_id), max_requests))
+        targets.append(
+            (
+                _rate_limit_key(
+                    request,
+                    group,
+                    trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
+                ),
+                max_requests,
+            )
+        )
+        if settings.rate_limit_tenant_multiplier > 0:
+            targets.append(
+                (
+                    _tenant_key(group, settings.rate_limit_tenant_id),
+                    max_requests * settings.rate_limit_tenant_multiplier,
+                )
+            )
+        return targets
+
     async def check(self, request: Request) -> bool:
         """检查请求是否超出速率限制。返回 True 表示通过，False 表示被限流。"""
         settings = get_settings()
@@ -104,35 +170,36 @@ class RateLimiter:
         if redis is None:
             return True  # Redis 不可达时放行
 
+        group = _route_group(request)
         window, max_requests = self._get_limits(request, settings)
-        key = _rate_limit_key(request, _route_group(request))
+        user_id = await self._resolve_user_id(request, redis)
+        targets = self._targets(request, settings, group, user_id, max_requests)
         now = time.time()
         window_start = now - window
+        member = f"{now}:{id(request)}"
 
         try:
-            # 使用 pipeline 原子操作
+            # 使用 pipeline 原子操作：每个键 4 条命令，结果按同样步长回读
             async with redis.pipeline(transaction=True) as pipe:
-                # 移除窗口外的旧记录
-                await pipe.zremrangebyscore(key, "-inf", window_start)
-                # 统计窗口内请求数
-                await pipe.zcard(key)
-                # 添加当前请求
-                await pipe.zadd(key, {f"{now}:{id(request)}": now})
-                # 设置键过期
-                await pipe.expire(key, window * 2)
+                for key, _ in targets:
+                    await pipe.zremrangebyscore(key, "-inf", window_start)
+                    await pipe.zcard(key)
+                    await pipe.zadd(key, {member: now})
+                    await pipe.expire(key, window * 2)
                 results = await pipe.execute()
 
-            count = results[1]  # zcard 结果
-            if count >= max_requests:
-                logger.warning(
-                    "速率限制 %s %s: %d/%d (窗口 %ds)",
-                    _route_group(request),
-                    key,
-                    count,
-                    max_requests,
-                    window,
-                )
-                return False
+            for index, (key, limit) in enumerate(targets):
+                count = results[index * 4 + 1]  # zcard 结果
+                if count >= limit:
+                    logger.warning(
+                        "速率限制 %s %s: %d/%d (窗口 %ds)",
+                        group,
+                        key,
+                        count,
+                        limit,
+                        window,
+                    )
+                    return False
             return True
         except Exception as exc:
             logger.warning("速率限制检查失败，放行：%s", exc)
