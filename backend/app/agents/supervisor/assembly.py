@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from app.agents.base import BaseAgent
 from app.agents.middlewares import build_middleware_pipeline
 from app.agents.models import build_chat_model
-from app.agents.prompts import load_prompt_docs
+from app.agents.prompts import load_prompt_docs, runtime_context_prompt
 from app.agents.runtime import RuntimeContext
 from app.agents.supervisor.contexts import SubAgentContext
 from app.agents.supervisor.subgraph import build_loop_subgraph
@@ -64,8 +64,12 @@ class LoopSubAgent(BaseAgent):
         return registry.select(names)
 
     def compose_system_prompt(self, override: str | None = None) -> str:
-        """系统提示词 = 覆盖值（或默认提示词）+ 本子包 AGENTS.md。"""
-        parts = (override or self.default_system_prompt, load_prompt_docs(self.package_dir()))
+        """系统提示词 = 覆盖值（或默认提示词）+ 本子包 AGENTS.md + 运行期上下文（当天日期）。"""
+        parts = (
+            override or self.default_system_prompt,
+            load_prompt_docs(self.package_dir()),
+            runtime_context_prompt(),
+        )
         return "\n\n".join(part for part in parts if part)
 
     def build_subgraph(

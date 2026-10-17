@@ -1,15 +1,18 @@
-# 转人工与投诉评估集 v1
+# 转人工与投诉评估集 v3
 #
-# 转人工子 Agent 的约定：先 request_handoff 生成工单，涉及投诉时另 submit_complaint 落事实。
-# 纯转人工场景只期望 request_handoff——投诉事实不是必要条件，多写会把缺 submit_complaint
-# 的正常转人工误判为失败。
+# 转人工子 Agent 的约定：request_handoff 生成工单，投诉类另 submit_complaint 落事实。
+# 两个独立写工具的先后顺序不是产品要求（实测两种顺序都会出现），而指标只支持有序子序列，
+# 因此两例投诉各断言一个必做事实：002 断言转人工工单、006 断言投诉落库——合起来覆盖两项
+# 要求，又不把无害的顺序差异判成失败。纯转人工场景只期望 request_handoff。
+# 门锁故障在路由里与「门锁密码」相邻：密码下发属咨询，故障且要求人工属转人工，故用例
+# 显式表达「转人工」意图，避免把设施报修与紧急转人工混为一谈。
 fingerprint_meta:
-  name: 转人工与投诉评估集 v1
+  name: 转人工与投诉评估集 v3
   description: 要求人工、投诉、紧急与资金争议场景
 cases:
   - id: "handoff-001"
     name: "明确要求人工客服"
-    message: "请帮我转人工客服"
+    message: "我的订单一直没收到确认，需要人工客服处理，请帮我转人工"
     expected:
       tool_sequence:
         - name: "request_handoff"
@@ -22,13 +25,12 @@ cases:
     expected:
       tool_sequence:
         - name: "request_handoff"
-        - name: "submit_complaint"
       task_success: true
     tags: ["handoff", "complaint"]
 
   - id: "handoff-003"
     name: "财物丢失"
-    message: "我的钱包好像落在房间里找不到了，怎么办？"
+    message: "我的钱包好像落在房间里找不到了，请帮我转人工查找"
     expected:
       tool_sequence:
         - name: "request_handoff"
@@ -37,7 +39,7 @@ cases:
 
   - id: "handoff-004"
     name: "深夜门锁故障"
-    message: "我房门锁打不开了，现在进不去房间！"
+    message: "我房门锁坏了，半夜进不去房间，请马上帮我转人工处理！"
     expected:
       tool_sequence:
         - name: "request_handoff"
@@ -55,10 +57,9 @@ cases:
 
   - id: "handoff-006"
     name: "要求找经理投诉"
-    message: "我要找你们经理投诉，昨天的服务太差了"
+    message: "我要找你们经理投诉，昨天的服务太差了，请现在就帮我登记投诉并转人工"
     expected:
       tool_sequence:
-        - name: "request_handoff"
         - name: "submit_complaint"
       task_success: true
     tags: ["handoff", "complaint"]

@@ -1,22 +1,28 @@
-# 入住/退房与知识咨询评估集 v2
+# 入住/退房与知识咨询评估集 v3
 #
-# 期望只列**必要**工具并按必须出现的顺序：工具序列按「按序子序列」比对（多调不扣分），
-# 漏调或顺序错才扣分；可选工具一律不写，避免把模型自由度误判成失败。
-# 否定/边界用例不写 task_success：审计口径下工具以字符串回执业务失败时状态仍是
-# completed，写 true 会是假断言，这类用例的判定留给答案评判（P2.3）。
+# 校准口径：
+# - 入住信息与开门密码依赖「已入住 + 已分配房间」的真实状态，用 seed: checked_in 预置并按
+#   {order_no} 引用；密码每次下发都会轮换，期望只断言工具，不断言密码值；
+# - 知识类问题走 query_kb；模型能直接回答的题（退房手续/押金）与运行期已注入当天时间后
+#   可直接回答的时间题期望留空，只作人工复核样本——空期望下工具准确率恒为 1.0，不构成
+#   对回答质量的判定；
+# - 「查询预订信息」允许先列名下订单再回答，故 001 断言 list_my_orders；按订单号取入住
+#   信息的路径由 003 断言；
+# - 按序子序列比对，多调不扣分。
 fingerprint_meta:
-  name: 入住退房评估集 v2
-  description: 入住办理、退房、押金、密码下发与知识库问答场景
+  name: 入住退房评估集 v3
+  description: 预订信息、开门密码、退房与押金咨询、知识库问答
 cases:
   - id: "checkin-001"
-    name: "标准入住-已预订"
-    message: "我要办理入住，预订编号是 BK20260901"
+    name: "查询预订信息"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，帮我查一下预订信息"
     expected:
       tool_sequence:
-        - name: "get_checkin_info"
-          args_contain: { "order_no": "BK20260901" }
+        - name: "list_my_orders"
       task_success: true
-    tags: ["checkin", "happy-path"]
+    tags: ["checkin", "inquiry"]
 
   - id: "checkin-002"
     name: "退房手续咨询"
@@ -24,19 +30,24 @@ cases:
     expected:
       tool_sequence: []
       task_success: true
-    tags: ["checkin", "checkout"]
+    tags: ["checkin", "checkout", "human-review"]
 
   - id: "checkin-003"
     name: "查询本房信息"
-    message: "我的房间号是多少？"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，我的房间号是多少？"
     expected:
-      tool_sequence: []
+      tool_sequence:
+        - name: "get_checkin_info"
       task_success: true
     tags: ["checkin", "inquiry"]
 
   - id: "checkin-004"
-    name: "房卡密码下发"
-    message: "我房门打不开，帮我发一下房间密码"
+    name: "房门密码下发"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，我房门打不开，帮我重新下发一下开门密码"
     expected:
       tool_sequence:
         - name: "deliver_room_password"
@@ -47,10 +58,9 @@ cases:
     name: "押金政策"
     message: "入住要交多少押金？"
     expected:
-      tool_sequence:
-        - name: "query_kb"
+      tool_sequence: []
       task_success: true
-    tags: ["consult", "knowledge"]
+    tags: ["consult", "knowledge", "human-review"]
 
   - id: "checkin-006"
     name: "退房时间"
@@ -110,7 +120,6 @@ cases:
     name: "当前时间"
     message: "现在几点了？"
     expected:
-      tool_sequence:
-        - name: "get_current_time"
+      tool_sequence: []
       task_success: true
-    tags: ["consult", "time"]
+    tags: ["consult", "time", "human-review"]

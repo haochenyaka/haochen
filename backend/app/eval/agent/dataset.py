@@ -16,6 +16,17 @@ from typing import Any
 
 import yaml
 
+ORDER_NO_PLACEHOLDER = "{order_no}"
+"""用例文本里引用夹具订单号的占位符：执行器在跑该用例前替换为真实订单号。"""
+
+SEED_PAID = "paid"
+"""前置夹具状态：已支付订单（续订 / 发票 / 入住信息查询可用）。"""
+
+SEED_CHECKED_IN = "checked_in"
+"""前置夹具状态：已支付且已入住、已分配房间并签发有效门锁凭证（开门密码下发可用）。"""
+
+SEED_STATES: frozenset[str] = frozenset({SEED_PAID, SEED_CHECKED_IN})
+
 
 class EvalSetError(ValueError):
     """评估集格式不合法：字段缺失、id 重复或预期定义不完整。"""
@@ -72,6 +83,7 @@ class AgentEvalItem:
     expected: ExpectedSpec | None = None
     tags: tuple[str, ...] = ()
     turns: tuple[str, ...] = ()
+    seed: str | None = None
 
     def effective_turns(self) -> tuple[str, ...]:
         """按序回放的用户消息：声明了 turns 用 turns，否则退化为单轮 message。"""
@@ -91,6 +103,8 @@ class AgentEvalItem:
         # 只在多轮用例里带 turns：单轮用例的指纹保持与历史一致
         if self.turns:
             d["turns"] = list(self.turns)
+        if self.seed is not None:
+            d["seed"] = self.seed
         return d
 
 
@@ -173,6 +187,7 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
         if not isinstance(raw_tags, list) or not all(isinstance(t, str) for t in raw_tags):
             raise EvalSetError(f"{path}: case #{idx} tags 必须为字符串数组")
         tags = tuple(raw_tags)
+    seed = _seed(path, idx, case, turns=turns, message=message)
     return AgentEvalItem(
         id=str(case_id).strip(),
         name=str(name).strip() if name else str(case_id).strip(),
@@ -182,7 +197,26 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
         expected=expected,
         tags=tags,
         turns=turns,
+        seed=seed,
     )
+
+
+def _seed(
+    path: Path, idx: int, case: dict[str, Any], *, turns: tuple[str, ...], message: str
+) -> str | None:
+    """解析前置状态夹具声明，并校验占位符/夹具一致（无夹具却引用订单号即报错）。"""
+    raw = case.get("seed")
+    if raw is None:
+        if ORDER_NO_PLACEHOLDER in message or any(ORDER_NO_PLACEHOLDER in t for t in turns):
+            raise EvalSetError(
+                f"{path}: case #{idx} 引用了 {ORDER_NO_PLACEHOLDER} 但未声明 seed 夹具"
+            )
+        return None
+    if not isinstance(raw, str) or raw not in SEED_STATES:
+        raise EvalSetError(
+            f"{path}: case #{idx} seed 必须是 {sorted(SEED_STATES)} 之一，实际：{raw!r}"
+        )
+    return raw
 
 
 def _turns(path: Path, idx: int, case: dict[str, Any]) -> tuple[str, ...]:

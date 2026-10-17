@@ -28,8 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents import ResourcePolicy, ToolRegistry
 from app.config import Settings, get_settings
 from app.db import SessionFactory
-from app.eval.agent.dataset import AgentEvalItem
+from app.eval.agent.dataset import ORDER_NO_PLACEHOLDER, AgentEvalItem
 from app.eval.agent.runner import EvalRunError
+from app.eval.agent.seeds import apply_seed, release_eval_orders
 from app.repositories import (
     AUDIT_READ_LIMIT,
     AuditRepository,
@@ -52,6 +53,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_EVAL_AGENT_SLUG = "front-desk"
 """评估对话的入口 slug：与线上客人对话同入口，评测口径与线上不漂移。"""
+
+EVAL_USERNAME_TEMPLATE = "eval-{item_id}"
+"""评测客人用户名：夹具与对话入口共用同一派生，保证夹具状态被同一账号看到。"""
 
 RUN_STATUS_COMPLETED = "completed"
 """Run 终态取值（见 `RunOutcome`）：只有 completed 才可能任务成功。"""
@@ -121,11 +125,18 @@ class RealCaseExecutor:
             ),
             session_factory=self._session_factory,
         )
+        released = await release_eval_orders(session_factory=self._session_factory)
+        if released:
+            logger.info("评测用例 %s 开跑前释放旧评测订单 %d 笔", item.id, released)
+        order_no = await self._seed_state(item)
+        turns = item.effective_turns()
+        if order_no is not None:
+            turns = tuple(text.replace(ORDER_NO_PLACEHOLDER, order_no) for text in turns)
         tool_calls: list[dict[str, object]] = []
         entries: list[AuditEntry] = []
         thread_id: UUID | None = None
         outcome = ""
-        for turn_no, text in enumerate(item.effective_turns(), start=1):
+        for turn_no, text in enumerate(turns, start=1):
             thread_id, run_id = await self._intake(item, text=text, thread_id=thread_id)
             outcome = str(await executor.execute(run_id))
             turn_entries = await self._audit_entries(run_id)
@@ -146,7 +157,9 @@ class RealCaseExecutor:
     ) -> tuple[UUID, UUID]:
         """按线上接入路径建线程与队列；首轮建线程并落历史消息，后续轮复用同一线程。"""
         async with self._session_factory() as session:
-            user = await UserRepository(session).get_or_create(username=f"eval-{item.id}")
+            user = await UserRepository(session).get_or_create(
+                username=EVAL_USERNAME_TEMPLATE.format(item_id=item.id)
+            )
             messages = MessageRepository(session)
             if thread_id is None:
                 thread = await ThreadRepository(session).create(
@@ -171,6 +184,20 @@ class RealCaseExecutor:
         if plan is None:
             raise EvalRunError(f"用例 {item.id} 未能派发 Run：队列头为空")
         return thread_id, plan.run_id
+
+    async def _seed_state(self, item: AgentEvalItem) -> str | None:
+        """按用例声明预置前置状态（已支付 / 已入住），返回订单号供占位符替换。
+
+        夹具先行落库再跑对话：后置写路径（续订/发票/入住信息/开门密码）依赖"已支付"等
+        无法由多轮对话制造的状态。无声明时返回 None。
+        """
+        if not item.seed:
+            return None
+        return await apply_seed(
+            session_factory=self._session_factory,
+            username=EVAL_USERNAME_TEMPLATE.format(item_id=item.id),
+            seed=item.seed,
+        )
 
     async def _audit_entries(self, run_id: UUID) -> list[AuditEntry]:
         async with self._session_factory() as session:

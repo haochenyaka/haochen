@@ -157,6 +157,27 @@ class TestDataset:
         path = _write_dataset(tmp_path, "match.yaml", [case])
         assert load_eval_set(path)[0].message == "第二轮"
 
+    def test_seed_parsed_and_carried_into_fingerprint(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        case["seed"] = "paid"
+        path = _write_dataset(tmp_path, "seed.yaml", [case])
+        items = load_eval_set(path)
+        assert items[0].seed == "paid"
+        assert items[0].as_dict()["seed"] == "paid"
+
+    def test_unknown_seed_rejected(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        case["seed"] = "no-such-state"
+        path = _write_dataset(tmp_path, "bad_seed.yaml", [case])
+        with pytest.raises(EvalSetError, match="seed"):
+            load_eval_set(path)
+
+    def test_placeholder_without_seed_rejected(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        path = _write_dataset(tmp_path, "no_seed.yaml", [case])
+        with pytest.raises(EvalSetError, match="未声明 seed 夹具"):
+            load_eval_set(path)
+
     @pytest.mark.parametrize("bad", [[], "不是数组", ["第一轮", "  "]])
     def test_turns_invalid(self, tmp_path: Path, bad: object) -> None:
         case = _yaml_case()

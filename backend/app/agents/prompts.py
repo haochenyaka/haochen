@@ -3,12 +3,30 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from pathlib import Path
+
+from app.domain.vocabulary import HOTEL_TIMEZONE, WEEKDAY_LABELS
 
 logger = logging.getLogger(__name__)
 
 PROMPT_DOC_FILES = ("AGENTS.md", "USER.md")
 PROMPT_DOC_MAX_BYTES = 64 * 1024
+
+
+def runtime_context_prompt() -> str:
+    """运行期上下文补丁：装配期注入酒店当地当天日期。
+
+    supervisor 图每次 Run 重建，此段随之刷新，相对日期（"今天/明天/本周"）由模型据此推算，
+    不依赖各子 Agent 各自持有 get_current_time。
+    """
+    now = datetime.now(HOTEL_TIMEZONE)
+    return (
+        "# 运行期上下文\n"
+        f"当前时间：{now.strftime('%Y-%m-%d %H:%M')} "
+        f"星期{WEEKDAY_LABELS[now.weekday()]}（酒店所在地 UTC+8）。\n"
+        "涉及“今天、明天、后天、本周”等相对日期时，以此刻推算具体日期，不要凭记忆。"
+    )
 
 
 def load_prompt_docs(directory: Path) -> str:

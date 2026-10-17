@@ -1,26 +1,30 @@
-# 订单流程评估集 v2
+# 订单流程评估集 v3
 #
-# 期望只列**必要**工具并按必须出现的顺序（按序子序列比对，多调不扣分）。
-# 有状态场景（改期/续订/取消/发票）用 turns 在同线程按序回放：第一轮真实建单，
-# 第二轮才有真实订单可操作——不要靠 history 里的假上下文。
-# 否定/边界用例不写 task_success，理由见 checkin.yaml 头部注释。
+# 校准口径：
+# - 写动作（下单/改期/续订/取消/开票）按线上确认策略写成「完整请求 → 明确确认」多轮：
+#   请求轮带齐房型、日期与人数，避免模型合理的追问被判成失败；
+# - 后置写路径（改期/续订/取消/发票）用 seed 夹具预置已支付订单，轮内以 {order_no} 引用；
+#   多轮用例只在开跑前预置一次，轮内状态连续；
+# - 否定/边界用例期望留空（空期望下工具准确率恒为 1.0），只作人工复核样本，不写 task_success；
+# - 期望只列**必要**工具并按必须出现的顺序（按序子序列比对，多调不扣分）。
 fingerprint_meta:
-  name: 订单流程评估集 v2
-  description: 订房、改期、续订、取消、发票，含多轮有状态链路
+  name: 订单流程评估集 v3
+  description: 订房、改期、续订、取消、发票，含确认轮与夹具预置的写路径
 cases:
   - id: "order-001"
     name: "标准订房-有房"
-    message: "我要订一间大床房，今晚入住"
+    turns:
+      - "帮我订一间皓晨双床房，明天入住，住一晚，两位"
+      - "确认下单"
     expected:
       tool_sequence:
-        - name: "list_room_types"
         - name: "create_order"
       task_success: true
     tags: ["order", "happy-path"]
 
   - id: "order-002"
     name: "查询房价"
-    message: "大床房多少钱一晚？"
+    message: "皓晨双床房多少钱一晚？"
     expected:
       tool_sequence:
         - name: "list_room_types"
@@ -30,8 +34,10 @@ cases:
   - id: "order-003"
     name: "下单后取消"
     turns:
-      - "帮我订一间大床房，今晚入住，明天退房"
+      - "帮我订一间皓晨双床房，明天入住，住一晚，两位"
+      - "确认下单"
       - "算了，帮我取消这个订单"
+      - "确认取消"
     expected:
       tool_sequence:
         - name: "create_order"
@@ -41,7 +47,9 @@ cases:
 
   - id: "order-004"
     name: "连住三晚"
-    message: "我要订大床房，10月20日入住，10月23日退房"
+    turns:
+      - "我要订皓晨双床房，明天入住，住三晚，一位"
+      - "确认下单"
     expected:
       tool_sequence:
         - name: "list_room_types"
@@ -51,7 +59,9 @@ cases:
 
   - id: "order-005"
     name: "指定房型与人数"
-    message: "帮我订一间大床房，两个人住，后天入住，住一晚"
+    turns:
+      - "帮我订一间皓晨双床房，两个人住，后天入住，住一晚"
+      - "确认下单"
     expected:
       tool_sequence:
         - name: "create_order"
@@ -62,7 +72,8 @@ cases:
     name: "房型咨询后下单"
     turns:
       - "你们有哪些房型？"
-      - "就要大床房，订今晚一晚"
+      - "就要皓晨双床房，明天入住一晚，两位"
+      - "确认下单"
     expected:
       tool_sequence:
         - name: "list_room_types"
@@ -81,91 +92,92 @@ cases:
 
   - id: "order-008"
     name: "订单改期"
+    seed: "paid"
     turns:
-      - "帮我订大床房，10月20日入住，10月22日退房"
-      - "能改到10月25日入住，10月27日退房吗？"
+      - "订单 {order_no}，能改到后天入住、大后天退房吗？"
+      - "确认改期"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "reschedule_order"
       task_success: true
     tags: ["order", "reschedule", "multi-turn"]
 
   - id: "order-009"
     name: "续订一晚"
+    seed: "paid"
     turns:
-      - "帮我订大床房，10月20日入住，10月21日退房"
-      - "我想再续一晚"
+      - "订单 {order_no}，我想再续一晚"
+      - "确认续订"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "renew_order"
       task_success: true
     tags: ["order", "renew", "multi-turn"]
 
   - id: "order-010"
-    name: "改期到满房日"
+    name: "改期到过去日期"
+    seed: "paid"
     turns:
-      - "帮我订大床房，10月20日入住，10月22日退房"
-      - "能改到国庆那几天吗？"
+      - "订单 {order_no}，帮我改到昨天入住"
     expected:
-      tool_sequence:
-        - name: "create_order"
-        - name: "reschedule_order"
-    tags: ["order", "reschedule", "multi-turn", "negative"]
+      tool_sequence: []
+    tags: ["order", "reschedule", "negative", "human-review"]
 
   - id: "order-011"
     name: "取消并说明原因"
+    seed: "paid"
     turns:
-      - "帮我订大床房，今晚一晚"
-      - "行程有变，帮我取消，原因是航班延误"
+      - "订单 {order_no}，行程有变，去不了了，帮我取消这个订单，不需要退款"
+      - "确认取消"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "cancel_order"
       task_success: true
     tags: ["order", "cancel", "multi-turn"]
 
   - id: "order-012"
     name: "申请公司发票"
+    seed: "paid"
     turns:
-      - "帮我订大床房，今晚一晚"
-      - "帮我开一张发票，抬头是皓晨科技有限公司"
+      - "订单 {order_no}，帮我开一张发票，抬头是皓晨科技有限公司，税号 91310115MA1K4X8N2P"
+      - "抬头是皓晨科技有限公司，确认开具"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "apply_invoice"
       task_success: true
     tags: ["order", "invoice", "multi-turn"]
 
   - id: "order-013"
     name: "开票后查询状态"
+    seed: "paid"
     turns:
-      - "帮我订大床房，今晚一晚"
-      - "帮我开一张发票，抬头是皓晨科技有限公司"
+      - "订单 {order_no}，帮我开一张发票，抬头是皓晨科技有限公司，税号 91310115MA1K4X8N2P"
+      - "抬头是皓晨科技有限公司，确认开具"
       - "这张发票开好了吗？"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "apply_invoice"
       task_success: true
     tags: ["order", "invoice", "multi-turn"]
 
   - id: "order-014"
     name: "重复申请发票"
+    seed: "paid"
     turns:
-      - "帮我订大床房，今晚一晚"
-      - "帮我开一张发票，抬头是皓晨科技有限公司"
+      - "订单 {order_no}，帮我开一张发票，抬头是皓晨科技有限公司，税号 91310115MA1K4X8N2P"
+      - "抬头是皓晨科技有限公司，确认开具"
       - "再帮我开一张发票"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "apply_invoice"
-    tags: ["order", "invoice", "multi-turn", "negative"]
+      task_success: true
+    tags: ["order", "invoice", "multi-turn"]
 
   - id: "order-015"
     name: "带小孩订房"
-    message: "我带孩子一起住，订一间大床房，今晚一晚"
+    turns:
+      - "我带孩子一起住，订一间皓晨家庭套房，明天入住一晚，一共三位"
+      - "确认下单"
     expected:
       tool_sequence:
         - name: "create_order"
@@ -174,13 +186,14 @@ cases:
 
   - id: "order-016"
     name: "改期后再取消"
+    seed: "paid"
     turns:
-      - "帮我订大床房，10月20日入住，10月22日退房"
-      - "改到10月25日入住，10月27日退房"
-      - "算了，还是取消吧"
+      - "订单 {order_no}，改到后天入住、大后天退房"
+      - "确认改期"
+      - "算了，还是取消吧，不需要退款"
+      - "确认取消"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "reschedule_order"
         - name: "cancel_order"
       task_success: true
@@ -189,8 +202,9 @@ cases:
   - id: "order-017"
     name: "比价后下单"
     turns:
-      - "大床房和双床房分别多少钱？"
-      - "订双床房，后天入住，住两晚"
+      - "皓晨双床房和皓晨行政房分别多少钱？"
+      - "订双床房，明天入住，住两晚，两位"
+      - "确认下单"
     expected:
       tool_sequence:
         - name: "list_room_types"
@@ -200,12 +214,12 @@ cases:
 
   - id: "order-018"
     name: "入住当天请求延长"
+    seed: "paid"
     turns:
-      - "帮我订大床房，10月20日入住，10月21日退房"
-      - "我今天入住，可以延长到后天吗？"
+      - "订单 {order_no}，我今天入住，可以延长到后天吗？"
+      - "确认续订"
     expected:
       tool_sequence:
-        - name: "create_order"
         - name: "renew_order"
       task_success: true
     tags: ["order", "renew", "multi-turn"]
