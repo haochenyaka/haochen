@@ -80,7 +80,10 @@ class OpenAICompatibleEmbeddings:
         timeout_seconds: float = 60.0,
     ) -> None:
         if not base_url or not model:
-            raise EmbeddingError("嵌入供给需要 MODEL_BASE_URL 与 MODEL_EMBEDDING_NAME")
+            raise EmbeddingError(
+                "嵌入供给需要 EMBEDDING_BASE_URL（或 MODEL_BASE_URL）与 MODEL_EMBEDDING_NAME"
+            )
+        # 约定 base_url 与 OpenAI 一致已包含 /v1；TEI 的兼容端点即 /v1/embeddings
         self._endpoint = base_url.rstrip("/") + "/embeddings"
         self._api_key = api_key
         self._model = model
@@ -143,9 +146,16 @@ def build_embedding_provider() -> EmbeddingProvider:
     settings = get_settings()
     if not settings.model_embedding_name:
         return DeterministicEmbeddings()
+    # 独立 embedding endpoint 激活后不再借用 chat 的密钥，避免把对话密钥发给本地服务
+    if settings.embedding_base_url:
+        base_url = settings.embedding_base_url
+        api_key = settings.embedding_api_key
+    else:
+        base_url = settings.model_base_url
+        api_key = settings.model_api_key
     return OpenAICompatibleEmbeddings(
-        base_url=settings.model_base_url,
-        api_key=settings.model_api_key,
+        base_url=base_url,
+        api_key=api_key,
         model=settings.model_embedding_name,
         dimensions=settings.embedding_dimensions,
         timeout_seconds=settings.model_timeout_seconds,

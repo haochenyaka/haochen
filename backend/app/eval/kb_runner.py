@@ -109,14 +109,22 @@ class PersistOutcome:
     superseded_reports: tuple[int, ...]
 
 
+BGE_M3_MODELS = {"bge-m3", "baai/bge-m3"}
+
+
 def embedding_identity(settings: Settings) -> str:
-    if settings.model_embedding_name:
-        dimensions = settings.embedding_dimensions or "auto"
-        return f"openai-compatible:{settings.model_embedding_name}:{dimensions}"
-    return f"dev-deterministic:{DEV_EMBEDDING_DIMENSIONS}"
+    model = settings.model_embedding_name.strip()
+    if not model:
+        return f"dev-deterministic:{DEV_EMBEDDING_DIMENSIONS}"
+    dimensions = settings.embedding_dimensions or "auto"
+    if model.lower() in BGE_M3_MODELS:
+        return f"bge-m3:{dimensions}"
+    return f"openai-compatible:{model}:{dimensions}"
 
 
 def reranker_identity(settings: Settings) -> str:
+    if settings.kb_rerank_enabled and settings.rerank_base_url:
+        return settings.rerank_model_name.strip() or "http-reranker"
     if settings.kb_rerank_enabled and settings.model_name and settings.model_base_url:
         return f"llm:{settings.model_name}"
     return "keyword"

@@ -66,7 +66,31 @@ def test_build_embedding_provider_falls_back_to_dev_without_model_name(
     assert isinstance(build_embedding_provider(), DeterministicEmbeddings)
 
     monkeypatch.setattr(get_settings(), "model_embedding_name", "text-embedding-3-small")
+    monkeypatch.setattr(get_settings(), "embedding_base_url", "")
+    monkeypatch.setattr(get_settings(), "embedding_api_key", "")
     monkeypatch.setattr(get_settings(), "model_base_url", "http://localhost:9999/v1")
     provider = build_embedding_provider()
     assert isinstance(provider, OpenAICompatibleEmbeddings)
     assert provider.identity == "text-embedding-3-small"
+    assert provider._endpoint == "http://localhost:9999/v1/embeddings"
+    assert provider._api_key == get_settings().model_api_key
+
+
+def test_build_embedding_provider_prefers_dedicated_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "model_embedding_name", "bge-m3")
+    monkeypatch.setattr(settings, "embedding_dimensions", 1024)
+    monkeypatch.setattr(settings, "embedding_base_url", "http://bge-embed:80/v1")
+    monkeypatch.setattr(settings, "embedding_api_key", "embed-key")
+    monkeypatch.setattr(settings, "model_base_url", "https://api.deepseek.com/v1")
+    monkeypatch.setattr(settings, "model_api_key", "chat-key")
+
+    provider = build_embedding_provider()
+
+    assert isinstance(provider, OpenAICompatibleEmbeddings)
+    assert provider.identity == "bge-m3"
+    assert provider.dimensions == 1024
+    assert provider._endpoint == "http://bge-embed:80/v1/embeddings"
+    assert provider._api_key == "embed-key"

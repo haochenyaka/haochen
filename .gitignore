@@ -59,6 +59,9 @@ workdir/
 *.sqlite
 *.sqlite3
 
+# BGE 模型权重（数 GiB，按 deploy/prepare_bge_models.py 本地准备）
+deploy/models/
+
 # ============ IDE / 编辑器 ============
 .idea/
 .vscode/

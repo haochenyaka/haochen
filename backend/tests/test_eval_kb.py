@@ -422,4 +422,14 @@ def test_retrieval_config_snapshot_flags_configured_reranker() -> None:
     )
     snapshot = retrieval_config_snapshot(10, configured, ["hotel-guest"])
     assert snapshot["reranker"] == "llm:qwen-max"
-    assert snapshot["embedding"] == "openai-compatible:bge-m3:1024"
+    assert snapshot["embedding"] == "bge-m3:1024"
+
+    local_bge = configured.model_copy(
+        update={
+            "rerank_base_url": "http://bge-rerank:80",
+            "rerank_model_name": "bge-reranker-v2-m3",
+        }
+    )
+    assert retrieval_config_snapshot(10, local_bge, ["hotel-guest"])["reranker"] == (
+        "bge-reranker-v2-m3"
+    )

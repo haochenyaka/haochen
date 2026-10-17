@@ -108,7 +108,7 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 | 项 | 内容 |
 | --- | --- |
 | 机制要点 | 文档状态机 `uploaded → parsing → parsed → indexing → indexed`（另有 error_parsing / error_indexing），`parsing`/`indexing` 为条件抢占，并发不双写；存储分工：PostgreSQL 拥有配置/权限/文件元数据与状态/chunk 正文/Task 意图与 lease，MinIO 拥有原件与解析产物，Milvus 拥有向量与 BM25 字段，Neo4j 拥有实体关系，Redis 只做投递与最小配置缓存；Milvus 索引是 PG + Milvus 双写、非跨存储事务，失败补偿并置 error_indexing；批量入口按状态筛选 + dedupe key 拒绝活跃重复任务；检索工具参数（kb_id/file_id/文件名）执行处复验权限 |
-| 酒店域增量 | 知识库内容为酒店介绍、政策、FAQ、WiFi/早餐/退房时间等入住指引来源；图谱用于房型-设施-周边（recommend_nearby）；知识库内容变更触发评估基线作废（P8）。检索落地为两段式：Milvus 混合宽捞（向量 + BM25，`KB_RECALL_LIMIT`=30）→ 重排截断（默认 RecallOrderReranker 保序，`KeywordReranker` 按 token 覆盖度打分，`KB_RERANK_ENABLED` 打开时走 LLM 重排、超时降级保序）→ 上下文装配（`KB_RERANK_TOP_N`=6、`KB_CONTEXT_MAX_CHARS`=3000、每文档 `KB_CONTEXT_MAX_CHUNKS_PER_DOCUMENT`=3 段） |
+| 酒店域增量 | 知识库内容为酒店介绍、政策、FAQ、WiFi/早餐/退房时间等入住指引来源；图谱用于房型-设施-周边（recommend_nearby）；知识库内容变更触发评估基线作废（P8）。检索落地为两段式：Milvus 混合宽捞（向量 + BM25，`KB_RECALL_LIMIT`=30）→ 重排截断（默认 `KeywordReranker` 按 token 覆盖度打分；`KB_RERANK_ENABLED` 打开时优先 `HttpReranker`（`RERANK_BASE_URL`，BGE cross-encoder），否则 LLM 重排，超时降级保序）→ 上下文装配（`KB_RERANK_TOP_N`=6、`KB_CONTEXT_MAX_CHARS`=3000、每文档 `KB_CONTEXT_MAX_CHUNKS_PER_DOCUMENT`=3 段） |
 | 落地位置 | app/knowledge/（manager、base、implementations/milvus、retrieval.py、rerank.py、tokenization.py）、app/routers/knowledge_router.py |
 | 阶段 | P3（验收主张 A5 的新鲜度/覆盖率治理对象） |
 

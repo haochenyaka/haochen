@@ -14,7 +14,7 @@
 ## 项目亮点
 
 - **三端一体的 Agent 落地**：客人小程序、保洁小程序、管理后台共用一套 Agent 运行时，把自然语言对话接到真实的订单、门锁、客房服务业务链路上，而不是只做问答 Demo。
-- **混合检索知识库**：Milvus 向量检索（含 BM25 稀疏向量）+ Neo4j 关系图检索双路召回，经 Rerank 精排管道；169 题分块级黄金锚点的 `chunk_recall@10` 达 **0.9675**、`primary@1` **0.6036**（开发态确定性 embedding，详见 [评估基线](docs/eval/kb-baseline.json)）。
+- **混合检索知识库**：Milvus 向量检索（含 BM25 稀疏向量）+ Neo4j 关系图检索双路召回，经 Rerank 精排管道；169 题分块级黄金锚点的 `chunk_recall@10` 达 **0.9941**、`primary@1` **0.6746**（本地 BGE-M3 embedding，详见 [评估基线](docs/eval/kb-baseline.json)）。
 - **可观测的 Agent 运行时**：Langfuse 做数据集驱动的评估与链路追踪，全量审计事实可通过 SQL 聚合派生报表，端到端可观测。
 - **数据湖分析层**：业务表增量导出到 MinIO（Parquet + zstd），由嵌入的 DuckDB 直读生成按日预聚合，报表查询提速 **10–100x**，预聚合缺失时自动降级回 PostgreSQL。
 - **异步与隔离**：API 与 Worker 分离，LangGraph 会话执行与知识索引、质检跑批等后台任务解耦，避免长任务阻塞交互链路。
@@ -97,7 +97,7 @@ flowchart TB
 | --- | --- |
 | Agent 编排 | LangGraph · LangChain · 中间件流水线 · Skills |
 | 后端 | FastAPI · ARQ · Alembic · SQLAlchemy (async) |
-| 知识库 | Milvus（向量 + BM25 稀疏）· Neo4j · Rerank |
+| 知识库 | Milvus（向量 + BM25 稀疏）· Neo4j · BGE-M3 embedding（可选）· Rerank |
 | 数据 | PostgreSQL · Redis · MinIO · Parquet + zstd · DuckDB · PyArrow |
 | 可观测 | Langfuse |
 | 前端 | uni-app · Vue 3 · Vite · TypeScript · Ant Design Vue |
@@ -123,6 +123,11 @@ docker compose -f deploy/docker-compose.yml exec api alembic upgrade head
 
 # 需要知识库依赖时（镜像较大）
 docker compose -f deploy/docker-compose.yml --profile knowledge up -d
+
+# 本地 BGE-M3 embedding（可选，模型约 2.2 GiB）：先准备模型目录，再启动 bge-embed
+python deploy/prepare_bge_models.py
+docker compose -f deploy/docker-compose.yml --profile knowledge up -d bge-embed
+# 按 deploy/.env.example 的注释启用 EMBEDDING_* 后重启 api/worker/task-worker，并全量重建索引
 ```
 
 服务入口：API 文档 http://localhost:8000/docs 、设备模拟器 http://localhost:9100/docs 、MinIO 控制台 http://localhost:9001 。
@@ -201,7 +206,9 @@ cd backend
 python -m app.eval.kb_runner --k 10 --out ../docs/eval/kb-baseline.json   # 加 --no-persist 只试跑不落库
 ```
 
-已交付基线见 [docs/eval/kb-baseline.json](docs/eval/kb-baseline.json)：K=10、`chunk_recall@10` 0.9675、`primary@1` 0.6036；文档级 `recall@10` 0.9763 作为参考口径保留。无答案评判时 `overall_score` 以 `chunk_recall@10` 为主指标。该数字跑在开发态确定性 embedding + 词面重排上，用于验证检索链路；接入真实 BGE-M3/reranker 后须重跑并作废旧基线。
+已交付基线见 [docs/eval/kb-baseline.json](docs/eval/kb-baseline.json)：K=10、`chunk_recall@10` **0.9941**、`primary@1` **0.6746**，文档级 `recall@10` 0.9911 作为参考口径保留。无答案评判时 `overall_score` 以 `chunk_recall@10` 为主指标。该基线跑在本地 BGE-M3（`bge-m3:1024`）嵌入 + 词面重排上，覆盖 20 篇文档 / 95 个分块；旧的开发态确定性 embedding 基线（`chunk_recall@10` 0.9675、`primary@1` 0.6036）已由报告 ID 4 作废。
+
+本地 BGE-M3 embedding 已接入（`EMBEDDING_BASE_URL`，TEI `/v1/embeddings`），查询延迟 p50 0.122s；真实分块 rerank 在本机 CPU 上 23 个候选需 53–59s，因此 `HttpReranker` 默认不启用，重排仍走词面/LLM 链路。容量数据与接入细节见 [BGE spike 报告](docs/spikes/2026-10-17-bge-feasibility.md)。
 
 ## Agent 评估基线
 

@@ -19,14 +19,14 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2 经 PR #5 合入 main），下一入口为 Phase 3.1（BGE-M3 可行性 spike）
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3.1 已完成（实现 + BGE-M3 全量重建 + 169 题基线，[spike 报告](spikes/2026-10-17-bge-feasibility.md)），下一入口为 P3.2
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
 | --- | --- | --- |
 | 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
 | 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
-| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–2 ✅；Phase 3 待启动 |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–2 ✅；Phase 3.1 ✅；P3.2–3.3 待启动 |
 | 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
 
 ---
@@ -133,27 +133,32 @@
 - [x] **P2.1 真实执行器**：✅ 已交付 `RealCaseExecutor`（线程/消息/请求 → 队头 Run → `RunExecutor` → `tool_audit` 回读），支持同线程多轮回放并回读末轮回答；`ScriptedCaseExecutor` 仅留测试，管理端注入真实执行器。
 - [x] **P2.2 数据集重建（LLM 生成 + 人工审核）**：✅ Agent 评测集 8 → **61 条**（checkin 12 / orders 18 / dispatch 7 / handoff 6 / multi_turn 6 / composite 5 / edge 7，含 20 条多轮）；KB 评测集 73 → **169 题**，gold 升级为 `(document_title, ordinal)` 分块级锚点；人工审核记录在 `docs/eval/review/`；工具名已对齐并加防漂移守卫 `test_eval_dataset_tools_registered`。
 - [x] **P2.3 LLM-as-judge 真实现**：✅ 四维评分（相关性/事实性/语气/边界，0–1 + 理由）；评判温度 0.7（生成侧默认 0.2，可用 `AGENT_JUDGE_MODEL_NAME` 换模型）；自一致性采样 3 次逐维取中位；20 条人工校准集 + Cohen's kappa（产物 `docs/eval/agent-judge-calibration.json`，本次 **kappa=1.0**）；评判指标与逐题明细已写入报告，评判器身份进配置指纹。
-- [x] **P2.4 指标诚实化**：✅ 无答案评判时 KB `overall_score` 主指标切到 `chunk_recall@K`（无分块 gold 才退回文档级 `recall@K`）；README 已更新为 169 题、分块级 gold、`chunk_recall@10` 0.9675 / `primary@1` 0.6036，并标注开发态 embedding 口径；真实 embedding + rerank 数字仍留待 Phase 3 重测。
+- [x] **P2.4 指标诚实化**：✅ 无答案评判时 KB `overall_score` 主指标切到 `chunk_recall@K`（无分块 gold 才退回文档级 `recall@K`）；README 已更新为 169 题、分块级 gold；P2 交付时为开发态 embedding 口径（`chunk_recall@10` 0.9675 / `primary@1` 0.6036），真实 BGE-M3 数字已于 P3.1 重测（0.9941 / 0.6746）。
 
 **验收**：✅ `pytest -m eval` 真跑通（61/61，报告 ID 39–45）；评判覆盖 61/61、四维均分 0.9622、单题通过率 0.9016；报告落库且可复现（指纹机制含执行器与评判器身份）；README 评测段落数字均可追到报告或校准产物。
+
+**交付记录**：P2.1/P2.2 经 **PR #5** 合入 main（merge commit `767b493`）；P2.3/P2.4 及 edge-001 根因修复经 **PR #6** 合入 main（merge commit `d185fca`，CI 6/6 全绿）。评判器已有 `use_judge` 开关，脚本模型集成测试显式关闭，避免误打真实 API。
 
 ---
 
 ### Phase 3 — 检索真实性
 
-**根因**：`MODEL_BASE_URL=https://api.deepseek.com/v1` 只有 chat 端点，DeepSeek **不提供 embedding / rerank** → 生产配置下 `build_embedding_provider()`（`knowledge/embedding.py:142`）与 `build_reranker()`（`knowledge/rerank.py:197`）必然落回 dev 实现（这正是 `kb-baseline.json` 里 `"embedding": "dev-deterministic:64"`、`"reranker": "keyword"` 的原因）。
+**根因**：`MODEL_BASE_URL=https://api.deepseek.com/v1` 只有 chat 端点，DeepSeek **不提供 embedding / rerank** → P3.1 前生产配置下 `build_embedding_provider()`（`knowledge/embedding.py`）与 `build_reranker()`（`knowledge/rerank.py`）必然落回 dev 实现（旧 `kb-baseline.json` 因此是 `"embedding": "dev-deterministic:64"`、`"reranker": "keyword"`）。P3.1 已拆出独立 `EMBEDDING_*` / `RERANK_*` 端点。
 
-- [ ] **P3.1 真实 embedding + rerank（本地 BGE-M3 + bge-reranker-v2-m3）**：
+- [x] **P3.1 真实 embedding + rerank（本地 BGE-M3 + bge-reranker-v2-m3）**：
+  - **Spike 已完成（2026-10-17）**：[spikes/2026-10-17-bge-feasibility.md](spikes/2026-10-17-bge-feasibility.md)。TEI CPU 可用于 embedding（查询 p50 0.122s、索引约 140–158 token/s）；但真实分块 rerank 23 候选需 53–59s，**CPU 不适合在线同步链路**。本阶段默认只落 embedding，rerank 保留 `LlmReranker`/`KeywordReranker` 降级链；另需对齐 TEI `--max-client-batch-size` 与后端 `EMBED_BATCH_SIZE=32`。
+  - **交付记录（2026-10-17）**：已落地 `EMBEDDING_*`/`RERANK_*` 配置拆分、`HttpReranker`（TEI `/rerank`，失败降级）、compose `bge-embed`（knowledge profile）与 `bge-rerank`（独立 profile）、`deploy/prepare_bge_models.py` 及单测；完成真实 TEI 的 provider 级联调（embedding 1024 维、rerank 相关片段排第 1）。全量重建 20 篇文档 / 95 个分块至 `haochen_kb_bge_m3`，169 题评估落库报告 ID 4：`chunk_recall@10` **0.9941**、`primary@1` **0.6746**（旧基线 0.9675 / 0.6036，报告 2/3 已作废）。
   - BGE 服务选型：`text-embeddings-inference`(TEI) 或 `Infinity`，暴露 `/embeddings`（兼容 OpenAI）与 `/rerank`。
   - rerank 需新端点 `/rerank`；现有 `LlmReranker`（`rerank.py:81`）走 chat completions 打分，**不是 cross-encoder** → 新增 `HttpReranker`（POST `/rerank`），保留 `LlmReranker` 作降级。
   - **配置拆分（本阶段必须改）**：当前 `MODEL_BASE_URL`/`MODEL_API_KEY` 同时被 chat/embedding/rerank 复用 → 拆出 `EMBEDDING_BASE_URL` / `RERANK_BASE_URL`。
   - 模型维度：`BAAI/bge-m3`（1024 维）；`ChunkVectorStore` 集合名按 identity 命名（`milvus_store.py:58`），换 provider 会生成新集合，需一次**全量重建**。
-  - 部署：`deploy/docker-compose.yml` 新增 `bge` 服务；`api`/`worker`/`task-worker` 注入新 URL。
-  - 索引重建：复用 `knowledge/task_handlers.py` + `recovery.py`，补「全量重建」命令 + 幂等校验（重建后 recall 不劣化才切换）。
+  - 部署：`deploy/docker-compose.yml` 新增 `bge-embed`（默认启用）与 `bge-rerank`（显式开关）；`api`/`worker`/`task-worker` 注入新 URL。
+  - 索引重建：复用现有 `reprocess` → `kb.parse` → `kb.index` 任务链完成全量重建，未新增独立 CLI；重建前先启动 `bge-embed`，重建后核对 Milvus 集合行数与 PG 分块数一致。
+  - 已知问题：首次创建集合时多个索引任务并发执行，偶发 `collection not loaded`（本次 1/20 文档，重试后成功）；后续可在删除/写入前补集合加载幂等或对瞬时错误重试。
 - [ ] **P3.2 Neo4j 真多跳推理**：现状（`knowledge/graph.py`）只有一跳（`room_type_overview` / `recommend_nearby`）。补多跳组合推理（如「带投影的房型附近 500m 内有早餐的店」= `RoomType -HAS_AMENITY-> Amenity` + `Hotel -NEARBY-> Place`），并把图检索结果作为 KB 召回的**补充腿**（当前图与 KB 检索未合流）。
 - [ ] **P3.3 DuckDB 数据湖真分析**：「提速 10-100x」无基准 → 补真实业务问题驱动（如「各房型月度入住率与客单价」）+ 可复现 benchmark 脚本（PG 直查 vs 预聚合），数字写进 README 时标注数据规模。
 
-**验收**：`docs/eval/kb-baseline.json` 为真实 provider 结果（`retrieval_config` 显示 `bge-m3:1024` + `bge-reranker-v2-m3`）；图谱/数据湖各有测试与基准。
+**验收**：✅ `docs/eval/kb-baseline.json` 为真实 provider 结果（`retrieval_config` 显示 `bge-m3:1024`），`chunk_recall@10` 0.9941、`primary@1` 0.6746；rerank 因 CPU 延迟保留 `keyword`，`bge-reranker-v2-m3` 作为显式开关。图谱/数据湖各有测试与基准。
 
 ---
 
@@ -188,13 +193,13 @@
 ① ✅ 查 ruff 版本（已查实：非漂移，必须 format）
 ② ✅ 收尾 cleanup PR：ruff check + ruff format + mypy（均绿）→ 已提交 `86a6494`
 ③ ✅ 开 P0 的 PR #2 → CI 6/6 全绿 → 已合入 main（merge commit `37a97ce`）
-④ ✅ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成）→ 已提交 `c58ce91`，rebase 到 `main`(`37a97ce`) 后强推；**PR 未创建**（本机无 `gh`/token，待人工开）
+④ ✅ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成）→ 提交 `c58ce91` + 收尾 `70cff14`，经 **PR #3** 合入 main（`b75bc6c`）
    └ 本轮收尾：SSE 事件包络按执行者归属（✅ 已完成）、supervisor 路由调用接审计与用量（✅ 已完成）、`qa-auditor` 登记为后台 Agent 并 Task 化（✅ 已完成），P1 全部收口
    └ 可并行：P2.1 真执行器 + P2.2 工具名对齐测试（不依赖 P1）
-⑤ P1 完成 → P2 全量 → P3 → P4
+⑤ ✅ P2 全量（PR #5 `767b493` → PR #6 `d185fca`）→ ✅ P3.1 BGE 可行性 spike（2026-10-17）→ ✅ P3.1 实现 + 全量重建 + 169 题基线（2026-10-17）→ P3.2 → P4
 ```
 
-**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 分支已提交（`c58ce91`）并 rebase + 强推，**PR 待人工创建**；三处收尾（SSE 事件归属、路由调用审计与用量、后台质检 Agent `qa-auditor`）均已收口，**P1 全部完成**。其余（Phase 1–4 内容）都是排队等前一个完成的「内容工作」，不是被卡住。
+**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 经 **PR #3** 合入 `main`（`b75bc6c`）；P2 经 **PR #5**（`767b493`）与 **PR #6**（`d185fca`）合入 `main`，**Phase 0–2 已全部完成**。P3.1 已交付：**本地 BGE-M3 embedding 可用，CPU rerank 不进入在线链路**；169 题基线 `chunk_recall@10` 0.9941、`primary@1` 0.6746（详见 spike 报告与 `docs/eval/kb-baseline.json`）；下一入口为 **P3.2**。Phase 3–4 是可立即启动的「内容工作」，不受阻塞。
 
 ---
 

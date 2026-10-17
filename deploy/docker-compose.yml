@@ -89,6 +89,62 @@ services:
       retries: 20
       start_period: 40s
 
+  bge-embed:
+    # 本地 BGE-M3：OpenAI 兼容端点 /v1/embeddings。模型目录先由 prepare_bge_models.py 准备
+    image: ${BGE_EMBED_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:cpu-1.9}
+    profiles: ["knowledge"]
+    command:
+      [
+        "--model-id",
+        "/models/bge-m3",
+        "--pooling",
+        "cls",
+        "--auto-truncate",
+        "--tokenization-workers",
+        "2",
+        "--max-batch-tokens",
+        "4096",
+        # 与后端 EMBED_BATCH_SIZE / 召回上限对齐，TEI 默认也是 32
+        "--max-client-batch-size",
+        "32",
+      ]
+    volumes:
+      - ${BGE_MODELS_DIR:-./models}:/models:ro
+    mem_limit: 4600m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  bge-rerank:
+    # CPU 下真实分块重排需 53-59s/23 候选（见 docs/spikes），默认不随 knowledge profile 启动；
+    # 仅 GPU 或小模型验证通过后，用 --profile bge-rerank 显式启用
+    image: ${BGE_RERANK_IMAGE:-ghcr.io/huggingface/text-embeddings-inference:cpu-1.9}
+    profiles: ["bge-rerank"]
+    command:
+      [
+        "--model-id",
+        "/models/bge-reranker-v2-m3",
+        "--auto-truncate",
+        "--tokenization-workers",
+        "2",
+        "--max-batch-tokens",
+        "4096",
+        "--max-client-batch-size",
+        "32",
+      ]
+    volumes:
+      - ${BGE_MODELS_DIR:-./models}:/models:ro
+    mem_limit: 4600m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
   device-sim:
     build: ../backend
     command: ["uvicorn", "app.device_sim.main:app", "--host", "0.0.0.0", "--port", "9100"]
@@ -127,6 +183,15 @@ services:
       MODEL_BASE_URL: ${MODEL_BASE_URL:-}
       MODEL_API_KEY: ${MODEL_API_KEY:-${DEEP_SEEK_API_KEY:-}}
       MODEL_TEMPERATURE: ${MODEL_TEMPERATURE:-0.2}
+      # 知识库检索：空值回退 dev 确定性实现；启用本地 BGE 时指向 bge-embed
+      MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-0}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      KB_RERANK_ENABLED: ${KB_RERANK_ENABLED:-false}
+      RERANK_BASE_URL: ${RERANK_BASE_URL:-}
+      RERANK_API_KEY: ${RERANK_API_KEY:-}
+      RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
       WECHAT_PAY_MCHID: ${WECHAT_PAY_MCHID:-}
       WECHAT_PAY_API_V3_KEY: ${WECHAT_PAY_API_V3_KEY:-}
       WECHAT_PAY_CERT_SERIAL: ${WECHAT_PAY_CERT_SERIAL:-}
@@ -175,6 +240,14 @@ services:
       MODEL_BASE_URL: ${MODEL_BASE_URL:-}
       MODEL_API_KEY: ${MODEL_API_KEY:-${DEEP_SEEK_API_KEY:-}}
       MODEL_TEMPERATURE: ${MODEL_TEMPERATURE:-0.2}
+      MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-0}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      KB_RERANK_ENABLED: ${KB_RERANK_ENABLED:-false}
+      RERANK_BASE_URL: ${RERANK_BASE_URL:-}
+      RERANK_API_KEY: ${RERANK_API_KEY:-}
+      RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
     volumes:
       - workdirdata:/srv/app/data/workdir
     depends_on:
@@ -219,6 +292,14 @@ services:
       MODEL_NAME: ${MODEL_NAME:-}
       MODEL_BASE_URL: ${MODEL_BASE_URL:-}
       MODEL_API_KEY: ${MODEL_API_KEY:-${DEEP_SEEK_API_KEY:-}}
+      MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-0}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      KB_RERANK_ENABLED: ${KB_RERANK_ENABLED:-false}
+      RERANK_BASE_URL: ${RERANK_BASE_URL:-}
+      RERANK_API_KEY: ${RERANK_API_KEY:-}
+      RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
     volumes:
       - workdirdata:/srv/app/data/workdir
     depends_on:

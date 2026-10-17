@@ -28,8 +28,10 @@ class Settings(BaseSettings):
     neo4j_database: str = "neo4j"
     neo4j_timeout_seconds: float = 20.0
 
-    # 知识库：嵌入模型走 OpenAI 兼容接口（与 MODEL_BASE_URL / MODEL_API_KEY 同源）
+    # 知识库嵌入：独立 endpoint；留空时回退 MODEL_BASE_URL / MODEL_API_KEY（兼容现网）
     model_embedding_name: str = ""
+    embedding_base_url: str = ""
+    embedding_api_key: str = ""
     embedding_dimensions: int = 0
     kb_chunk_max_chars: int = 700
     kb_chunk_overlap_chars: int = 80
@@ -41,9 +43,13 @@ class Settings(BaseSettings):
     kb_rerank_top_n: int = 6
     kb_context_max_chars: int = 3000
     kb_context_max_chunks_per_document: int = 3
-    # 模型重排需显式开启；未开启或模型未配置时走确定性词面重排
+    # 重排需显式开启：优先本地 cross-encoder（RERANK_BASE_URL），其次对话模型打分，
+    # 都未配置时走确定性词面重排
     kb_rerank_enabled: bool = False
     kb_rerank_timeout_seconds: float = 30.0
+    rerank_base_url: str = ""
+    rerank_api_key: str = ""
+    rerank_model_name: str = "bge-reranker-v2-m3"
 
     # P1.4 长期记忆写入：Run 终态后按策略抽取候选记忆写 GuestMemory；默认关（LLM 成本）
     memory_extract_enabled: bool = False

@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # 词面重排的截断长度：只影响打分速度，不改变候选正文
 SCORE_EXCERPT_CHARS = 1200
 LLM_EXCERPT_CHARS = 400
+HTTP_RERANK_BATCH_SIZE = 32
 JSON_FENCE = "```"
 
 
@@ -145,6 +146,83 @@ class LlmReranker:
         return [(candidates[index].chunk_id, scores[index]) for index in order[:top_n]]
 
 
+class HttpReranker:
+    """cross-encoder 重排：POST /rerank，TEI 兼容响应为 [{index, score}]。"""
+
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        api_key: str = "",
+        timeout_seconds: float = 30.0,
+        batch_size: int = HTTP_RERANK_BATCH_SIZE,
+    ) -> None:
+        if not base_url:
+            raise RerankError("HTTP 重排需要 RERANK_BASE_URL")
+        if batch_size <= 0:
+            raise RerankError("HTTP 重排批次大小必须为正数")
+        self._endpoint = base_url.rstrip("/") + "/rerank"
+        self._api_key = api_key
+        self._timeout = timeout_seconds
+        self._batch_size = batch_size
+
+    async def rerank(
+        self, query: str, candidates: Sequence[RerankCandidate], *, top_n: int
+    ) -> list[tuple[str, float]]:
+        if not candidates:
+            return []
+        scored: list[tuple[int, float]] = []
+        for start in range(0, len(candidates), self._batch_size):
+            batch = candidates[start : start + self._batch_size]
+            scores = await self._score(query, batch)
+            scored.extend((start + offset, score) for offset, score in enumerate(scores))
+        order = sorted(scored, key=lambda pair: pair[1], reverse=True)
+        return [(candidates[index].chunk_id, score) for index, score in order[:top_n]]
+
+    async def _score(self, query: str, candidates: Sequence[RerankCandidate]) -> list[float]:
+        payload = {
+            "query": query,
+            "texts": [item.content for item in candidates],
+            "raw_scores": False,
+        }
+        headers = {"Content-Type": "application/json"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(self._endpoint, json=payload, headers=headers)
+                response.raise_for_status()
+                body = response.json()
+        except httpx.HTTPError as exc:
+            raise RerankError(f"重排接口调用失败：{exc}") from exc
+        except ValueError as exc:
+            raise RerankError(f"重排接口返回非 JSON：{exc}") from exc
+        return _parse_http_scores(body, expected=len(candidates))
+
+
+def _parse_http_scores(body: object, *, expected: int) -> list[float]:
+    if not isinstance(body, list) or len(body) != expected:
+        raise RerankError("重排接口返回条数与候选不一致")
+    scores = [0.0] * expected
+    seen: set[int] = set()
+    for item in body:
+        if not isinstance(item, dict):
+            raise RerankError("重排接口返回结构异常：条目不是对象")
+        index = item.get("index")
+        score = item.get("score")
+        if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < expected:
+            raise RerankError("重排接口返回结构异常：index 越界")
+        if index in seen:
+            raise RerankError("重排接口返回结构异常：index 重复")
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            raise RerankError("重排接口返回结构异常：score 非数值")
+        seen.add(index)
+        scores[index] = float(score)
+    if len(seen) != expected:
+        raise RerankError("重排接口返回条数与候选不一致")
+    return scores
+
+
 def _parse_scores(body: object, *, expected: int) -> list[float]:
     content = _message_content(body)
     payload = _load_json_object(content)
@@ -195,8 +273,14 @@ def _load_json_object(content: str) -> dict[str, object]:
 
 
 def build_reranker() -> Reranker:
-    """模型可用且显式开启时走模型重排，否则走确定性词面重排。"""
+    """按配置选择重排实现：本地 cross-encoder 优先，其次对话模型，最后词面。"""
     settings = get_settings()
+    if settings.kb_rerank_enabled and settings.rerank_base_url:
+        return HttpReranker(
+            base_url=settings.rerank_base_url,
+            api_key=settings.rerank_api_key,
+            timeout_seconds=settings.kb_rerank_timeout_seconds,
+        )
     if settings.kb_rerank_enabled and settings.model_name and settings.model_base_url:
         return LlmReranker(
             base_url=settings.model_base_url,
