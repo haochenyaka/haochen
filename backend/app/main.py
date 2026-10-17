@@ -83,11 +83,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # 生产环境配置不安全时在启动期失败关闭，避免带默认口令上线
+    settings.validate_production()
     app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        # 通配符来源与凭据不能同时生效（浏览器规范），通配符下仅允许无凭据跨域
+        allow_credentials="*" not in settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )

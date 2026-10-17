@@ -132,6 +132,19 @@ docker compose -f deploy/docker-compose.yml --profile knowledge up -d bge-embed
 
 服务入口：API 文档 http://localhost:8000/docs 、设备模拟器 http://localhost:9100/docs 、MinIO 控制台 http://localhost:9001 。
 
+### 生产部署（反向代理 + TLS）
+
+生产使用覆盖层：中间件与 API 不发布宿主端口，仅 nginx 暴露 80/443；启动时校验 `DATABASE_URL` / `NEO4J_PASSWORD` / `MINIO_SECRET_KEY` / `LOCK_MASTER_KEY` 等不再使用开发默认值，`CORS_ORIGINS` 不得为通配符，`DEV_IDENTITY_ENABLED` 必须关闭。
+
+```bash
+# 1. 在 deploy/.env 填齐生产必填项（见 .env.example 末段）
+# 2. 将证书放到 deploy/nginx/certs/fullchain.pem 与 privkey.pem
+# 3. 启动
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+```
+
+X-Forwarded-For 由 nginx 覆盖写入，后端仅在 `RATE_LIMIT_TRUST_FORWARDED_FOR=true` 时采信。
+
 ## 本地开发
 
 ### 后端

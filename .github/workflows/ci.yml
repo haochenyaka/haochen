@@ -92,6 +92,17 @@ jobs:
           cp deploy/.env.example deploy/.env
           docker compose -f deploy/docker-compose.yml config --quiet
           docker compose -f deploy/docker-compose.yml --profile knowledge config --quiet
+      - name: Validate production compose override
+        env:
+          POSTGRES_PASSWORD: ci-only-postgres-password
+          MINIO_ROOT_PASSWORD: ci-only-minio-password
+          NEO4J_PASSWORD: ci-only-neo4j-password
+          LOCK_MASTER_KEY: ci-only-lock-master-key-0123456789
+          DEVICE_SIM_SIGNING_SECRET: ci-only-device-sim-secret
+          CORS_ORIGINS: '["https://admin.example.com"]'
+          SERVER_NAME: hotel.example.com
+        run: |
+          docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet
 
   frontend:
     runs-on: ubuntu-latest
