@@ -178,7 +178,12 @@
   - **限流分层**：Bearer 会话经 Redis 解析到用户，已认证请求同时计入「用户 + IP」两个滑动窗口；新增部署级租户总额度（分组限额 × `RATE_LIMIT_TENANT_MULTIPLIER`，默认 10，0 关闭）；`X-Forwarded-For` 仅在 `RATE_LIMIT_TRUST_FORWARDED_FOR=true` 时采信。
   - **生产部署形态**：新增 `deploy/docker-compose.prod.yml` 覆盖层，PG/Redis/MinIO/Milvus/Neo4j/device-sim/API 一律不发布宿主端口，仅 nginx 暴露 80/443；密钥用 `${VAR:?}` 强制显式提供。nginx 模板提供 TLS 1.2/1.3、HTTP→HTTPS、HSTS 与安全头、SSE 关闭缓冲，并覆盖写入 XFF（防伪造）。
   - **验证**：ruff / mypy 全绿，后端单测 392 passed；本地集成套件 325 passed / 3 skipped（D7 本机无 `pg_dump` 必然 skip，仍以 CI 为准）；base 与 prod compose `config --quiet` 通过；nginx 模板 `nginx -t` 通过。
-- [ ] **P4.3 可观测与告警**：Langfuse 支持 self-host 或**强制脱敏后再外发**；告警规则（Run 卡死、租约过期率、SSE 断流、DB 连接池耗尽）；SLO + on-call 手册。
+- [x] **P4.3 可观测与告警**（2026-10-17 交付）：
+  - **Langfuse 外发边界**：默认按外部托管处理，只配密钥不初始化；`LANGFUSE_SELF_HOSTED=true` 走内网自建，或 `LANGFUSE_ALLOW_EXTERNAL_EXPORT=true` 显式允许外发。外发模式下用户/会话标识经 SHA-256 脱敏、score 自由文本备注丢弃；self-host 保留原值便于排障。生产环境配置密钥但两项均未声明时，启动期拒绝启动。
+  - **SSE 指标**：流生命周期、客户端断开、服务端异常、事件总线读写失败写入 Redis 分钟桶（TTL 1h，多副本聚合）；Redis 不可用时降级为进程内计数且不阻断流。跟随/回放失败即计入异常收流，SSE 仍按数据库投影兜底。
+  - **告警规则**：`GET /api/admin/health/alerts`（admin/manager 只读）重算四类规则——`run_stuck`（pending > 300s 或 running 心跳 > 180s）、`lease_expiry_rate`（15min 内 ≥10 次已结束尝试且过期率 >5%）、`sse_disconnect`（15min 内 ≥20 次订阅且异常率 >10%，或事件总线读写失败）、`db_pool_exhaustion`（本进程签出率 ≥90%）。返回 `ok/warning/critical` 与可定位 `facts`，阈值全部可配置。
+  - **SLO + on-call**：新增 `docs/operations/slo-oncall.md`，含 SLO 口径、告警阈值、逐规则处置 SQL/动作、升级路径、季度演练与已知限制（拉取式评估、池指标单进程、指标 TTL）。
+  - **验证**：ruff / mypy 全绿；单元 400 passed；本地集成 326 passed / 3 skipped；base 与 prod compose `config --quiet` 通过。
 - [ ] **P4.4 可靠性与容量**：checkpoint 连接池固定 4（`runtime.py:40-42`）→ 可配置；长会话静默截断（`run_body.py:105` `limit=200`）→ 显式告警 + 接入摘要（当前摘要阈值 10 万 token 几乎不触发）；审计「每次调用单开事务」（`audit_service.py`）→ 批量/复用连接。
 - [ ] **P4.5 备份与合规**：备份定时 + 异地 + 恢复演练纳入 CI（`deploy/backup.sh` / `restore.sh` 已存在）；PIPL 告知同意、最小必要、出境；客人身份/证件/人脸字段的存储与脱敏方案（**当前完全空白**）。
 

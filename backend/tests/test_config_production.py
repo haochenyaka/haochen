@@ -67,6 +67,29 @@ def test_production_rejects_unsafe_value(overrides: dict[str, object], expected:
     assert any(expected in issue for issue in issues), issues
 
 
+def test_production_langfuse_external_requires_explicit_consent() -> None:
+    """配置了密钥但未声明 self-host 时必须显式允许脱敏外发，否则拒绝启动。"""
+    settings = _production_settings(
+        langfuse_public_key="pk",
+        langfuse_secret_key="sk",
+    )
+    assert any("LANGFUSE" in issue for issue in settings.production_issues())
+
+    allowed = _production_settings(
+        langfuse_public_key="pk",
+        langfuse_secret_key="sk",
+        langfuse_allow_external_export=True,
+    )
+    assert allowed.production_issues() == []
+
+    self_hosted = _production_settings(
+        langfuse_public_key="pk",
+        langfuse_secret_key="sk",
+        langfuse_self_hosted=True,
+    )
+    assert self_hosted.production_issues() == []
+
+
 def test_create_app_fails_closed_with_unsafe_production_settings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -42,6 +42,7 @@ from app.services.conversation_service import (
     FeedbackTargetError,
     MessageNotFoundError,
 )
+from app.services.observability_service import NullSseMetrics, SseMetrics
 from app.services.run_dispatch import NullRunDispatcher, RunDispatcher, dispatch_run
 from app.services.run_event_bus import NullRunEventBus, RunEventBus
 from app.services.run_stream import RunAccessError, RunNotFoundError, RunStreamService
@@ -187,10 +188,19 @@ def get_run_event_bus(request: Request) -> RunEventBus:
     return bus if bus is not None else NullRunEventBus()
 
 
+_FALLBACK_SSE_METRICS = NullSseMetrics()
+
+
+def get_sse_metrics(request: Request) -> SseMetrics:
+    metrics: SseMetrics | None = getattr(request.app.state, "sse_metrics", None)
+    return metrics if metrics is not None else _FALLBACK_SSE_METRICS
+
+
 def get_run_stream_service(
     bus: Annotated[RunEventBus, Depends(get_run_event_bus)],
+    metrics: Annotated[SseMetrics, Depends(get_sse_metrics)],
 ) -> RunStreamService:
-    return RunStreamService(bus=bus)
+    return RunStreamService(bus=bus, metrics=metrics)
 
 
 def _raise_http(exc: QueueServiceError | ConversationServiceError) -> NoReturn:

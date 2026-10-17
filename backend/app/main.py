@@ -39,6 +39,7 @@ from app.routers import (
 )
 from app.security import create_session_service
 from app.security.rate_limiter import setup_rate_limiter
+from app.services.observability_service import create_sse_metrics
 from app.services.run_dispatch import ArqRunDispatcher, NullRunDispatcher, RunDispatcher
 from app.services.run_event_bus import create_run_event_bus
 from app.services.task_dispatch import ArqTaskDispatcher, NullTaskDispatcher, TaskDispatcher
@@ -66,6 +67,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.task_dispatcher = task_dispatcher
     # 运行事件总线不可用时返回空实现：SSE 退回数据库状态投影
     app.state.run_event_bus = await create_run_event_bus()
+    # SSE 指标分钟桶：Redis 不可用时降级为进程内计数，不阻断启动
+    app.state.sse_metrics = await create_sse_metrics()
     # 会话存储不可用时登录 503、令牌认证 401（失败关闭）
     session_service = await create_session_service()
     app.state.session_service = session_service
@@ -76,6 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await session_service.aclose()
         await app.state.run_event_bus.aclose()
+        await app.state.sse_metrics.aclose()
         await app.state.wechat_client.aclose()
         await dispatcher.aclose()
         await task_dispatcher.aclose()

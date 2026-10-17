@@ -134,6 +134,23 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_base_url: str = ""
+    # P4.3 外发边界：默认按外部托管处理；声明 self-host 才按原样上报。
+    # 外发第三方必须显式允许，且强制脱敏标识后再发出（见 langfuse_service）。
+    langfuse_self_hosted: bool = False
+    langfuse_allow_external_export: bool = False
+
+    # P4.3 可观测与告警：阈值是唯一口径，告警端点只读事实并按阈值判定
+    alert_pending_stuck_seconds: int = 300
+    alert_running_stuck_seconds: int = 180
+    alert_lease_window_minutes: int = 15
+    alert_lease_expiry_rate: float = 0.05
+    alert_lease_min_attempts: int = 10
+    alert_sse_window_minutes: int = 15
+    alert_sse_disconnect_rate: float = 0.1
+    alert_sse_min_streams: int = 20
+    alert_db_pool_usage: float = 0.9
+    # SSE 分钟桶保留时长：覆盖最长告警窗口与排障回看
+    sse_metrics_ttl_seconds: int = 3600
 
     # 报表：模型输入单价（每 1K tokens，元），用于估算缓存命中的成本节省；留 0 表示不估算
     report_price_input_per_1k: float = 0.0
@@ -203,6 +220,17 @@ class Settings(BaseSettings):
 
         if not self.rate_limit_enabled:
             issues.append("RATE_LIMIT_ENABLED 必须在生产环境开启")
+
+        if (
+            self.langfuse_public_key
+            and self.langfuse_secret_key
+            and not self.langfuse_self_hosted
+            and not self.langfuse_allow_external_export
+        ):
+            issues.append(
+                "LANGFUSE 已配置密钥但既未声明 LANGFUSE_SELF_HOSTED，"
+                "也未显式允许脱敏外发（LANGFUSE_ALLOW_EXTERNAL_EXPORT）"
+            )
 
         return issues
 
