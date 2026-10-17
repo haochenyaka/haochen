@@ -108,8 +108,8 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 | 项 | 内容 |
 | --- | --- |
 | 机制要点 | 文档状态机 `uploaded → parsing → parsed → indexing → indexed`（另有 error_parsing / error_indexing），`parsing`/`indexing` 为条件抢占，并发不双写；存储分工：PostgreSQL 拥有配置/权限/文件元数据与状态/chunk 正文/Task 意图与 lease，MinIO 拥有原件与解析产物，Milvus 拥有向量与 BM25 字段，Neo4j 拥有实体关系，Redis 只做投递与最小配置缓存；Milvus 索引是 PG + Milvus 双写、非跨存储事务，失败补偿并置 error_indexing；批量入口按状态筛选 + dedupe key 拒绝活跃重复任务；检索工具参数（kb_id/file_id/文件名）执行处复验权限 |
-| 酒店域增量 | 知识库内容为酒店介绍、政策、FAQ、WiFi/早餐/退房时间等入住指引来源；图谱用于房型-设施-周边（recommend_nearby）；知识库内容变更触发评估基线作废（P8）。检索落地为两段式：Milvus 混合宽捞（向量 + BM25，`KB_RECALL_LIMIT`=30）→ 重排截断（默认 `KeywordReranker` 按 token 覆盖度打分；`KB_RERANK_ENABLED` 打开时优先 `HttpReranker`（`RERANK_BASE_URL`，BGE cross-encoder），否则 LLM 重排，超时降级保序）→ 上下文装配（`KB_RERANK_TOP_N`=6、`KB_CONTEXT_MAX_CHARS`=3000、每文档 `KB_CONTEXT_MAX_CHUNKS_PER_DOCUMENT`=3 段） |
-| 落地位置 | app/knowledge/（manager、base、implementations/milvus、retrieval.py、rerank.py、tokenization.py）、app/routers/knowledge_router.py |
+| 酒店域增量 | 知识库内容为酒店介绍、政策、FAQ、WiFi/早餐/退房时间等入住指引来源；图谱用于房型-设施-周边（`recommend_nearby`、`match_room_types` 设施 AND、`multi_hop_insight` 组合两跳房型与一跳周边）；知识库内容变更触发评估基线作废（P8）。检索落地为两段式：Milvus 混合宽捞（向量 + BM25，`KB_RECALL_LIMIT`=30）→ 重排截断（默认 `KeywordReranker` 按 token 覆盖度打分；`KB_RERANK_ENABLED` 打开时优先 `HttpReranker`（`RERANK_BASE_URL`，BGE cross-encoder），否则 LLM 重排，超时降级保序）→ 上下文装配（`KB_RERANK_TOP_N`=6、`KB_CONTEXT_MAX_CHARS`=3000、每文档 `KB_CONTEXT_MAX_CHUNKS_PER_DOCUMENT`=3 段）；图作为可降级补充腿：`graph_retrieval` 确定性抽取设施/周边类别/距离/步行条件，命中才查 Neo4j，图事实与 KB 片段共用连续编号、引用以 `source=graph` 区分，故障或超时（`KB_GRAPH_TIMEOUT_SECONDS`）只丢弃图腿 |
+| 落地位置 | app/knowledge/（manager、base、implementations/milvus、retrieval.py、rerank.py、graph.py、graph_seed.py、graph_retrieval.py、tokenization.py）、app/routers/knowledge_router.py |
 | 阶段 | P3（验收主张 A5 的新鲜度/覆盖率治理对象） |
 
 ### 2.9 上下文压缩
@@ -169,6 +169,15 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 | 阶段 | P1（验收主张 A1 的推送链路） |
 
 P1 已落地运行事件总线与 SSE 端点：api 与 worker 进程启动时各建一份进程级总线（`create_run_event_bus`，Redis 不可达时降级为 `NullRunEventBus`，流退回数据库状态投影，不阻断进程启动）。发射侧：`RunExecutor` 在认领后发射 run.started，回复消息提交后发射 message.completed（带已提交的 message_id），ToolNode 在调用前发射 tool.call、执行与审计后发射 tool.result，审批等待发射 interrupt，终态事件在终态写入提交后发射（租约被接管时不发射，由 reconciler 收敛后按数据库投影补缺）；非流式模型（含 stub 与测试替身）成功调用后把整段回复回退为一次 message.delta。读侧：`GET /api/guest/chat/stream?run_id=` 支持标准 `Last-Event-ID` 头与 `last_event_id` 查询参数续传，只有传输游标形态（`ms-seq`）参与定位、非游标 id 从头回放，合成事件 id 带 `projected-` 前缀；活动运行按 `sse_heartbeat_seconds` 发心跳注释。配置项：`RUN_EVENT_TTL_SECONDS` / `RUN_EVENT_MAXLEN` / `SSE_HEARTBEAT_SECONDS` / `SSE_FOLLOW_BLOCK_MS`。
+
+### 2.15 数据湖分析层
+
+| 项 | 内容 |
+| --- | --- |
+| 机制要点 | 业务与审计事实增量导出 MinIO Parquet（zstd、按日期分区），DuckDB 直读生成预聚合；报表重聚合优先读预聚合，湖缺失/不可达按契约降级回 PostgreSQL 重算，**PostgreSQL 事实始终是唯一口径来源**；订单按 `[check_in_date, check_out_date)` 逐夜归属，取消/未支付不计，入住率 = 已售房晚 /（房型房间数 × 当月天数），客单价 = 房费收入 / 已售房晚 |
+| 酒店域增量 | `agg_room_type_monthly` 房型月度入住率与客单价预聚合；管理端 `GET /admin/datalake/analysis/room-type-monthly`（支持月份过滤）；`data_pipeline.export_business` 导出订单与房型/房间维度；基准脚本 `bench_datalake.py` 给出 PG 直查 vs 预聚合的可复现数字（20 万订单 568ms → 1.5ms，口径一致，见 `docs/eval/datalake-benchmark.md`） |
+| 落地位置 | app/data_pipeline/（lake_storage.py、business_aggregates.py、task_handlers.py）、app/services/datalake_query_service.py、app/routers/admin_datalake_router.py、backend/bench_datalake.py |
+| 阶段 | P8 链路、P3.3 真实基准与业务口径 |
 
 ## 3. 中间件装配差分
 

@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.security import Identity, require_roles
@@ -54,6 +55,10 @@ class PartitionsResponse(BaseModel):
     partitions: list[PartitionInfo]
 
 
+class RoomTypeMonthlyResponse(BaseModel):
+    rows: list[dict[str, Any]]
+
+
 @router.get("/tables", response_model=TablesResponse)
 async def list_datalake_tables(
     _identity: GuardDep,
@@ -90,6 +95,23 @@ async def query_datalake(
         return QueryResponse(**result)
     except DatalakeQueryError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.get("/analysis/room-type-monthly", response_model=RoomTypeMonthlyResponse)
+async def room_type_monthly(
+    _identity: GuardDep,
+    month_from: Annotated[date | None, Query(description="起始月份，如 2026-01-01")] = None,
+    month_to: Annotated[date | None, Query(description="结束月份，含当月")] = None,
+) -> RoomTypeMonthlyResponse:
+    """各房型月度入住率与客单价（DuckDB 预聚合）。"""
+    if month_from is not None and month_to is not None and month_from > month_to:
+        raise HTTPException(status_code=400, detail="month_from 不能晚于 month_to")
+    svc = DatalakeQueryService()
+    try:
+        rows = await svc.room_type_monthly(month_from=month_from, month_to=month_to)
+    except DatalakeQueryError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return RoomTypeMonthlyResponse(rows=rows)
 
 
 @router.get("/preview/{table}", response_model=QueryResponse)

@@ -19,14 +19,14 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3.1 已完成（实现 + BGE-M3 全量重建 + 169 题基线，[spike 报告](spikes/2026-10-17-bge-feasibility.md)），下一入口为 P3.2
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准），下一入口为 P4
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
 | --- | --- | --- |
 | 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
 | 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
-| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–2 ✅；Phase 3.1 ✅；P3.2–3.3 待启动 |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–3 ✅；P4 待启动 |
 | 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
 
 ---
@@ -155,10 +155,17 @@
   - 部署：`deploy/docker-compose.yml` 新增 `bge-embed`（默认启用）与 `bge-rerank`（显式开关）；`api`/`worker`/`task-worker` 注入新 URL。
   - 索引重建：复用现有 `reprocess` → `kb.parse` → `kb.index` 任务链完成全量重建，未新增独立 CLI；重建前先启动 `bge-embed`，重建后核对 Milvus 集合行数与 PG 分块数一致。
   - 已知问题：首次创建集合时多个索引任务并发执行，偶发 `collection not loaded`（本次 1/20 文档，重试后成功）；后续可在删除/写入前补集合加载幂等或对瞬时错误重试。
-- [ ] **P3.2 Neo4j 真多跳推理**：现状（`knowledge/graph.py`）只有一跳（`room_type_overview` / `recommend_nearby`）。补多跳组合推理（如「带投影的房型附近 500m 内有早餐的店」= `RoomType -HAS_AMENITY-> Amenity` + `Hotel -NEARBY-> Place`），并把图检索结果作为 KB 召回的**补充腿**（当前图与 KB 检索未合流）。
-- [ ] **P3.3 DuckDB 数据湖真分析**：「提速 10-100x」无基准 → 补真实业务问题驱动（如「各房型月度入住率与客单价」）+ 可复现 benchmark 脚本（PG 直查 vs 预聚合），数字写进 README 时标注数据规模。
+- [x] **P3.2 Neo4j 真多跳推理**：
+  - **交付记录（2026-10-17）**：`graph.py` 新增 `match_room_types`（设施全命中 AND 语义）、`recommend_nearby` 距离上限与 `multi_hop_insight`（房型两跳 + 周边一跳组合，limit=0 可跳过单腿）；新增 `graph_retrieval.py` 做确定性条件抽取、编号渲染与降级。`KnowledgeRetriever` 把图事实并入上下文，KB 片段与图事实共用连续编号、引用以 `source=graph` 区分；`KB_GRAPH_ENABLED` 默认开启，`KB_GRAPH_TIMEOUT_SECONDS` 默认 3s，图故障/超时只丢弃图腿，不影响 KB 检索；`query_kb` 在仅有图事实时不再误判“无相关资料”。
+  - **自证**：[eval/graph-leg.md](eval/graph-leg.md)。真实 Neo4j 上验证：投影房型 + 500m 餐饮组合、儿童用品唯一命中、5 分钟步行排除 6 分钟地铁、500m 内药店返回空；普通文档问题不触发图腿。测试覆盖单测、真实图集成与 KB/图合流。
+  - **已知限制**：抽取为关键词/正则，不理解未登记的同义改写；仅覆盖已建模关系（房型设施、周边类别/距离/步行时间）；周边为样例数据，上线前需替换为门店实测值。
+- [x] **P3.3 DuckDB 数据湖真分析**：
+  - **交付记录（2026-10-17）**：新增 `business_aggregates.py` 统一业务口径（订单按 `[check_in, check_out)` 逐夜展开、跨月按夜归属、取消不计；入住率 = 已售房晚 /（房间数 × 当月天数），客单价 = 房费 / 已售房晚）；新增 `data_pipeline.export_business` 导出订单（`updated_at` 键集增量 + 版本去重）与房型/房间快照；`build_aggregates` 增生成 `agg_room_type_monthly`；管理端新增 `GET /admin/datalake/analysis/room-type-monthly`。
+  - **可复现基准**：`backend/bench_datalake.py` 固定 seed 生成合成订单，同一口径分别走 PostgreSQL 临时表直查与 DuckDB 预聚合，逐字段比对一致。20 万订单 / 42.5 万入住夜：中位 **568.43ms → 1.51ms（约 378x）**；5 千订单冒烟为 34.00ms → 1.80ms（18.8x，倍数随规模增长）。
+  - **自证**：[eval/datalake-benchmark.md](eval/datalake-benchmark.md) + `eval/datalake-benchmark.json`（含环境、规模、min/p95、一致性）；README 提速声明按此改写并标注数据规模。
+  - **已知限制**：基准不含导出/构建预处理与 MinIO 下载耗时；合成随机分布、单机 warm cache；即席探索仍需走 `/admin/datalake/query` 直查。
 
-**验收**：✅ `docs/eval/kb-baseline.json` 为真实 provider 结果（`retrieval_config` 显示 `bge-m3:1024`），`chunk_recall@10` 0.9941、`primary@1` 0.6746；rerank 因 CPU 延迟保留 `keyword`，`bge-reranker-v2-m3` 作为显式开关。图谱/数据湖各有测试与基准。
+**验收**：✅ `docs/eval/kb-baseline.json` 为真实 provider 结果（`retrieval_config` 显示 `bge-m3:1024`），`chunk_recall@10` 0.9941、`primary@1` 0.6746；rerank 因 CPU 延迟保留 `keyword`，`bge-reranker-v2-m3` 作为显式开关。P3.2 图谱已有真实多跳测试与定向自证（[eval/graph-leg.md](eval/graph-leg.md)）；P3.3 数据湖已有真实业务问题口径与可复现基准（[eval/datalake-benchmark.md](eval/datalake-benchmark.md)，20 万订单 378x，结果一致）。
 
 ---
 
@@ -196,10 +203,10 @@
 ④ ✅ 提交 P1 分支（`p1-multi-agent`，三条验收已全达成）→ 提交 `c58ce91` + 收尾 `70cff14`，经 **PR #3** 合入 main（`b75bc6c`）
    └ 本轮收尾：SSE 事件包络按执行者归属（✅ 已完成）、supervisor 路由调用接审计与用量（✅ 已完成）、`qa-auditor` 登记为后台 Agent 并 Task 化（✅ 已完成），P1 全部收口
    └ 可并行：P2.1 真执行器 + P2.2 工具名对齐测试（不依赖 P1）
-⑤ ✅ P2 全量（PR #5 `767b493` → PR #6 `d185fca`）→ ✅ P3.1 BGE 可行性 spike（2026-10-17）→ ✅ P3.1 实现 + 全量重建 + 169 题基线（2026-10-17）→ P3.2 → P4
+⑤ ✅ P2 全量（PR #5 `767b493` → PR #6 `d185fca`）→ ✅ P3.1 BGE 可行性 spike（2026-10-17）→ ✅ P3.1 实现 + 全量重建 + 169 题基线（2026-10-17）→ ✅ P3.2 图多跳与补充腿（2026-10-17）→ ✅ P3.3 数据湖业务口径与基准（2026-10-17）→ P4
 ```
 
-**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 经 **PR #3** 合入 `main`（`b75bc6c`）；P2 经 **PR #5**（`767b493`）与 **PR #6**（`d185fca`）合入 `main`，**Phase 0–2 已全部完成**。P3.1 已交付：**本地 BGE-M3 embedding 可用，CPU rerank 不进入在线链路**；169 题基线 `chunk_recall@10` 0.9941、`primary@1` 0.6746（详见 spike 报告与 `docs/eval/kb-baseline.json`）；下一入口为 **P3.2**。Phase 3–4 是可立即启动的「内容工作」，不受阻塞。
+**一句话总结**：原定**阻塞点两个**——**P0 未合进 main**、**CI 不可能绿**——**均已于 2026-10-16 解除**：P0 以 **PR #2** 合入 `main`（merge commit `37a97ce`）；CI 在 lint/format/mypy 转绿、集成 job 明确「**不启 MinIO + 数据湖按契约降级**」、并**修掉 D7 备份演练自伤共享库**（曾连锁 66 failed）后 **6/6 全绿**。P1 经 **PR #3** 合入 `main`（`b75bc6c`）；P2 经 **PR #5**（`767b493`）与 **PR #6**（`d185fca`）合入 `main`，**Phase 0–2 已全部完成**。P3.1 已交付：**本地 BGE-M3 embedding 可用，CPU rerank 不进入在线链路**；169 题基线 `chunk_recall@10` 0.9941、`primary@1` 0.6746（详见 spike 报告与 `docs/eval/kb-baseline.json`）；P3.2 图多跳补充腿与 P3.3 数据湖基准均已完成（四舍五入自证见 `docs/eval/`）；下一入口为 **P4**。Phase 4 是可立即启动的「内容工作」，不受阻塞。
 
 ---
 
@@ -210,5 +217,5 @@
 | M0（Phase 0）✅ | 配置链路/记忆/脱敏接线 + 测试 | 「管理端配置真的生效、记忆真的注入、隐私脱敏覆盖手机号证件号」 |
 | M1（Phase 1） | Supervisor + 4 子 Agent 图 | 「真·多智能体：supervisor 路由 + LangGraph 子图协作」 |
 | M2（Phase 2） | 真执行器 + 50/150 条评测集 + 真 judge | 「评测能自证：50+ 条用例、chunk 级 gold、judge 经人工校准」 |
-| M3（Phase 3） | 真实 embedding/rerank + 图多跳 + 数据湖基准 | 「检索走真实向量+重排，图谱做多跳推理，数据湖有基准数字」 |
+| M3（Phase 3）✅ | 真实 embedding/rerank + 图多跳 + 数据湖基准 | 「检索走真实向量+重排，图谱做多跳推理，数据湖有基准数字」 |
 | M4（Phase 4） | 安全/观测/备份/合规 checklist | 「从 demo 到生产就绪的差距清单与逐条证据」 |

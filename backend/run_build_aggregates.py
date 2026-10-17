@@ -3,6 +3,7 @@
 等价于依次触发：
   data_pipeline.export_messages
   data_pipeline.export_audits
+  data_pipeline.export_business
   data_pipeline.build_aggregates
 
 但直接执行逻辑，不依赖 ARQ worker。
@@ -160,17 +161,105 @@ async def export_audits_direct(storage: LakeStorage) -> dict[str, Any]:
     return {"exported": total}
 
 
+async def export_business_direct(storage: LakeStorage) -> dict[str, Any]:
+    """导出订单事实与房型/房间维度。"""
+    logger.info("=== Exporting business tables ===")
+    snapshots = {
+        "room_types": """
+            SELECT id::text AS id, code, name, base_price_fen, active, updated_at
+            FROM room_types ORDER BY code
+        """,
+        "rooms": """
+            SELECT id::text AS id, room_type_id::text AS room_type_id,
+                   room_no, status, updated_at
+            FROM rooms ORDER BY room_no
+        """,
+    }
+    counts: dict[str, int] = {}
+    for table, sql in snapshots.items():
+        async with SessionFactory() as session:
+            rows = (await session.execute(text(sql))).mappings().all()
+        batch = []
+        for row in rows:
+            item = dict(row)
+            for key, value in item.items():
+                if isinstance(value, (datetime, date)):
+                    item[key] = value.isoformat() if hasattr(value, "isoformat") else value
+            batch.append(item)
+        if batch:
+            await storage.write_parquet(table, date.today(), 0, batch)
+        counts[table] = len(batch)
+        logger.info("  %s: %d rows", table, len(batch))
+
+    order_count = 0
+    last_ts: str | None = None
+    last_id: str | None = None
+    offset = 0
+    while True:
+        where = "updated_at < now()"
+        params: dict[str, Any] = {"limit": 2000}
+        if last_ts and last_id:
+            where += " AND (updated_at, id) > (CAST(:cp_ts AS timestamptz), CAST(:cp_id AS uuid))"
+            params["cp_ts"] = datetime.fromisoformat(last_ts)
+            params["cp_id"] = last_id
+        async with SessionFactory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        text(f"""
+                        SELECT id::text AS id, room_type_id::text AS room_type_id,
+                               status, check_in_date, check_out_date, nights,
+                               amount_fen, paid_amount_fen, created_at, updated_at
+                        FROM orders
+                        WHERE {where}
+                        ORDER BY updated_at, id
+                        LIMIT :limit
+                    """),
+                        params,
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        if not rows:
+            break
+        batch = []
+        for row in rows:
+            item = dict(row)
+            last_ts = item["updated_at"].isoformat()
+            last_id = item["id"]
+            for key, value in item.items():
+                if isinstance(value, (datetime, date)):
+                    item[key] = value.isoformat()
+            batch.append(item)
+        await storage.write_parquet("orders", date.today(), offset // 2000, batch)
+        offset += len(batch)
+        order_count += len(batch)
+        logger.info("  orders: exported %d rows", order_count)
+
+    counts["orders"] = order_count
+    return counts
+
+
 async def build_aggregates_direct(storage: LakeStorage) -> dict[str, Any]:
     """使用 DuckDB 读取 Parquet 文件，生成预聚合表。"""
 
     import duckdb
 
+    from app.data_pipeline.business_aggregates import (
+        ROOM_TYPE_MONTHLY_TABLE,
+        build_room_type_monthly,
+    )
+
     logger.info("=== Building aggregates ===")
 
     audit_files = await storage.list_partitions("model_audit")
     tool_files = await storage.list_partitions("tool_audit")
+    order_files = await storage.list_partitions("orders")
+    room_type_files = await storage.list_partitions("room_types")
+    room_files = await storage.list_partitions("rooms")
 
-    if not audit_files and not tool_files:
+    if not audit_files and not tool_files and not order_files:
         logger.warning("No Parquet files found in data lake")
         return {"status": "skipped", "reason": "no parquet files found"}
 
@@ -231,6 +320,23 @@ async def build_aggregates_direct(storage: LakeStorage) -> dict[str, Any]:
                 results["tool_agg"] = tool_agg.num_rows
                 logger.info("  agg_tool_daily: %d rows", tool_agg.num_rows)
 
+        # 房型月度入住率与客单价
+        if order_files and room_type_files and room_files:
+            agg = build_room_type_monthly(
+                con,
+                orders_paths=[str(await storage.read_parquet_to_temp(f)) for f in order_files],
+                room_types_paths=[
+                    str(await storage.read_parquet_to_temp(f)) for f in room_type_files
+                ],
+                rooms_paths=[str(await storage.read_parquet_to_temp(f)) for f in room_files],
+            )
+            if agg.num_rows > 0:
+                await storage.write_parquet(
+                    ROOM_TYPE_MONTHLY_TABLE, date.today(), 0, agg.to_pylist()
+                )
+                results["room_type_monthly"] = agg.num_rows
+                logger.info("  agg_room_type_monthly: %d rows", agg.num_rows)
+
         return {"status": "completed", "results": results}
     finally:
         con.close()
@@ -243,12 +349,14 @@ async def main() -> None:
 
     step1 = await export_messages_direct(storage)
     step2 = await export_audits_direct(storage)
-    step3 = await build_aggregates_direct(storage)
+    step3 = await export_business_direct(storage)
+    step4 = await build_aggregates_direct(storage)
 
     logger.info("=== Summary ===")
     logger.info("export_messages: %s", step1)
     logger.info("export_audits: %s", step2)
-    logger.info("build_aggregates: %s", step3)
+    logger.info("export_business: %s", step3)
+    logger.info("build_aggregates: %s", step4)
 
 
 if __name__ == "__main__":

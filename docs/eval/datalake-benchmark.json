@@ -1,0 +1,32 @@
+{
+  "environment": {
+    "platform": "Windows-11-10.0.22631-SP0",
+    "python": "3.13.14",
+    "duckdb": "1.5.6",
+    "postgresql": "16.15"
+  },
+  "dataset": {
+    "orders": 200000,
+    "months": 12,
+    "room_types": 5,
+    "rooms": 100,
+    "sold_nights": 425403,
+    "preaggregate_rows": 60,
+    "seed": 42
+  },
+  "postgresql_direct": {
+    "min_ms": 566.211,
+    "median_ms": 568.429,
+    "max_ms": 590.431,
+    "p95_ms": 590.431
+  },
+  "duckdb_preaggregate": {
+    "min_ms": 1.391,
+    "median_ms": 1.505,
+    "max_ms": 1.578,
+    "p95_ms": 1.578
+  },
+  "speedup_median": 377.69,
+  "consistent": true,
+  "mismatches": []
+}

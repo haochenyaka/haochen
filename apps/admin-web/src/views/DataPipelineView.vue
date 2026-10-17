@@ -51,6 +51,7 @@ const PIPELINE_TYPES: Record<string, string> = {
   'data_pipeline.clean_qa_labels': '质检标签清洗',
   'data_pipeline.export_messages': '数据湖-消息导出',
   'data_pipeline.export_audits': '数据湖-审计导出',
+  'data_pipeline.export_business': '数据湖-订单导出',
   'data_pipeline.build_aggregates': '数据湖-预聚合',
 }
 

@@ -25,11 +25,22 @@ from app.models.runtime import AgentRun, Message, Thread
 from app.models.task import Task
 from app.repositories import AgentRunRepository, HandoffRequestRepository, UserRepository
 from app.security import hash_password
+from app.services.report_service import ReportService
 from tests.integration.support import intake_message
 
 pytestmark = pytest.mark.integration
 
 PASSWORD = "report-pass-1"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_datalake(monkeypatch: pytest.MonkeyPatch) -> None:
+    """隔离外部数据湖：本文件断言 PostgreSQL 重算口径，预聚合读取由降级单测覆盖。"""
+
+    async def _no_preaggregate(self: ReportService, table: str, sql: str) -> None:
+        return None
+
+    monkeypatch.setattr(ReportService, "_duckdb_query_agg", _no_preaggregate)
 
 
 @dataclass

@@ -26,6 +26,16 @@ from tests.integration.support import intake_message
 pytestmark = pytest.mark.integration
 
 
+@pytest.fixture(autouse=True)
+def _isolate_datalake(monkeypatch: pytest.MonkeyPatch) -> None:
+    """隔离外部数据湖：本文件断言 PostgreSQL 重算口径，预聚合读取由降级单测覆盖。"""
+
+    async def _no_preaggregate(self: ReportService, table: str, sql: str) -> None:
+        return None
+
+    monkeypatch.setattr(ReportService, "_duckdb_query_agg", _no_preaggregate)
+
+
 def _unique_window() -> tuple[datetime, datetime, datetime]:
     """专属时间窗：种子事实全部落在 2031 年的唯一窗口内，规避共享库其它测试的 now() 数据污染。"""
     base = datetime(2031, 1, 1, tzinfo=UTC) + timedelta(seconds=uuid4().int % (300 * 86400))

@@ -11,11 +11,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import tempfile
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import duckdb
 
+from app.data_pipeline.business_aggregates import ROOM_TYPE_MONTHLY_TABLE
 from app.data_pipeline.lake_storage import LakeStorage
 
 logger = logging.getLogger(__name__)
@@ -49,6 +51,49 @@ class DatalakeQueryService:
             if parsed:
                 partitions.append(parsed)
         return partitions
+
+    async def room_type_monthly(
+        self, *, month_from: date | None = None, month_to: date | None = None
+    ) -> list[dict[str, Any]]:
+        """查询房型月度入住率与客单价预聚合表。"""
+        files = await self._storage.list_partitions(ROOM_TYPE_MONTHLY_TABLE)
+        if not files:
+            raise DatalakeQueryError(
+                "房型月度预聚合表不存在，请先运行 data_pipeline.build_aggregates"
+            )
+
+        local_paths = [str(await self._storage.read_parquet_to_temp(f)) for f in files]
+        clauses = ["1 = 1"]
+        params: list[Any] = []
+        if month_from is not None:
+            clauses.append("month >= CAST(? AS DATE)")
+            params.append(month_from.isoformat())
+        if month_to is not None:
+            clauses.append("month <= CAST(? AS DATE)")
+            params.append(month_to.isoformat())
+        sql = (
+            f"SELECT * FROM read_parquet({_path_list(local_paths)}) "
+            f"WHERE {' AND '.join(clauses)} ORDER BY month, room_type_code"
+        )
+
+        def _run() -> list[dict[str, Any]]:
+            con = duckdb.connect()
+            try:
+                rel = con.execute(sql, params)
+                columns = [desc[0] for desc in rel.description]
+                return [
+                    {
+                        column: _serialize_value(value)
+                        for column, value in zip(columns, row, strict=True)
+                    }
+                    for row in rel.fetchall()
+                ]
+            except Exception as e:
+                raise DatalakeQueryError(str(e)) from e
+            finally:
+                con.close()
+
+        return await asyncio.to_thread(_run)
 
     async def query(self, sql: str, limit: int = 1000) -> dict[str, Any]:
         """执行只读 SQL 查询，返回结果集。
@@ -147,6 +192,11 @@ class DatalakeQueryService:
         columns = result["columns"]
         rows = result["rows"]
         return [dict(zip(columns, row, strict=True)) for row in rows]
+
+
+def _path_list(paths: list[str]) -> str:
+    quoted = ", ".join("'" + path.replace("'", "''") + "'" for path in paths)
+    return f"[{quoted}]"
 
 
 def _parse_object_key(key: str) -> dict[str, Any] | None:

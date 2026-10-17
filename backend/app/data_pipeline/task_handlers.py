@@ -563,10 +563,8 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
 # ===================================================================
 
 
-async def _get_checkpoint(ctx: TaskContext, task_type: str) -> int | None:
-    """从上次运行的 summary 中读取 checkpoint（最大已导出 id）。
-    查找同一 task_type 最近一次成功的 pipeline_run 的 summary.checkpoint。
-    """
+async def _latest_completed_summary(ctx: TaskContext, source_table: str) -> dict[str, Any] | None:
+    """读取同一数据源最近一次成功运行的 summary。"""
     from sqlalchemy import desc, select
 
     async with ctx.session_factory() as session:
@@ -574,12 +572,17 @@ async def _get_checkpoint(ctx: TaskContext, task_type: str) -> int | None:
 
         stmt = (
             select(DataPipelineRun.summary)
-            .where(DataPipelineRun.source_table == task_type)
+            .where(DataPipelineRun.source_table == source_table)
             .where(DataPipelineRun.status == "completed")
             .order_by(desc(DataPipelineRun.finished_at))
             .limit(1)
         )
-        row = (await session.execute(stmt)).scalar_one_or_none()
+        return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def _get_checkpoint(ctx: TaskContext, task_type: str) -> int | None:
+    """从上次运行的 summary 中读取 checkpoint（最大已导出 id）。"""
+    row = await _latest_completed_summary(ctx, task_type)
     if row and row.get("checkpoint"):
         return int(row["checkpoint"])
     return None
@@ -786,6 +789,217 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
 
 
 # ===================================================================
+# 业务数据导出：订单事实 + 房型/房间维度
+# ===================================================================
+
+
+async def _export_business_snapshot(
+    ctx: TaskContext,
+    *,
+    table: str,
+    query: str,
+) -> int:
+    """维度表全量快照：同一日期分区固定写到 part-000000，重复运行覆盖。"""
+    from app.data_pipeline.lake_storage import LakeStorage
+
+    async with ctx.session_factory() as session:
+        from sqlalchemy import text
+
+        rows = (await session.execute(text(query))).mappings().all()
+
+    if not rows:
+        return 0
+
+    from datetime import datetime
+
+    batch: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        for key, value in item.items():
+            if isinstance(value, datetime):
+                item[key] = value.isoformat()
+        batch.append(item)
+
+    storage = LakeStorage.from_settings()
+    await storage.write_parquet(table, date.today(), 0, batch)
+    return len(batch)
+
+
+async def _export_orders(ctx: TaskContext, *, batch_size: int) -> dict[str, Any]:
+    """订单事实增量导出：按 (updated_at, id) 键集推进，重复版本由聚合端去重。"""
+    from datetime import datetime
+
+    from sqlalchemy import text
+
+    from app.data_pipeline.lake_storage import LakeStorage
+
+    storage = LakeStorage.from_settings()
+    summary = await _latest_completed_summary(ctx, "orders")
+    checkpoint = (summary or {}).get("checkpoint") or {}
+    cp_updated_at = checkpoint.get("updated_at") if isinstance(checkpoint, dict) else None
+    cp_id = checkpoint.get("id") if isinstance(checkpoint, dict) else None
+
+    base_offset = await _next_part_offset(storage, "orders", date.today())
+    total_rows = 0
+    last_updated_at: str | None = cp_updated_at if isinstance(cp_updated_at, str) else None
+    last_id: str | None = cp_id if isinstance(cp_id, str) else None
+
+    while True:
+        params: dict[str, Any] = {"limit": batch_size}
+        where = ["updated_at < now()"]
+        if last_updated_at and last_id:
+            where.append("(updated_at, id) > (CAST(:cp_ts AS timestamptz), CAST(:cp_id AS uuid))")
+            params["cp_ts"] = datetime.fromisoformat(last_updated_at)
+            params["cp_id"] = last_id
+
+        async with ctx.session_factory() as session:
+            rows = (
+                (
+                    await session.execute(
+                        text(f"""
+                        SELECT
+                            id::text AS id,
+                            room_type_id::text AS room_type_id,
+                            status,
+                            check_in_date,
+                            check_out_date,
+                            nights,
+                            amount_fen,
+                            paid_amount_fen,
+                            created_at,
+                            updated_at
+                        FROM orders
+                        WHERE {" AND ".join(where)}
+                        ORDER BY updated_at, id
+                        LIMIT :limit
+                    """),
+                        params,
+                    )
+                )
+                .mappings()
+                .all()
+            )
+
+        if not rows:
+            break
+
+        batch: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            last_updated_at = item["updated_at"].isoformat()
+            last_id = item["id"]
+            for key, value in item.items():
+                if isinstance(value, (datetime, date)):
+                    item[key] = value.isoformat()
+            batch.append(item)
+
+        part_offset = base_offset + total_rows // batch_size
+        await storage.write_parquet("orders", date.today(), part_offset, batch)
+        total_rows += len(batch)
+
+        async with ctx.session_factory() as ps:
+            from app.repositories.task_repository import TaskRepository
+
+            repo = TaskRepository(ps)
+            await repo.set_progress(
+                ctx.task_id,
+                owner_token=ctx.owner_token,
+                progress={"table": "orders", "exported": total_rows},
+            )
+            await ps.commit()
+
+    return {
+        "exported": total_rows,
+        "checkpoint": {"updated_at": last_updated_at, "id": last_id},
+    }
+
+
+async def _next_part_offset(storage: Any, table: str, day: date) -> int:
+    """同一天多次导出时追加分区，避免覆盖上一次运行的文件。"""
+    prefix = f"{table}/year={day.year}/month={day.month:02d}/day={day.day:02d}/part-"
+    offsets: list[int] = []
+    for path in await storage.list_partitions(table):
+        if not path.startswith(prefix):
+            continue
+        try:
+            offsets.append(int(path[len(prefix) :].split(".")[0]))
+        except ValueError:
+            continue
+    return max(offsets, default=-1) + 1
+
+
+@task_handler("data_pipeline.export_business", 1)
+async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
+    """导出订单与房型/房间维度，供 DuckDB 生成房型月度入住率与客单价。
+
+    配置（config）：
+      - batch_size: 订单每批导出行数，默认 2000
+    """
+    config = dict(ctx.payload.get("config", {}) or {})
+    batch_size = config.get("batch_size", 2000)
+
+    start = time.time()
+    try:
+        room_types = await _export_business_snapshot(
+            ctx,
+            table="room_types",
+            query="""
+                SELECT
+                    id::text AS id,
+                    code,
+                    name,
+                    base_price_fen,
+                    active,
+                    updated_at
+                FROM room_types
+                ORDER BY code
+            """,
+        )
+        rooms = await _export_business_snapshot(
+            ctx,
+            table="rooms",
+            query="""
+                SELECT
+                    id::text AS id,
+                    room_type_id::text AS room_type_id,
+                    room_no,
+                    status,
+                    updated_at
+                FROM rooms
+                ORDER BY room_no
+            """,
+        )
+        orders = await _export_orders(ctx, batch_size=batch_size)
+
+        duration = time.time() - start
+        await _complete_run(
+            ctx,
+            status="completed",
+            source_table="orders",
+            processed_rows=orders["exported"],
+            affected_rows=0,
+            error_rows=0,
+            duration_seconds=duration,
+            summary={
+                "orders": orders["exported"],
+                "room_types": room_types,
+                "rooms": rooms,
+                "checkpoint": orders["checkpoint"],
+            },
+        )
+        return {
+            "orders": orders["exported"],
+            "room_types": room_types,
+            "rooms": rooms,
+        }
+    except Exception as e:
+        duration = time.time() - start
+        logger.exception("export_business 失败")
+        await _complete_run(ctx, status="failed", error=str(e), duration_seconds=duration)
+        raise
+
+
+# ===================================================================
 # DuckDB 预聚合管道：读取 Parquet 生成聚合报表
 # ===================================================================
 
@@ -797,45 +1011,46 @@ async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
     聚合内容：
       - 按日 token 消耗（model_audit）
       - 按日工具调用统计（tool_audit）
-      - 按日会话量（messages）
+      - 房型月度入住率与客单价（orders + room_types + rooms）
     """
     import duckdb
 
+    from app.data_pipeline.business_aggregates import (
+        ROOM_TYPE_MONTHLY_TABLE,
+        build_room_type_monthly,
+    )
     from app.data_pipeline.lake_storage import LakeStorage
 
     storage = LakeStorage.from_settings()
     start = time.time()
+
+    async def _download(files: list[str]) -> list[str]:
+        return [str(await storage.read_parquet_to_temp(f)) for f in files]
 
     try:
         # 列出数据湖中现有 Parquet 文件
         audit_files = await storage.list_partitions("model_audit")
         tool_files = await storage.list_partitions("tool_audit")
         msg_files = await storage.list_partitions("messages")
+        order_files = await storage.list_partitions("orders")
+        room_type_files = await storage.list_partitions("room_types")
+        room_files = await storage.list_partitions("rooms")
 
-        if not audit_files and not tool_files and not msg_files:
+        if not any((audit_files, tool_files, msg_files, order_files)):
             return {"status": "skipped", "reason": "no parquet files found"}
-
-        downloaded: list[str] = []
-
-        for f in audit_files + tool_files + msg_files:
-            local = await storage.read_parquet_to_temp(f)
-            downloaded.append(str(local))
-
-        if not downloaded:
-            return {"status": "skipped", "reason": "no files downloaded"}
 
         # DuckDB 聚合
         con = duckdb.connect()
         try:
-            # 注册所有文件为视图
+            # 注册审计文件为视图
             if audit_files:
-                audit_local = [str(await storage.read_parquet_to_temp(f)) for f in audit_files]
+                audit_local = await _download(audit_files)
                 con.execute(f"""
                     CREATE VIEW model_audit_v AS
                     SELECT * FROM read_parquet({audit_local!s})
                 """)
             if tool_files:
-                tool_local = [str(await storage.read_parquet_to_temp(f)) for f in tool_files]
+                tool_local = await _download(tool_files)
                 con.execute(f"""
                     CREATE VIEW tool_audit_v AS
                     SELECT * FROM read_parquet({tool_local!s})
@@ -882,6 +1097,21 @@ async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
                         "agg_tool_daily", date.today(), 0, tool_agg.to_pylist()
                     )
                     results["tool_agg"] = tool_agg.num_rows
+
+            # 聚合 3：房型月度入住率与客单价
+            if order_files and room_type_files and room_files:
+                agg = build_room_type_monthly(
+                    con,
+                    orders_paths=await _download(order_files),
+                    room_types_paths=await _download(room_type_files),
+                    rooms_paths=await _download(room_files),
+                )
+                if agg.num_rows > 0:
+                    await storage.write_parquet(
+                        ROOM_TYPE_MONTHLY_TABLE, date.today(), 0, agg.to_pylist()
+                    )
+                    results["room_type_monthly_agg"] = agg.num_rows
+                    logger.info("room type monthly aggregation: %d rows", agg.num_rows)
 
             duration = time.time() - start
             return {"status": "completed", "results": results, "duration_seconds": duration}
