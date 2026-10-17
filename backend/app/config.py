@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     rerank_base_url: str = ""
     rerank_api_key: str = ""
     rerank_model_name: str = "bge-reranker-v2-m3"
+    # 关系图补充腿：仅命中结构化问题才查 Neo4j；超时或故障降级为无图事实，不阻塞 KB 检索
+    kb_graph_enabled: bool = True
+    kb_graph_timeout_seconds: float = 3.0
 
     # P1.4 长期记忆写入：Run 终态后按策略抽取候选记忆写 GuestMemory；默认关（LLM 成本）
     memory_extract_enabled: bool = False

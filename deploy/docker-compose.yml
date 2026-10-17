@@ -192,6 +192,9 @@ services:
       RERANK_BASE_URL: ${RERANK_BASE_URL:-}
       RERANK_API_KEY: ${RERANK_API_KEY:-}
       RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
+      # 关系图补充腿：命中结构化问题才查 Neo4j，故障/超时自动降级
+      KB_GRAPH_ENABLED: ${KB_GRAPH_ENABLED:-true}
+      KB_GRAPH_TIMEOUT_SECONDS: ${KB_GRAPH_TIMEOUT_SECONDS:-3}
       WECHAT_PAY_MCHID: ${WECHAT_PAY_MCHID:-}
       WECHAT_PAY_API_V3_KEY: ${WECHAT_PAY_API_V3_KEY:-}
       WECHAT_PAY_CERT_SERIAL: ${WECHAT_PAY_CERT_SERIAL:-}
@@ -248,6 +251,9 @@ services:
       RERANK_BASE_URL: ${RERANK_BASE_URL:-}
       RERANK_API_KEY: ${RERANK_API_KEY:-}
       RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
+      # 关系图补充腿：命中结构化问题才查 Neo4j，故障/超时自动降级
+      KB_GRAPH_ENABLED: ${KB_GRAPH_ENABLED:-true}
+      KB_GRAPH_TIMEOUT_SECONDS: ${KB_GRAPH_TIMEOUT_SECONDS:-3}
     volumes:
       - workdirdata:/srv/app/data/workdir
     depends_on:
@@ -300,6 +306,9 @@ services:
       RERANK_BASE_URL: ${RERANK_BASE_URL:-}
       RERANK_API_KEY: ${RERANK_API_KEY:-}
       RERANK_MODEL_NAME: ${RERANK_MODEL_NAME:-bge-reranker-v2-m3}
+      # 关系图补充腿：命中结构化问题才查 Neo4j，故障/超时自动降级
+      KB_GRAPH_ENABLED: ${KB_GRAPH_ENABLED:-true}
+      KB_GRAPH_TIMEOUT_SECONDS: ${KB_GRAPH_TIMEOUT_SECONDS:-3}
     volumes:
       - workdirdata:/srv/app/data/workdir
     depends_on:

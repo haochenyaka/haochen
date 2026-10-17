@@ -15,12 +15,12 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import SessionFactory
-from app.knowledge.graph import KnowledgeGraph, PlaceFact, RoomTypeFact
+from app.knowledge.graph import DEFAULT_HOTEL_CODE, KnowledgeGraph, PlaceFact, RoomTypeFact
 from app.repositories import RoomTypeRepository
 
 logger = logging.getLogger(__name__)
 
-HOTEL_CODE = "haochen-city-new-area"
+HOTEL_CODE = DEFAULT_HOTEL_CODE
 HOTEL_NAME = "皓晨酒店（城市新区店）"
 
 
@@ -125,14 +125,19 @@ async def _room_type_facts(session: AsyncSession) -> list[RoomTypeFact]:
 
 
 async def seed_graph(
-    session: AsyncSession, *, graph: KnowledgeGraph | None = None
+    session: AsyncSession,
+    *,
+    graph: KnowledgeGraph | None = None,
+    hotel_code: str = HOTEL_CODE,
+    hotel_name: str = HOTEL_NAME,
 ) -> GraphSeedReport:
+    """把当前库房型与样例周边导入指定酒店节点；测试可传独立编码隔离共享图。"""
     room_types = await _room_type_facts(session)
     facts = graph or KnowledgeGraph.create()
     try:
         await facts.verify()
-        written_types = await facts.sync_room_types(HOTEL_CODE, HOTEL_NAME, room_types)
-        written_places = await facts.sync_places(HOTEL_CODE, SAMPLE_PLACES)
+        written_types = await facts.sync_room_types(hotel_code, hotel_name, room_types)
+        written_places = await facts.sync_places(hotel_code, SAMPLE_PLACES)
     finally:
         if graph is None:
             await facts.close()

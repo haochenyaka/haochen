@@ -5,7 +5,9 @@
 - 交付模型的上下文只来自 PostgreSQL 的 kb_chunks（Milvus 只提供命中键），
   因此引用里的正文、标题与偏移可与库内事实逐字对齐；
 - 重排故障降级为召回顺序并在结果上标记 degraded，检索本身不因重排不可用而失败；
-- 只引用 `indexed` 状态的文档，解析中/失败/已停用的文档不会进入上下文。
+- 只引用 `indexed` 状态的文档，解析中/失败/已停用的文档不会进入上下文；
+- 关系图是可降级的补充腿：结构化问题才触发多跳查询，图故障/超时不改变 KB 结果；
+  图事实与 KB 片段共用连续编号，引用清单以 `source=graph` 区分来源。
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.knowledge.embedding import EmbeddingProvider, build_embedding_provider
+from app.knowledge.graph_retrieval import GraphRetrieval, GraphRetriever
 from app.knowledge.milvus_store import ChunkVectorStore
 from app.knowledge.rerank import RerankCandidate, Reranker, RerankError, build_reranker
 from app.models.knowledge import KbChunk, KbDocument
@@ -73,13 +76,19 @@ class RetrievedContext:
     recalled: int = 0
     dropped: int = 0
     notes: tuple[str, ...] = field(default=())
+    graph: GraphRetrieval | None = None
 
     @property
     def is_empty(self) -> bool:
-        return not self.chunks
+        return not self.chunks and (self.graph is None or self.graph.is_empty)
 
     def citations(self) -> list[dict[str, object]]:
-        return [item.citation() for item in self.chunks]
+        """KB 片段按组装序号在前，图事实紧随其后，编号与 prompt_text 一一对应。"""
+        items = [item.citation() for item in self.chunks]
+        if self.graph is not None:
+            for offset, fact in enumerate(self.graph.facts()):
+                items.append({"index": len(self.chunks) + offset + 1, **fact})
+        return items
 
 
 @dataclass(frozen=True)
@@ -96,6 +105,7 @@ class KnowledgeRetriever:
         provider: EmbeddingProvider | None = None,
         vector_store: ChunkVectorStore | None = None,
         reranker: Reranker | None = None,
+        graph_retriever: GraphRetriever | None = None,
         settings: Settings | None = None,
     ) -> None:
         self._session = session
@@ -105,6 +115,12 @@ class KnowledgeRetriever:
             identity=self._provider.identity, dimensions=self._provider.dimensions
         )
         self._reranker = reranker or build_reranker()
+        if graph_retriever is not None:
+            self._graph_retriever: GraphRetriever | None = graph_retriever
+        elif self._settings.kb_graph_enabled:
+            self._graph_retriever = GraphRetriever(settings=self._settings)
+        else:
+            self._graph_retriever = None
 
     async def retrieve(
         self,
@@ -138,8 +154,16 @@ class KnowledgeRetriever:
         )
         rows = await self._load_indexed_chunks([chunk_id for chunk_id, _ in hits])
         candidates = _candidates(hits, rows)
+        graph = await self._retrieve_graph(question)
         if not candidates:
-            return RetrievedContext(query=question, chunks=(), prompt_text="", recalled=len(hits))
+            return RetrievedContext(
+                query=question,
+                chunks=(),
+                prompt_text=_render_prompt((), graph),
+                recalled=len(hits),
+                notes=graph.notes if graph is not None else (),
+                graph=graph,
+            )
 
         degraded = False
         try:
@@ -153,11 +177,23 @@ class KnowledgeRetriever:
         return RetrievedContext(
             query=question,
             chunks=chunks,
-            prompt_text=_render_prompt(chunks),
+            prompt_text=_render_prompt(chunks, graph),
             degraded=degraded,
             recalled=len(candidates),
             dropped=len(candidates) - len(chunks),
+            notes=graph.notes if graph is not None else (),
+            graph=graph,
         )
+
+    async def _retrieve_graph(self, question: str) -> GraphRetrieval | None:
+        """补充腿：任何异常都不改变 KB 检索结果，只丢弃图事实。"""
+        if self._graph_retriever is None:
+            return None
+        try:
+            return await self._graph_retriever.retrieve(question)
+        except Exception:
+            logger.warning("graph leg unavailable: query=%s", question, exc_info=True)
+            return None
 
     async def _load_indexed_chunks(self, chunk_ids: Sequence[str]) -> dict[UUID, _ChunkRow]:
         """按命中键回填正文与文档标题；只保留仍处于 indexed 的文档。"""
@@ -249,11 +285,14 @@ def _is_indexed(document: KbDocument) -> bool:
     return document.status == INDEXED_STATUS
 
 
-def _render_prompt(chunks: Sequence[RetrievedChunk]) -> str:
-    if not chunks:
-        return ""
+def _render_prompt(
+    chunks: Sequence[RetrievedChunk],
+    graph: GraphRetrieval | None = None,
+) -> str:
     blocks = [
         f"[{item.index}]《{item.document_title}》第 {item.ordinal + 1} 段\n{item.content}"
         for item in chunks
     ]
+    if graph is not None and not graph.is_empty:
+        blocks.append(graph.render(start_index=len(chunks) + 1))
     return "\n\n".join(blocks)
