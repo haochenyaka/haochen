@@ -11,7 +11,11 @@ from langchain_openai import ChatOpenAI
 from app.agents.buildin.front_desk.agent import FrontDeskAgent
 from app.agents.models import DevStubChatModel
 from app.agents.registry import discover_agents
-from app.agents.supervisor.graph import SUB_AGENT_TYPES, SUPERVISOR_TOOL_IDS
+from app.agents.supervisor.graph import (
+    SUB_AGENT_TYPES,
+    SUPERVISOR_TOOL_IDS,
+    _resolve_route,
+)
 from app.agents.supervisor.routing import (
     MAX_DISPATCHES,
     ROUTE_CONSULT,
@@ -20,6 +24,7 @@ from app.agents.supervisor.routing import (
     ROUTE_ORDER,
     ROUTE_ROOM_SERVICE,
     ROUTING_PROMPT,
+    SUB_AGENT_ROUTES,
     RouteDecision,
     SupervisorRouter,
     keyword_route,
@@ -115,6 +120,16 @@ def test_plain_request_falls_back_to_consult_then_finishes() -> None:
 def test_no_route_is_dispatched_twice() -> None:
     dispatched = _dispatch_sequence("我要投诉")
     assert dispatched == [ROUTE_HANDOFF]
+
+
+def test_finish_before_any_dispatch_falls_back_to_default_route() -> None:
+    """首轮 finish 会让用户请求无人处理且不产出助手消息：必须回落默认子 Agent。"""
+    tool_counts = {route: 1 for route in SUB_AGENT_ROUTES}
+    assert _resolve_route(ROUTE_FINISH, dispatched=[], tool_counts=tool_counts) == ROUTE_CONSULT
+    assert _resolve_route(ROUTE_FINISH, dispatched=[ROUTE_CONSULT], tool_counts=tool_counts) is None
+    # 回落仍走授权感知改派：默认子 Agent 无可见工具时改派有工具的那个
+    no_consult_tools = {**tool_counts, ROUTE_CONSULT: 0}
+    assert _resolve_route(ROUTE_FINISH, dispatched=[], tool_counts=no_consult_tools) == ROUTE_ORDER
 
 
 class _FakeStructuredChain:

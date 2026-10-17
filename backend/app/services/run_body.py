@@ -77,6 +77,18 @@ def reply_text(message: BaseMessage) -> str:
     return str(content)
 
 
+def final_reply(messages: Sequence[BaseMessage]) -> AIMessage:
+    """最后一条有文本的助手回复；没有则显式失败。
+
+    图可能是路由收尾（未派发任何子 Agent）或子图只留工具消息，末条不一定是助手消息。
+    此前直接取 messages[-1] 会把客人原话落成助手回复，既污染对话事实又让答案评判失真。
+    """
+    for message in reversed(messages):
+        if isinstance(message, AIMessage) and reply_text(message).strip():
+            return message
+    raise RuntimeError("Run 收敛但没有助手回复，拒绝把非助手消息落库")
+
+
 class AgentRunBody:
     """执行体：检查点与工具注册表可注入（测试用内存实现与自建注册表），默认取进程级实例。"""
 
@@ -171,7 +183,7 @@ class AgentRunBody:
             await self._persist_approvals(ctx, approvals)
             return RunInterrupted(approvals)
 
-        reply = output["messages"][-1]
+        reply = final_reply(output["messages"])
 
         await ctx.ensure_not_cancelled()
         async with ctx.session_factory() as session:
