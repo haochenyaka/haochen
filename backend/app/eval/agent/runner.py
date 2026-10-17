@@ -162,15 +162,17 @@ async def run_eval(
     dataset_path: Path,
     executor: CaseExecutor | None = None,
     settings: Settings | None = None,
+    use_judge: bool = True,
 ) -> AgentEvalReportData:
     """完整评估路径：加载数据集 → 执行 → 聚合。
 
-    执行器缺省时用 ScriptedCaseExecutor（仅用于测试）。
+    执行器缺省时用 ScriptedCaseExecutor（仅用于测试）。评判器缺省按配置构建；
+    `use_judge=False` 显式关闭——脚本模型的集成测试不该触达外部评判 API。
     """
     settings = settings or get_settings()
     items = load_eval_set(dataset_path)
     active_executor = executor or ScriptedCaseExecutor()
-    judge = build_agent_judge(settings)
+    judge = build_agent_judge(settings) if use_judge else None
     return await evaluate_items(
         items=items,
         executor=active_executor,

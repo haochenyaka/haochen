@@ -294,7 +294,9 @@ def test_real_case_executor_reads_tool_facts(
             session_factory=factory,
         )
         async with factory() as session:
-            report = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            report = await run_eval(
+                session, dataset_path=dataset_path, executor=executor, use_judge=False
+            )
             persisted = await persist_report(session, report)
         return {"report": report, "persisted": persisted}
 
@@ -420,7 +422,9 @@ def test_real_case_executor_replays_multi_turn_in_one_thread(
             session_factory=factory,
         )
         async with factory() as session:
-            report = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            report = await run_eval(
+                session, dataset_path=dataset_path, executor=executor, use_judge=False
+            )
             user = await UserRepository(session).get_or_create(username="eval-real-multi-001")
             stmt = select(AgentRun.thread_id).where(AgentRun.user_id == user.id)
             thread_ids = list((await session.execute(stmt)).scalars())
