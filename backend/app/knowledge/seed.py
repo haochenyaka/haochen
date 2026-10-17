@@ -41,6 +41,20 @@ SAMPLE_TITLES: dict[str, str] = {
     "stay-policies.md": "【样例】入住政策与押金",
     "housekeeping-and-services.md": "【样例】客房服务与清洁",
     "faq.md": "【样例】常见问题",
+    "booking-and-hold.md": "【样例】预订与保留规则",
+    "reschedule-and-cancel.md": "【样例】改期与取消规则",
+    "group-and-longstay.md": "【样例】团体与长住预订",
+    "invoice-and-company.md": "【样例】发票与企业结算",
+    "parking-and-pickup.md": "【样例】停车与接送服务",
+    "meeting-room.md": "【样例】会议室与活动场地",
+    "accessibility-family.md": "【样例】无障碍与亲子设施",
+    "safety-and-emergency.md": "【样例】安全与应急指引",
+    "membership.md": "【样例】会员与积分",
+    "complaint-and-recovery.md": "【样例】投诉与补偿标准",
+    "lost-and-found.md": "【样例】失物招领",
+    "nearby-attractions.md": "【样例】周边配套与景点",
+    "dietary-allergy.md": "【样例】特殊饮食与过敏须知",
+    "eco-preference.md": "【样例】环保与清洁偏好",
 }
 
 

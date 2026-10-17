@@ -67,7 +67,7 @@ def _describe_overview(overview: CheckinOverview) -> str:
 async def get_checkin_info(order_no: str, runtime: ToolRuntime[RuntimeContext]) -> str:
     """查询客人自己订单的入住信息：房间号、楼层与门锁凭证有效期（不含开门密码）。
 
-    order_no：订单号，可先用 list_my_orders 查询；
+    order_no：订单号；客人未提供时先向其索要，不要凭房间号猜测；
     客人索要开门密码时改用 deliver_room_password（每次下发都会换新密码）。
     """
     ctx = runtime.context
@@ -95,7 +95,7 @@ async def deliver_room_password(order_no: str, runtime: ToolRuntime[RuntimeConte
     """为客人已支付的订单重新生成开门密码并交给当次回复下发。
 
     每次调用都会生成新密码、旧密码立即失效；密码仅在当次回复中展示，历史记录里打码。
-    order_no：订单号，先用 list_my_orders 或 get_checkin_info 核对。
+    order_no：订单号；客人未提供时先向其索要，可用 get_checkin_info 核对。
     """
     ctx = runtime.context
     if ctx is None:

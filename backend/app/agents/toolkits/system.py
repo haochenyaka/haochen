@@ -9,9 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.agents.toolkits.registry import builtin_tool
-from app.domain.vocabulary import HOTEL_TIMEZONE
-
-WEEKDAY_LABELS = "一二三四五六日"
+from app.domain.vocabulary import HOTEL_TIMEZONE, WEEKDAY_LABELS
 
 
 @builtin_tool(category="system", read_only=True, display_name="当前时间")

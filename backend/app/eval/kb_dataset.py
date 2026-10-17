@@ -1,8 +1,10 @@
-"""评估集装载：JSONL 逐行校验，黄金参考以文档标题为准，数据集指纹用于基线可比性。
+"""评估集装载：JSONL 逐行校验，黄金参考含分块锚点，数据集指纹用于基线可比性。
 
-黄金参考为什么不用 chunk_id：分块会随分块配置变化，标题在内容不变时稳定；分块级变化由
-内容指纹（文档 checksum + 分块数）兜底，per-question 结果保留 chunk_id 与段序，后续可
-升级为分块级黄金标注。
+黄金参考以 (document_title, ordinal) 为分块锚点：chunk_id 随重新索引变化、不可用于标注；
+标题在内容不变时稳定，段序在分块配置不变时稳定，因此两者组合作为锚点，并保留标题级
+gold_titles/primary_title 作参考口径。锚点的稳定性由内容指纹兜底——内容指纹含逐分块
+content_hash（见 kb_runner.collect_content_fingerprint），任一分块内容或边界变化即失配，
+避免「改了内容但分块数不变」时锚点静默漂移。
 """
 
 from __future__ import annotations
@@ -19,6 +21,17 @@ class EvalSetError(ValueError):
 
 
 @dataclass(frozen=True)
+class ChunkRef:
+    """黄金分块锚点：文档标题 + 段序（ordinal 从 0 起）。"""
+
+    document_title: str
+    ordinal: int
+
+    def as_dict(self) -> dict[str, object]:
+        return {"document_title": self.document_title, "ordinal": self.ordinal}
+
+
+@dataclass(frozen=True)
 class EvalItem:
     id: str
     question: str
@@ -26,6 +39,7 @@ class EvalItem:
     gold_titles: tuple[str, ...]
     primary_title: str
     gold_answer: str
+    gold_chunks: tuple[ChunkRef, ...] = ()
     tags: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, object]:
@@ -36,6 +50,7 @@ class EvalItem:
             "gold_titles": list(self.gold_titles),
             "primary_title": self.primary_title,
             "gold_answer": self.gold_answer,
+            "gold_chunks": [chunk.as_dict() for chunk in self.gold_chunks],
             "tags": list(self.tags),
         }
 
@@ -78,6 +93,7 @@ def _parse_item(path: Path, line_no: int, payload: object) -> EvalItem:
     if not isinstance(payload, dict):
         raise EvalSetError(f"{path}:{line_no} 条目必须是 JSON 对象")
     gold_titles = _str_tuple(path, line_no, payload, "gold_titles", required=True)
+    gold_chunks = _chunk_refs(path, line_no, payload, gold_titles)
     item = EvalItem(
         id=_str_field(path, line_no, payload, "id"),
         question=_str_field(path, line_no, payload, "question"),
@@ -85,11 +101,39 @@ def _parse_item(path: Path, line_no: int, payload: object) -> EvalItem:
         gold_titles=gold_titles,
         primary_title=_str_field(path, line_no, payload, "primary_title"),
         gold_answer=_str_field(path, line_no, payload, "gold_answer"),
+        gold_chunks=gold_chunks,
         tags=_str_tuple(path, line_no, payload, "tags", required=False),
     )
     if item.primary_title not in item.gold_titles:
         raise EvalSetError(f"{path}:{line_no} primary_title 不在 gold_titles 内：{item.id}")
     return item
+
+
+def _chunk_refs(
+    path: Path, line_no: int, payload: dict[str, object], gold_titles: tuple[str, ...]
+) -> tuple[ChunkRef, ...]:
+    """解析分块锚点；缺省允许为空（分块级标注为可选，出厂集由守卫测试强制非空）。"""
+    value = payload.get("gold_chunks")
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not value:
+        raise EvalSetError(f"{path}:{line_no} 缺少非空数组字段：gold_chunks")
+    refs: list[ChunkRef] = []
+    for idx, entry in enumerate(value):
+        if not isinstance(entry, dict):
+            raise EvalSetError(f"{path}:{line_no} gold_chunks[{idx}] 必须是对象")
+        title = entry.get("document_title")
+        ordinal = entry.get("ordinal")
+        if not isinstance(title, str) or not title.strip():
+            raise EvalSetError(f"{path}:{line_no} gold_chunks[{idx}] 缺少 document_title")
+        if not isinstance(ordinal, int) or isinstance(ordinal, bool) or ordinal < 0:
+            raise EvalSetError(f"{path}:{line_no} gold_chunks[{idx}] ordinal 必须是非负整数")
+        if title.strip() not in gold_titles:
+            raise EvalSetError(
+                f"{path}:{line_no} gold_chunks[{idx}] 标题不在 gold_titles 内：{title.strip()}"
+            )
+        refs.append(ChunkRef(document_title=title.strip(), ordinal=ordinal))
+    return tuple(refs)
 
 
 def _str_field(path: Path, line_no: int, payload: dict[str, object], key: str) -> str:

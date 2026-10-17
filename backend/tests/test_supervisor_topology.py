@@ -19,6 +19,7 @@ from app.agents.supervisor.routing import (
     ROUTE_HANDOFF,
     ROUTE_ORDER,
     ROUTE_ROOM_SERVICE,
+    ROUTING_PROMPT,
     RouteDecision,
     SupervisorRouter,
     keyword_route,
@@ -64,6 +65,19 @@ def test_keyword_route_priority_is_handoff_first() -> None:
     assert keyword_route("我想预订明晚的房间") == ROUTE_ORDER
     assert keyword_route("大床房多少钱") == ROUTE_CONSULT
     assert keyword_route("你好") is None
+
+
+def test_sub_agent_system_prompt_carries_runtime_context() -> None:
+    """子 Agent 提示词带运行期上下文（当天日期），供相对日期推算。"""
+    order_prompt = SUB_AGENT_TYPES[ROUTE_ORDER]().compose_system_prompt()
+    assert "运行期上下文" in order_prompt
+    assert "当前时间" in order_prompt
+
+
+def test_room_password_request_routes_to_consult() -> None:
+    """门锁密码由 consult 子 Agent 持有（deliver_room_password），路由不得落到客房服务。"""
+    assert keyword_route("我是 302 房间的客人，房门打不开，帮我发一下开门密码") == ROUTE_CONSULT
+    assert "门锁密码" in ROUTING_PROMPT
 
 
 def test_matching_routes_returns_all_hits_in_priority_order() -> None:

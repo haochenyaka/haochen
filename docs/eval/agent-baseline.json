@@ -1,0 +1,2344 @@
+{
+  "generated_at": "2026-10-17T05:05:49.335692+00:00",
+  "command": "pytest -m eval tests/integration/test_eval_agent_real.py",
+  "model": "deepseek-chat",
+  "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+  "total_cases": 61,
+  "total_passed": 61,
+  "metrics": {
+    "avg_tool_accuracy": 1.0,
+    "avg_args_match_rate": 1.0,
+    "task_success_rate": 1.0,
+    "by_tag": {
+      "access": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "authorization": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "cancel": {
+        "count": 3,
+        "pass_rate": 1.0
+      },
+      "change-of-mind": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "checkin": {
+        "count": 4,
+        "pass_rate": 1.0
+      },
+      "checkout": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "clarification": {
+        "count": 3,
+        "pass_rate": 1.0
+      },
+      "complaint": {
+        "count": 2,
+        "pass_rate": 1.0
+      },
+      "composite": {
+        "count": 5,
+        "pass_rate": 1.0
+      },
+      "consult": {
+        "count": 8,
+        "pass_rate": 1.0
+      },
+      "coreference": {
+        "count": 2,
+        "pass_rate": 1.0
+      },
+      "delivery": {
+        "count": 3,
+        "pass_rate": 1.0
+      },
+      "dispatch": {
+        "count": 12,
+        "pass_rate": 1.0
+      },
+      "edge": {
+        "count": 7,
+        "pass_rate": 1.0
+      },
+      "escalation": {
+        "count": 2,
+        "pass_rate": 1.0
+      },
+      "family": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "funds": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "handoff": {
+        "count": 7,
+        "pass_rate": 1.0
+      },
+      "happy-path": {
+        "count": 6,
+        "pass_rate": 1.0
+      },
+      "human-review": {
+        "count": 9,
+        "pass_rate": 1.0
+      },
+      "idempotent": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "inquiry": {
+        "count": 5,
+        "pass_rate": 1.0
+      },
+      "invoice": {
+        "count": 3,
+        "pass_rate": 1.0
+      },
+      "knowledge": {
+        "count": 10,
+        "pass_rate": 1.0
+      },
+      "multi-turn": {
+        "count": 21,
+        "pass_rate": 1.0
+      },
+      "negative": {
+        "count": 7,
+        "pass_rate": 1.0
+      },
+      "no-order": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "order": {
+        "count": 19,
+        "pass_rate": 1.0
+      },
+      "out-of-scope": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "renew": {
+        "count": 2,
+        "pass_rate": 1.0
+      },
+      "reschedule": {
+        "count": 2,
+        "pass_rate": 1.0
+      },
+      "sensitive": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "time": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "unavailable": {
+        "count": 1,
+        "pass_rate": 1.0
+      },
+      "urgent": {
+        "count": 1,
+        "pass_rate": 1.0
+      }
+    }
+  },
+  "datasets": [
+    {
+      "report_id": 16,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\checkin.yaml",
+      "dataset_fingerprint": "sha256:cf286d7e11079f8914cedee6bacbc31cc290a057f142ee5fbfb38280ccbab0ed",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 12,
+      "metrics": {
+        "by_tag": {
+          "time": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "access": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "checkin": {
+            "count": 4,
+            "pass_rate": 1.0
+          },
+          "consult": {
+            "count": 8,
+            "pass_rate": 1.0
+          },
+          "inquiry": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "checkout": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "knowledge": {
+            "count": 7,
+            "pass_rate": 1.0
+          },
+          "human-review": {
+            "count": 3,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 12,
+        "total_passed": 12,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 17,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\composite.yaml",
+      "dataset_fingerprint": "sha256:79a9a473ad3aa7153816d9521ad35e19b311534c55a3ba7a6cf9b3a3a0a29567",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 5,
+      "metrics": {
+        "by_tag": {
+          "order": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "handoff": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "dispatch": {
+            "count": 5,
+            "pass_rate": 1.0
+          },
+          "composite": {
+            "count": 5,
+            "pass_rate": 1.0
+          },
+          "knowledge": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "multi-turn": {
+            "count": 3,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 5,
+        "total_passed": 5,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 18,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\dispatch.yaml",
+      "dataset_fingerprint": "sha256:ebd43b7b603bdbe51a95387fc4e646c64c038677b70143fd60b70d34136df24a",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 7,
+      "metrics": {
+        "by_tag": {
+          "inquiry": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "delivery": {
+            "count": 3,
+            "pass_rate": 1.0
+          },
+          "dispatch": {
+            "count": 7,
+            "pass_rate": 1.0
+          },
+          "happy-path": {
+            "count": 3,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 7,
+        "total_passed": 7,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 19,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\edge.yaml",
+      "dataset_fingerprint": "sha256:91ac2af0ebd78ecaec872a308d19b2a4b8fc70fe0ae649d002071f25c172988b",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 7,
+      "metrics": {
+        "by_tag": {
+          "edge": {
+            "count": 7,
+            "pass_rate": 1.0
+          },
+          "negative": {
+            "count": 6,
+            "pass_rate": 1.0
+          },
+          "no-order": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "sensitive": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "idempotent": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "multi-turn": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "unavailable": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "human-review": {
+            "count": 5,
+            "pass_rate": 1.0
+          },
+          "out-of-scope": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "authorization": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "clarification": {
+            "count": 1,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 7,
+        "total_passed": 7,
+        "avg_tool_accuracy": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 20,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\handoff.yaml",
+      "dataset_fingerprint": "sha256:895a53f270483a508b01feb0643dfa10a7a7c06c5ab0f7c627dd2d217abf9dd8",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 6,
+      "metrics": {
+        "by_tag": {
+          "funds": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "urgent": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "handoff": {
+            "count": 6,
+            "pass_rate": 1.0
+          },
+          "complaint": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "escalation": {
+            "count": 2,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 6,
+        "total_passed": 6,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 21,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\multi_turn.yaml",
+      "dataset_fingerprint": "sha256:4884059249e57c03aeb666fcdbb96cd29b34946f1d12f14db6c72dc79f469419",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 6,
+      "metrics": {
+        "by_tag": {
+          "knowledge": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "multi-turn": {
+            "count": 6,
+            "pass_rate": 1.0
+          },
+          "coreference": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "clarification": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "change-of-mind": {
+            "count": 1,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 6,
+        "total_passed": 6,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    },
+    {
+      "report_id": 22,
+      "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\orders.yaml",
+      "dataset_fingerprint": "sha256:7d65ec2348a2682a83647a8e3aa9c96bded4f5c8cb7abed36ed5933d14dc57d1",
+      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "total_cases": 18,
+      "metrics": {
+        "by_tag": {
+          "order": {
+            "count": 18,
+            "pass_rate": 1.0
+          },
+          "renew": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "cancel": {
+            "count": 3,
+            "pass_rate": 1.0
+          },
+          "family": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "inquiry": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "invoice": {
+            "count": 3,
+            "pass_rate": 1.0
+          },
+          "negative": {
+            "count": 1,
+            "pass_rate": 1.0
+          },
+          "happy-path": {
+            "count": 3,
+            "pass_rate": 1.0
+          },
+          "multi-turn": {
+            "count": 11,
+            "pass_rate": 1.0
+          },
+          "reschedule": {
+            "count": 2,
+            "pass_rate": 1.0
+          },
+          "human-review": {
+            "count": 1,
+            "pass_rate": 1.0
+          }
+        },
+        "questions": 18,
+        "total_passed": 18,
+        "avg_tool_accuracy": 1.0,
+        "task_success_rate": 1.0,
+        "avg_args_match_rate": 1.0
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "name": "查询预订信息",
+      "tags": [
+        "checkin",
+        "inquiry"
+      ],
+      "item_id": "checkin-001",
+      "question": "订单 {order_no}，帮我查一下预订信息",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_my_orders"
+        }
+      ]
+    },
+    {
+      "name": "退房手续咨询",
+      "tags": [
+        "checkin",
+        "checkout",
+        "human-review"
+      ],
+      "item_id": "checkin-002",
+      "question": "我要退房，需要办什么手续？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": []
+    },
+    {
+      "name": "查询本房信息",
+      "tags": [
+        "checkin",
+        "inquiry"
+      ],
+      "item_id": "checkin-003",
+      "question": "订单 {order_no}，我的房间号是多少？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "order_no": "H20261017710092"
+          },
+          "name": "get_checkin_info"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "get_checkin_info"
+        }
+      ]
+    },
+    {
+      "name": "房门密码下发",
+      "tags": [
+        "checkin",
+        "access"
+      ],
+      "item_id": "checkin-004",
+      "question": "订单 {order_no}，我房门打不开，帮我重新下发一下开门密码",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "order_no": "H20261017E40A0C"
+          },
+          "name": "deliver_room_password"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "deliver_room_password"
+        }
+      ]
+    },
+    {
+      "name": "押金政策",
+      "tags": [
+        "consult",
+        "knowledge",
+        "human-review"
+      ],
+      "item_id": "checkin-005",
+      "question": "入住要交多少押金？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "入住要交多少押金？"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": []
+    },
+    {
+      "name": "退房时间",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-006",
+      "question": "你们几点退房？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "退房时间是几点？"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "早餐时间",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-007",
+      "question": "早餐几点到几点？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "早餐时间是几点到几点？"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "停车与收费",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-008",
+      "question": "酒店有停车场吗？怎么收费？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "酒店有停车场吗？怎么收费？"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "会员积分规则",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-009",
+      "question": "会员积分怎么算？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "会员积分怎么算？积分规则"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "网络与设施",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-010",
+      "question": "房间 WiFi 怎么连？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "房间 WiFi 怎么连？WiFi 名称和密码"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "无障碍与亲子设施",
+      "tags": [
+        "consult",
+        "knowledge"
+      ],
+      "item_id": "checkin-011",
+      "question": "你们有无障碍房或者可以借轮椅吗？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "question": "有无障碍房吗？可以借轮椅吗？"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "当前时间",
+      "tags": [
+        "consult",
+        "time",
+        "human-review"
+      ],
+      "item_id": "checkin-012",
+      "question": "现在几点了？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": []
+    },
+    {
+      "name": "清洁并配送毛巾",
+      "tags": [
+        "composite",
+        "dispatch"
+      ],
+      "item_id": "comp-001",
+      "question": "我在 302 房间，帮我打扫一下房间，再送两条毛巾上来",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302"
+          },
+          "name": "request_room_clean"
+        },
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "毛巾",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_room_clean"
+        },
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "补送饮用水并投诉",
+      "tags": [
+        "composite",
+        "dispatch",
+        "handoff",
+        "multi-turn"
+      ],
+      "item_id": "comp-002",
+      "question": "对，送两瓶水到 302 房间，另外隔壁太吵了我要投诉",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "矿泉水",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        },
+        {
+          "args": {
+            "content": "客人入住 302 房间，反映隔壁房间太吵，影响休息，要求处理。",
+            "category": "noise"
+          },
+          "name": "submit_complaint"
+        },
+        {
+          "args": {
+            "reason": "客人投诉隔壁房间噪音影响休息，要求处理"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_robot_delivery"
+        },
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "咨询早餐并送水",
+      "tags": [
+        "composite",
+        "dispatch",
+        "knowledge",
+        "multi-turn"
+      ],
+      "item_id": "comp-003",
+      "question": "另外 302 房间麻烦送两瓶水上来",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "早餐几点开始？"
+          },
+          "name": "query_kb"
+        },
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "矿泉水",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        },
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "咨询早餐并请求清洁",
+      "tags": [
+        "composite",
+        "dispatch",
+        "knowledge"
+      ],
+      "item_id": "comp-004",
+      "question": "早餐几点开始？另外 302 房间帮我打扫一下",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "早餐几点开始？早餐时间"
+          },
+          "name": "query_kb"
+        },
+        {
+          "args": {
+            "room_no": "302"
+          },
+          "name": "request_room_clean"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        },
+        {
+          "name": "request_room_clean"
+        }
+      ]
+    },
+    {
+      "name": "房态咨询并送水",
+      "tags": [
+        "composite",
+        "dispatch",
+        "order",
+        "multi-turn"
+      ],
+      "item_id": "comp-005",
+      "question": "另外 302 房间麻烦送两瓶水上来",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "矿泉水",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "请求保洁",
+      "tags": [
+        "dispatch",
+        "happy-path"
+      ],
+      "item_id": "dispatch-001",
+      "question": "我是 302 房间的客人，需要打扫房间",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302"
+          },
+          "name": "request_room_clean"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_room_clean"
+        }
+      ]
+    },
+    {
+      "name": "保洁进度查询",
+      "tags": [
+        "dispatch",
+        "inquiry"
+      ],
+      "item_id": "dispatch-002",
+      "question": "保洁什么时候到？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": []
+    },
+    {
+      "name": "配送矿泉水",
+      "tags": [
+        "dispatch",
+        "delivery"
+      ],
+      "item_id": "dispatch-003",
+      "question": "我在 302 房间，能送两瓶矿泉水上来吗？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "矿泉水",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "配送毛巾",
+      "tags": [
+        "dispatch",
+        "delivery"
+      ],
+      "item_id": "dispatch-004",
+      "question": "302 房间麻烦送两条毛巾过来",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "毛巾",
+            "item_quantity": 2
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "配送洗漱用品",
+      "tags": [
+        "dispatch",
+        "delivery"
+      ],
+      "item_id": "dispatch-005",
+      "question": "302 房间的牙刷和洗发水用完了，请送一套到房间",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "牙刷",
+            "item_quantity": 1
+          },
+          "name": "request_robot_delivery"
+        },
+        {
+          "args": {
+            "room_no": "302",
+            "item_name": "洗发水",
+            "item_quantity": 1
+          },
+          "name": "request_robot_delivery"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_robot_delivery"
+        }
+      ]
+    },
+    {
+      "name": "清洁并说明重点",
+      "tags": [
+        "dispatch",
+        "happy-path"
+      ],
+      "item_id": "dispatch-006",
+      "question": "我是 302 房间的客人，帮我打扫一下房间，重点是卫生间",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "note": "重点清洁卫生间",
+            "room_no": "302"
+          },
+          "name": "request_room_clean"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_room_clean"
+        }
+      ]
+    },
+    {
+      "name": "房间异味处理",
+      "tags": [
+        "dispatch",
+        "happy-path"
+      ],
+      "item_id": "dispatch-007",
+      "question": "302 房间有一股烟味，能不能派人来处理一下？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "note": "房间内有烟味，需处理异味",
+            "room_no": "302"
+          },
+          "name": "request_room_clean"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_room_clean"
+        }
+      ]
+    },
+    {
+      "name": "无关问题",
+      "tags": [
+        "edge",
+        "negative",
+        "out-of-scope",
+        "human-review"
+      ],
+      "item_id": "edge-001",
+      "question": "今天股市怎么样？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "缺关键信息应追问",
+      "tags": [
+        "edge",
+        "negative",
+        "clarification",
+        "human-review"
+      ],
+      "item_id": "edge-002",
+      "question": "帮我订个房",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "越权查询他人订单",
+      "tags": [
+        "edge",
+        "negative",
+        "authorization",
+        "human-review"
+      ],
+      "item_id": "edge-003",
+      "question": "帮我查一下 13800001111 这个手机号的订单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "消息含手机号与证件号",
+      "tags": [
+        "edge",
+        "negative",
+        "sensitive",
+        "human-review"
+      ],
+      "item_id": "edge-004",
+      "question": "我的手机号是 13812345678，身份证 110101199001011234，帮我改一下订单日期",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "不存在的房型",
+      "tags": [
+        "edge",
+        "negative",
+        "unavailable"
+      ],
+      "item_id": "edge-005",
+      "question": "帮我订一间海景别墅房，明天入住，住一晚，两位",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        }
+      ]
+    },
+    {
+      "name": "无订单时改期",
+      "tags": [
+        "edge",
+        "negative",
+        "no-order",
+        "human-review"
+      ],
+      "item_id": "edge-006",
+      "question": "帮我把订单改到下周",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "重复取消幂等",
+      "tags": [
+        "edge",
+        "idempotent",
+        "multi-turn"
+      ],
+      "item_id": "edge-007",
+      "question": "再帮我取消一次",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "reason": "行程有变，客人确认取消且不申请退款",
+            "order_no": "H202610174AC6F5"
+          },
+          "name": "cancel_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": [
+        {
+          "name": "cancel_order"
+        }
+      ]
+    },
+    {
+      "name": "明确要求人工客服",
+      "tags": [
+        "handoff",
+        "escalation"
+      ],
+      "item_id": "handoff-001",
+      "question": "我的订单一直没收到确认，需要人工客服处理，请帮我转人工",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "reason": "客人反映订单一直未收到确认，要求人工客服处理"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "噪音投诉",
+      "tags": [
+        "handoff",
+        "complaint"
+      ],
+      "item_id": "handoff-002",
+      "question": "隔壁太吵了，一直睡不着，我要投诉",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "content": "客人反映隔壁房间噪音过大，持续影响休息，导致无法入睡，提出投诉，希望酒店介入处理。",
+            "category": "noise"
+          },
+          "name": "submit_complaint"
+        },
+        {
+          "args": {
+            "reason": "客人投诉隔壁房间噪音过大，影响休息无法入睡，要求处理"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "财物丢失",
+      "tags": [
+        "handoff",
+        "escalation"
+      ],
+      "item_id": "handoff-003",
+      "question": "我的钱包好像落在房间里找不到了，请帮我转人工查找",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "reason": "客人钱包疑似遗落在房间内，申请加急查找遗失财物"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "深夜门锁故障",
+      "tags": [
+        "handoff",
+        "urgent"
+      ],
+      "item_id": "handoff-004",
+      "question": "我房门锁坏了，半夜进不去房间，请马上帮我转人工处理！",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "content": "客人反映房门锁损坏，半夜无法进入房间，要求紧急处理。",
+            "category": "facility"
+          },
+          "name": "submit_complaint"
+        },
+        {
+          "args": {
+            "reason": "客人房门锁故障，半夜无法进入房间，要求紧急人工处理"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "押金退款争议",
+      "tags": [
+        "handoff",
+        "funds"
+      ],
+      "item_id": "handoff-005",
+      "question": "我退房都一周了，押金还没退给我，你们扣了我钱吗？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "reason": "客人退房一周后押金仍未退回，询问是否被扣款，申请核实押金退还情况"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "request_handoff"
+        }
+      ]
+    },
+    {
+      "name": "要求找经理投诉",
+      "tags": [
+        "handoff",
+        "complaint"
+      ],
+      "item_id": "handoff-006",
+      "question": "我要找你们经理投诉，昨天的服务太差了，请现在就帮我登记投诉并转人工",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "content": "客人来电投诉昨天的服务太差，要求登记投诉并转人工，希望由经理处理。具体经过待人工客服进一步了解核实。",
+            "category": "service"
+          },
+          "name": "submit_complaint"
+        },
+        {
+          "args": {
+            "reason": "客人投诉昨天的服务太差，要求登记投诉并转人工（希望找经理处理）"
+          },
+          "name": "request_handoff"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "submit_complaint"
+        }
+      ]
+    },
+    {
+      "name": "指代消解后下单",
+      "tags": [
+        "multi-turn",
+        "coreference"
+      ],
+      "item_id": "multi-001",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "haochen_twin"
+          },
+          "name": "create_order"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "补充信息后下单",
+      "tags": [
+        "multi-turn",
+        "clarification"
+      ],
+      "item_id": "multi-002",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "皓晨双床房"
+          },
+          "name": "create_order"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "先比价再下单",
+      "tags": [
+        "multi-turn",
+        "coreference"
+      ],
+      "item_id": "multi-003",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "澄清入住人数",
+      "tags": [
+        "multi-turn",
+        "clarification"
+      ],
+      "item_id": "multi-004",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "跨轮改主意",
+      "tags": [
+        "multi-turn",
+        "change-of-mind"
+      ],
+      "item_id": "multi-005",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "EXEC"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order",
+          "args_contain": {
+            "room_type_code": "EXEC"
+          }
+        }
+      ]
+    },
+    {
+      "name": "连续知识追问",
+      "tags": [
+        "multi-turn",
+        "knowledge"
+      ],
+      "item_id": "multi-006",
+      "question": "那健身房几点开门？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "早餐几点开始？早餐时间"
+          },
+          "name": "query_kb"
+        },
+        {
+          "args": {
+            "question": "健身房几点开门？开放时间"
+          },
+          "name": "query_kb"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "query_kb"
+        },
+        {
+          "name": "query_kb"
+        }
+      ]
+    },
+    {
+      "name": "标准订房-有房",
+      "tags": [
+        "order",
+        "happy-path"
+      ],
+      "item_id": "order-001",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "查询房价",
+      "tags": [
+        "order",
+        "inquiry"
+      ],
+      "item_id": "order-002",
+      "question": "皓晨双床房多少钱一晚？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        }
+      ]
+    },
+    {
+      "name": "下单后取消",
+      "tags": [
+        "order",
+        "cancel",
+        "multi-turn"
+      ],
+      "item_id": "order-003",
+      "question": "确认取消",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        },
+        {
+          "args": {
+            "reason": "客人主动取消",
+            "order_no": "H202610171DCA60"
+          },
+          "name": "cancel_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        },
+        {
+          "name": "cancel_order"
+        }
+      ]
+    },
+    {
+      "name": "连住三晚",
+      "tags": [
+        "order",
+        "happy-path"
+      ],
+      "item_id": "order-004",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 1,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-21",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "指定房型与人数",
+      "tags": [
+        "order",
+        "happy-path"
+      ],
+      "item_id": "order-005",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-19",
+            "check_out_date": "2026-10-20",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "房型咨询后下单",
+      "tags": [
+        "order",
+        "multi-turn"
+      ],
+      "item_id": "order-006",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "haochen_twin"
+          },
+          "name": "create_order"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "我的订单列表",
+      "tags": [
+        "order",
+        "inquiry"
+      ],
+      "item_id": "order-007",
+      "question": "我有哪些订单？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_my_orders"
+        }
+      ]
+    },
+    {
+      "name": "订单改期",
+      "tags": [
+        "order",
+        "reschedule",
+        "multi-turn"
+      ],
+      "item_id": "order-008",
+      "question": "确认改期",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "order_no": "H20261017DDCF9D",
+            "new_check_in_date": "2026-10-19",
+            "new_check_out_date": "2026-10-20"
+          },
+          "name": "reschedule_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "reschedule_order"
+        }
+      ]
+    },
+    {
+      "name": "续订一晚",
+      "tags": [
+        "order",
+        "renew",
+        "multi-turn"
+      ],
+      "item_id": "order-009",
+      "question": "确认续订",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "order_no": "H20261017C20830",
+            "new_check_out_date": "2026-10-19"
+          },
+          "name": "renew_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "renew_order"
+        }
+      ]
+    },
+    {
+      "name": "改期到过去日期",
+      "tags": [
+        "order",
+        "reschedule",
+        "negative",
+        "human-review"
+      ],
+      "item_id": "order-010",
+      "question": "订单 {order_no}，帮我改到昨天入住",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": null,
+      "expected_sequence": []
+    },
+    {
+      "name": "取消并说明原因",
+      "tags": [
+        "order",
+        "cancel",
+        "multi-turn"
+      ],
+      "item_id": "order-011",
+      "question": "确认取消",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "reason": "客人行程有变，主动取消，不需要退款",
+            "order_no": "H202610178004A5"
+          },
+          "name": "cancel_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "cancel_order"
+        }
+      ]
+    },
+    {
+      "name": "申请公司发票",
+      "tags": [
+        "order",
+        "invoice",
+        "multi-turn"
+      ],
+      "item_id": "order-012",
+      "question": "抬头是皓晨科技有限公司，确认开具",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "title": "皓晨科技有限公司",
+            "tax_no": "91310115MA1K4X8N2P",
+            "order_no": "H20261017E62F9A"
+          },
+          "name": "apply_invoice"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "apply_invoice"
+        }
+      ]
+    },
+    {
+      "name": "开票后查询状态",
+      "tags": [
+        "order",
+        "invoice",
+        "multi-turn"
+      ],
+      "item_id": "order-013",
+      "question": "这张发票开好了吗？",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "title": "皓晨科技有限公司",
+            "tax_no": "91310115MA1K4X8N2P",
+            "order_no": "H202610173DD9F6"
+          },
+          "name": "apply_invoice"
+        },
+        {
+          "args": {
+            "title": "皓晨科技有限公司",
+            "tax_no": "91310115MA1K4X8N2P",
+            "order_no": "H202610173DD9F6"
+          },
+          "name": "apply_invoice"
+        },
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "apply_invoice"
+        }
+      ]
+    },
+    {
+      "name": "重复申请发票",
+      "tags": [
+        "order",
+        "invoice",
+        "multi-turn"
+      ],
+      "item_id": "order-014",
+      "question": "再帮我开一张发票",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "title": "皓晨科技有限公司",
+            "tax_no": "91310115MA1K4X8N2P",
+            "order_no": "H20261017276910"
+          },
+          "name": "apply_invoice"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "apply_invoice"
+        }
+      ]
+    },
+    {
+      "name": "带小孩订房",
+      "tags": [
+        "order",
+        "family"
+      ],
+      "item_id": "order-015",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 3,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-19",
+            "room_type_code": "FAMILY"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "改期后再取消",
+      "tags": [
+        "order",
+        "cancel",
+        "multi-turn"
+      ],
+      "item_id": "order-016",
+      "question": "确认取消",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "order_no": "H202610171FA693",
+            "new_check_in_date": "2026-10-19",
+            "new_check_out_date": "2026-10-20"
+          },
+          "name": "reschedule_order"
+        },
+        {
+          "args": {
+            "reason": "客人主动取消，不需要退款",
+            "order_no": "H202610171FA693"
+          },
+          "name": "cancel_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "reschedule_order"
+        },
+        {
+          "name": "cancel_order"
+        }
+      ]
+    },
+    {
+      "name": "比价后下单",
+      "tags": [
+        "order",
+        "multi-turn"
+      ],
+      "item_id": "order-017",
+      "question": "确认下单",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-20",
+            "room_type_code": "皓晨双床房"
+          },
+          "name": "create_order"
+        },
+        {
+          "args": {},
+          "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-18",
+            "check_out_date": "2026-10-20",
+            "room_type_code": "TWIN"
+          },
+          "name": "create_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "list_room_types"
+        },
+        {
+          "name": "create_order"
+        }
+      ]
+    },
+    {
+      "name": "入住当天请求延长",
+      "tags": [
+        "order",
+        "renew",
+        "multi-turn"
+      ],
+      "item_id": "order-018",
+      "question": "确认续订",
+      "task_success": true,
+      "tool_accuracy": 1.0,
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        },
+        {
+          "args": {
+            "order_no": "H202610178F8631",
+            "new_check_out_date": "2026-10-19"
+          },
+          "name": "renew_order"
+        }
+      ],
+      "args_match_rate": 1.0,
+      "expected_success": true,
+      "expected_sequence": [
+        {
+          "name": "renew_order"
+        }
+      ]
+    }
+  ]
+}

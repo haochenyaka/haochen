@@ -61,7 +61,7 @@ MAX_DISPATCHES = 4
 
 ROUTING_PROMPT = (
     "你是无人酒店前台的多智能体调度器。根据客人的最新诉求，决定下一步派发给哪个子 Agent：\n"
-    "- consult：知识问答、房型与时间等咨询\n"
+    "- consult：知识问答、房型与时间等咨询、入住信息与门锁密码（查询入住信息、重新下发开门密码）\n"
     "- order：预订、改期、续订、取消、发票等订单事务\n"
     "- room_service：清洁、送物、机器人配送、设施报修等客房服务\n"
     "- handoff：投诉、退款、赔偿、人身安全等需要转人工的诉求\n"
@@ -127,6 +127,8 @@ ROUTE_KEYWORDS: tuple[tuple[RouteName, tuple[str, ...]], ...] = (
             "宠物",
             "停车",
             "早餐",
+            "密码",
+            "门锁",
         ),
     ),
 )
@@ -168,8 +170,10 @@ class SupervisorRouter:
         actor_id: str = "",
         on_usage: UsageSink | None = None,
     ) -> None:
+        # 显式走 tool 调用取结构化输出：`json_schema` 依赖 response_format，部分 OpenAI 兼容
+        # 端点（含 DeepSeek）对其返回 400，会让路由整条退化到关键词兜底而静默失真。
         self._structured = (
-            model.with_structured_output(RouteDecision, include_raw=True)
+            model.with_structured_output(RouteDecision, include_raw=True, method="function_calling")
             if isinstance(model, ChatOpenAI)
             else None
         )

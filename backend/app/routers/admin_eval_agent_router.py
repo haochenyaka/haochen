@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.eval.agent.dataset import EvalSetError, dataset_fingerprint, load_eval_set
+from app.eval.agent.executor import RealCaseExecutor
 from app.eval.agent.runner import (
     DEFAULT_DATASET_DIR,
     EvalRunError,
@@ -107,7 +108,11 @@ async def run_agent_eval(
     session: SessionDep,
     _identity: GuardDep,
 ) -> ReportDetail:
-    """触发智能体评估实验。"""
+    """触发智能体评估实验：逐条跑真实编译图，工具序列从审计事实回读。
+
+    未配置模型密钥时返回 400（工具序列由模型产生，缺密钥只会得到恒零分数）；
+    用例会真实落库（线程/消息/审计以及订单、任务等业务副作用）。
+    """
     dataset_path = Path(body.dataset_path)
     if not dataset_path.is_file():
         raise HTTPException(
@@ -122,7 +127,7 @@ async def run_agent_eval(
             detail=str(exc),
         ) from exc
     try:
-        report = await run_eval(session, dataset_path=dataset_path)
+        report = await run_eval(session, dataset_path=dataset_path, executor=RealCaseExecutor())
     except EvalRunError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

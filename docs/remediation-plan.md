@@ -239,6 +239,7 @@ START → supervisor（决策节点，结构化输出决定下一步）
 - checkpoint 连接池固定 4（`runtime.py:40-42`）→ 改为可配置。
 - 长会话静默截断（`run_body.py:105` limit=200）→ 显式告警 + 接入摘要（当前摘要阈值 10 万 token 几乎不触发）。
 - 审计"每次调用单开事务"（`audit_service.py`）→ 批量/复用连接，降低 DB 往返。
+- **报表读路径的权威性（A4 张力）**：`report_service.py` 的 `token_totals` / `token_usage_by_model` / `token_usage_by_day` / `cache_hit_series`（`report_service.py:349/387/417/454`）与 `performance` 的工具计数（`report_service.py:514`）都是"预聚合优先"——只要数据湖存在对应 `agg_*` 分片就不回落到 PostgreSQL，陈旧分片会把"由审计事实派生"静默替换成缓存值（本地实测：残留 `agg_token_daily` 分片令 token 类指标恒为 0，且同窗口 `agg_tool_daily` 分片令 `tool_calls` 恒为 0）。→ 加新鲜度校验，或默认走 PG、仅在显式开关下用预聚合。
 
 ### P4.5 备份与合规
 - 备份：定时 + 异地 + 恢复演练纳入 CI（`backup.sh` / `restore.sh` 已存在）。

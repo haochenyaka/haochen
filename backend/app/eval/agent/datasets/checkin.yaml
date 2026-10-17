@@ -1,32 +1,125 @@
-# 入住/退房流程评估集 v1
+# 入住/退房与知识咨询评估集 v3
+#
+# 校准口径：
+# - 入住信息与开门密码依赖「已入住 + 已分配房间」的真实状态，用 seed: checked_in 预置并按
+#   {order_no} 引用；密码每次下发都会轮换，期望只断言工具，不断言密码值；
+# - 知识类问题走 query_kb；模型能直接回答的题（退房手续/押金）与运行期已注入当天时间后
+#   可直接回答的时间题期望留空，只作人工复核样本——空期望下工具准确率恒为 1.0，不构成
+#   对回答质量的判定；
+# - 「查询预订信息」允许先列名下订单再回答，故 001 断言 list_my_orders；按订单号取入住
+#   信息的路径由 003 断言；
+# - 按序子序列比对，多调不扣分。
 fingerprint_meta:
-  name: 入住退房评估集 v1
-  description: 入住办理、退房、密码下发等场景
+  name: 入住退房评估集 v3
+  description: 预订信息、开门密码、退房与押金咨询、知识库问答
 cases:
   - id: "checkin-001"
-    name: "标准入住-已预订"
-    message: "我要办理入住，预订编号是 BK20260901"
+    name: "查询预订信息"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，帮我查一下预订信息"
     expected:
       tool_sequence:
-        - name: "check_in"
-          args_contain: { "booking_ref": "BK20260901" }
+        - name: "list_my_orders"
       task_success: true
-      answer_contains: ["入住"]
-    tags: ["checkin", "happy-path"]
+    tags: ["checkin", "inquiry"]
 
   - id: "checkin-002"
-    name: "退房"
-    message: "我要退房"
-    expected:
-      tool_sequence:
-        - name: "check_out"
-      task_success: true
-    tags: ["checkin", "checkout"]
-
-  - id: "checkin-003"
-    name: "查询入住信息"
-    message: "我的房间号是多少？"
+    name: "退房手续咨询"
+    message: "我要退房，需要办什么手续？"
     expected:
       tool_sequence: []
       task_success: true
+    tags: ["checkin", "checkout", "human-review"]
+
+  - id: "checkin-003"
+    name: "查询本房信息"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，我的房间号是多少？"
+    expected:
+      tool_sequence:
+        - name: "get_checkin_info"
+      task_success: true
     tags: ["checkin", "inquiry"]
+
+  - id: "checkin-004"
+    name: "房门密码下发"
+    seed: "checked_in"
+    turns:
+      - "订单 {order_no}，我房门打不开，帮我重新下发一下开门密码"
+    expected:
+      tool_sequence:
+        - name: "deliver_room_password"
+      task_success: true
+    tags: ["checkin", "access"]
+
+  - id: "checkin-005"
+    name: "押金政策"
+    message: "入住要交多少押金？"
+    expected:
+      tool_sequence: []
+      task_success: true
+    tags: ["consult", "knowledge", "human-review"]
+
+  - id: "checkin-006"
+    name: "退房时间"
+    message: "你们几点退房？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-007"
+    name: "早餐时间"
+    message: "早餐几点到几点？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-008"
+    name: "停车与收费"
+    message: "酒店有停车场吗？怎么收费？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-009"
+    name: "会员积分规则"
+    message: "会员积分怎么算？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-010"
+    name: "网络与设施"
+    message: "房间 WiFi 怎么连？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-011"
+    name: "无障碍与亲子设施"
+    message: "你们有无障碍房或者可以借轮椅吗？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+      task_success: true
+    tags: ["consult", "knowledge"]
+
+  - id: "checkin-012"
+    name: "当前时间"
+    message: "现在几点了？"
+    expected:
+      tool_sequence: []
+      task_success: true
+    tags: ["consult", "time", "human-review"]

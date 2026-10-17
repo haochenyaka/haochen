@@ -203,6 +203,19 @@ python -m app.eval.kb_runner --k 10 --out ../docs/eval/kb-baseline.json   # 加 
 
 已交付基线见 [docs/eval/kb-baseline.json](docs/eval/kb-baseline.json)：K=10、`recall@10` 0.9863、`primary@1` 0.3973。该数字跑在开发态确定性 embedding 上，用于验证检索链路；接入真实向量模型后须重跑并作废旧基线。
 
+## Agent 评估基线
+
+评估集为 7 份 YAML（`backend/app/eval/agent/datasets/`，共 61 题），覆盖咨询、订房、入住、派单、多轮指代、转人工与边界负例。评测走生产同源链路（线程/消息/请求 → 队头 Run → supervisor 图），工具序列从 `tool_audit` 事实回读，报告落 `agent_eval_reports` 表（只追加；同数据集指纹下的旧报告在配置变化时标记作废）：
+
+```bash
+cd backend
+pytest -m eval tests/integration/test_eval_agent_real.py
+```
+
+真实模型 `deepseek-chat` 下的已交付基线见 [docs/eval/agent-baseline.json](docs/eval/agent-baseline.json)：61/61 通过、平均工具准确率 1.0、参数匹配率 1.0、任务成功率 1.0，对应报告 ID 16–22（数据集/配置指纹与逐题工具序列见基线文件）。
+
+前置条件：开发库已迁移并执行 `python -m app.seed`、知识库已导入（`query_kb` 用例）、设备模拟器在线（门锁密码用例），并配置 `MODEL_API_KEY` / `MODEL_NAME` / `MODEL_BASE_URL`。评测会为 `eval-*` 客人写入订单/任务等业务副作用；执行器在每条用例前释放旧评测订单，可重复执行。模型温度沿用 Agent 运行时配置（默认 0.2），跨轮组合类用例按单轮单意图设计以消除路由摇摆。
+
 ## 目录结构
 
 ```

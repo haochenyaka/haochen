@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 
@@ -12,7 +13,7 @@ import pytest
 from app.agents.base import AgentPackageError
 from app.agents.buildin.front_desk.agent import FrontDeskContext
 from app.agents.buildin.qa_auditor.agent import QaAuditorAgent, QaAuditorContext
-from app.agents.prompts import PROMPT_DOC_MAX_BYTES, load_prompt_docs
+from app.agents.prompts import PROMPT_DOC_MAX_BYTES, load_prompt_docs, runtime_context_prompt
 from app.agents.registry import (
     AgentRegistryError,
     build_registry,
@@ -20,6 +21,7 @@ from app.agents.registry import (
     get_agent,
     list_agents,
 )
+from app.domain.vocabulary import HOTEL_TIMEZONE, WEEKDAY_LABELS
 
 FAKE_AGENT_SOURCE = """\
 from app.agents.base import BaseAgent
@@ -115,3 +117,12 @@ def test_load_prompt_docs_truncates_at_limit(tmp_path: Path) -> None:
 
     docs = load_prompt_docs(tmp_path)
     assert docs.count("a") == PROMPT_DOC_MAX_BYTES
+
+
+def test_runtime_context_prompt_injects_hotel_local_date() -> None:
+    now = datetime.now(HOTEL_TIMEZONE)
+    context = runtime_context_prompt()
+
+    assert now.strftime("%Y-%m-%d") in context
+    assert f"星期{WEEKDAY_LABELS[now.weekday()]}" in context
+    assert "UTC+8" in context

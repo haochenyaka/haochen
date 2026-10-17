@@ -14,8 +14,12 @@ import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.agents import StaticResourcePolicy
+from app.agents.buildin.front_desk.agent import FrontDeskAgent
+from app.agents.toolkits import ToolRegistry, builtin_tool
 from app.config import get_settings
 from app.eval.agent.dataset import dataset_fingerprint
+from app.eval.agent.executor import RealCaseExecutor
 from app.eval.agent.runner import (
     ScriptedCaseExecutor,
     evaluate_items,
@@ -23,11 +27,16 @@ from app.eval.agent.runner import (
     run_eval,
 )
 from app.models.eval_agent import AgentEvalReport
+from app.models.runtime import AgentRun
+from app.repositories import UserRepository
 from tests.integration.db_utils import run_with_session_factory
+from tests.integration.support import PerTurnToolChatModel, ScriptedToolChatModel
 
 pytestmark = pytest.mark.integration
 
 SessionFactoryArg = async_sessionmaker[AsyncSession]
+
+HAS_MODEL_KEY = bool(get_settings().model_api_key)
 
 
 def _dataset_fingerprint() -> str:
@@ -212,3 +221,218 @@ def test_unknown_dataset(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError):
         load_eval_set(tmp_path / "nonexistent.yaml")
+
+
+def _write_case_dataset(
+    tmp_path: Path,
+    *,
+    case_id: str,
+    message: str,
+    tool_name: str,
+    tool_args: dict[str, object],
+) -> Path:
+    path = tmp_path / f"{case_id}.yaml"
+    data = {
+        "fingerprint_meta": {"name": case_id, "description": ""},
+        "cases": [
+            {
+                "id": case_id,
+                "name": case_id,
+                "message": message,
+                "expected": {
+                    "tool_sequence": [{"name": tool_name, "args_contain": dict(tool_args)}],
+                    "task_success": True,
+                },
+                "tags": ["real"],
+            }
+        ],
+    }
+    path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
+    return path
+
+
+def test_real_case_executor_reads_tool_facts(
+    runtime_db_url: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """真实执行器走生产接入路径跑真实编译图：工具序列从 tool_audit 回读。
+
+    模型用确定性替身（不依赖外部模型与网络）：本用例验证执行器链路——接入 → 队头 Run →
+    真实 supervisor 图 → 工具事实 → 审计回读 → 打分落库；真实模型的评测见下方用例。
+    """
+    settings = get_settings()
+    monkeypatch.setattr(settings, "model_api_key", "test-key")
+    monkeypatch.setattr(settings, "model_name", "scripted-tool")
+
+    registry = ToolRegistry()
+
+    @builtin_tool(category="test", registry=registry)
+    async def test_echo(text: str) -> str:
+        """回显文本。"""
+        return f"echo:{text}"
+
+    model = ScriptedToolChatModel(tool_name="test_echo", tool_args={"text": "你好"})
+    monkeypatch.setattr(
+        "app.agents.buildin.front_desk.agent.build_chat_model", lambda **kwargs: model
+    )
+    monkeypatch.setattr(FrontDeskAgent, "tool_ids", ("test_echo",))
+
+    dataset_path = _write_case_dataset(
+        tmp_path,
+        case_id="real-001",
+        message="现在几点？",
+        tool_name="test_echo",
+        tool_args={"text": "你好"},
+    )
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        executor = RealCaseExecutor(
+            checkpointer=InMemorySaver(),
+            resource_policy=StaticResourcePolicy(allowed=frozenset({("tool", "test_echo")})),
+            tool_registry=registry,
+            session_factory=factory,
+        )
+        async with factory() as session:
+            report = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            persisted = await persist_report(session, report)
+        return {"report": report, "persisted": persisted}
+
+    values = run_with_session_factory(runtime_db_url, _body)
+    report = values["report"]
+    assert values["persisted"].report_id is not None
+    assert report.total_cases == 1
+    outcome = report.outcomes[0]
+    assert [call["name"] for call in outcome["actual_sequence"]] == ["test_echo"]
+    assert outcome["tool_accuracy"] == 1.0
+    assert outcome["args_match_rate"] == 1.0
+    assert outcome["task_success"] is True
+    assert report.metrics["total_passed"] == 1
+
+
+@pytest.mark.eval
+@pytest.mark.skipif(not HAS_MODEL_KEY, reason="未配置模型密钥：真实评测按约定跳过")
+def test_real_case_executor_against_real_model(runtime_db_url: str, tmp_path: Path) -> None:
+    """真实模型下的评测真跑：只用只读工具，不产生订单/任务等业务副作用。"""
+    dataset_path = tmp_path / "real_model.yaml"
+    dataset_path.write_text(
+        yaml.dump(
+            {
+                "fingerprint_meta": {"name": "real-model", "description": ""},
+                "cases": [
+                    {
+                        "id": "real-consult-001",
+                        "name": "房型咨询",
+                        "message": "你们有哪些房型？",
+                        "expected": {
+                            "tool_sequence": [{"name": "list_room_types"}],
+                            "task_success": True,
+                        },
+                        "tags": ["consult"],
+                    },
+                    {
+                        "id": "real-consult-002",
+                        "name": "时间咨询",
+                        "message": "现在几点了？",
+                        "expected": {
+                            "tool_sequence": [{"name": "get_current_time"}],
+                            "task_success": True,
+                        },
+                        "tags": ["consult"],
+                    },
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    async def _body(factory: SessionFactoryArg) -> Any:
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        executor = RealCaseExecutor(checkpointer=InMemorySaver(), session_factory=factory)
+        async with factory() as session:
+            return await run_eval(session, dataset_path=dataset_path, executor=executor)
+
+    report = run_with_session_factory(runtime_db_url, _body)
+    assert report.total_cases == 2
+    assert all("actual_sequence" in outcome for outcome in report.outcomes)
+    called = sum(len(outcome["actual_sequence"]) for outcome in report.outcomes)
+    assert called >= 1, "真实模型未调用任何工具，评测链路未真正跑通"
+
+
+def test_real_case_executor_replays_multi_turn_in_one_thread(
+    runtime_db_url: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """多轮用例：同线程逐轮各起一个 Run，工具序列按轮序聚合。
+
+    关键口径：`tool_audit.seq` 在每个 Run 内独立计数，把多轮事实合并后统一排序会打乱轮次
+    顺序；本用例断言两轮的同一个工具按轮序出现（期望 [echo, echo]），并核对确实落了两个
+    Run、且属于同一线程。
+    """
+    settings = get_settings()
+    monkeypatch.setattr(settings, "model_api_key", "test-key")
+    monkeypatch.setattr(settings, "model_name", "scripted-tool")
+
+    registry = ToolRegistry()
+
+    @builtin_tool(category="test", registry=registry)
+    async def test_echo(text: str) -> str:
+        """回显文本。"""
+        return f"echo:{text}"
+
+    model = PerTurnToolChatModel(tool_name="test_echo", tool_args={"text": "你好"})
+    monkeypatch.setattr(
+        "app.agents.buildin.front_desk.agent.build_chat_model", lambda **kwargs: model
+    )
+    monkeypatch.setattr(FrontDeskAgent, "tool_ids", ("test_echo",))
+
+    dataset_path = tmp_path / "multi_turn.yaml"
+    dataset_path.write_text(
+        yaml.dump(
+            {
+                "fingerprint_meta": {"name": "multi-turn", "description": ""},
+                "cases": [
+                    {
+                        "id": "real-multi-001",
+                        "name": "两轮同一个工具",
+                        "turns": ["第一轮：你好", "第二轮：再问一次"],
+                        "expected": {
+                            "tool_sequence": [{"name": "test_echo"}, {"name": "test_echo"}],
+                            "task_success": True,
+                        },
+                        "tags": ["real", "multi-turn"],
+                    }
+                ],
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        executor = RealCaseExecutor(
+            checkpointer=InMemorySaver(),
+            resource_policy=StaticResourcePolicy(allowed=frozenset({("tool", "test_echo")})),
+            tool_registry=registry,
+            session_factory=factory,
+        )
+        async with factory() as session:
+            report = await run_eval(session, dataset_path=dataset_path, executor=executor)
+            user = await UserRepository(session).get_or_create(username="eval-real-multi-001")
+            stmt = select(AgentRun.thread_id).where(AgentRun.user_id == user.id)
+            thread_ids = list((await session.execute(stmt)).scalars())
+        return {"report": report, "thread_ids": thread_ids}
+
+    values = run_with_session_factory(runtime_db_url, _body)
+    report = values["report"]
+    thread_ids = values["thread_ids"]
+    outcome = report.outcomes[0]
+    assert [call["name"] for call in outcome["actual_sequence"]] == ["test_echo", "test_echo"]
+    assert outcome["tool_accuracy"] == 1.0
+    assert outcome["task_success"] is True
+    # 两轮各一个 Run，且复用同一线程
+    assert len(thread_ids) == 2
+    assert len(set(thread_ids)) == 1

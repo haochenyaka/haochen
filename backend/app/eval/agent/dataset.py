@@ -1,6 +1,7 @@
 """智能体评估数据集：YAML 定义测试用例，含输入、预期工具链与任务结果。
 
 每条用例可指定前置对话历史、客人属性覆盖、预期工具调用序列与任务成功标志。
+多轮用例用 `turns` 声明按序回放的多条用户消息（同线程多个 Run），`message` 为最后一条。
 数据集指纹用于基线可比性。
 """
 
@@ -14,6 +15,17 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+ORDER_NO_PLACEHOLDER = "{order_no}"
+"""用例文本里引用夹具订单号的占位符：执行器在跑该用例前替换为真实订单号。"""
+
+SEED_PAID = "paid"
+"""前置夹具状态：已支付订单（续订 / 发票 / 入住信息查询可用）。"""
+
+SEED_CHECKED_IN = "checked_in"
+"""前置夹具状态：已支付且已入住、已分配房间并签发有效门锁凭证（开门密码下发可用）。"""
+
+SEED_STATES: frozenset[str] = frozenset({SEED_PAID, SEED_CHECKED_IN})
 
 
 class EvalSetError(ValueError):
@@ -70,6 +82,12 @@ class AgentEvalItem:
     guest_overrides: dict[str, object] | None = None
     expected: ExpectedSpec | None = None
     tags: tuple[str, ...] = ()
+    turns: tuple[str, ...] = ()
+    seed: str | None = None
+
+    def effective_turns(self) -> tuple[str, ...]:
+        """按序回放的用户消息：声明了 turns 用 turns，否则退化为单轮 message。"""
+        return self.turns or (self.message,)
 
     def as_dict(self) -> dict[str, object]:
         d: dict[str, object] = {
@@ -82,6 +100,11 @@ class AgentEvalItem:
         }
         if self.guest_overrides is not None:
             d["guest_overrides"] = dict(self.guest_overrides)
+        # 只在多轮用例里带 turns：单轮用例的指纹保持与历史一致
+        if self.turns:
+            d["turns"] = list(self.turns)
+        if self.seed is not None:
+            d["seed"] = self.seed
         return d
 
 
@@ -120,11 +143,20 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
         raise EvalSetError(f"{path}: case #{idx} 必须是对象")
     case_id = case.get("id", "")
     name = case.get("name", "")
+    turns = _turns(path, idx, case)
     message = case.get("message", "")
+    if not isinstance(message, str):
+        raise EvalSetError(f"{path}: case #{idx} message 必须为非空字符串")
+    message = message.strip()
+    if turns:
+        # 多轮用例：message 可省略（取末条）；显式给出时必须与末条一致，防止编写漂移
+        if message and message != turns[-1]:
+            raise EvalSetError(f"{path}: case #{idx} message 与 turns 末条不一致")
+        message = turns[-1]
+    if not message:
+        raise EvalSetError(f"{path}: case #{idx} message 缺失或非空字符串")
     if not isinstance(case_id, str) or not case_id.strip():
         raise EvalSetError(f"{path}: case #{idx} id 缺失或非空字符串")
-    if not isinstance(message, str) or not message.strip():
-        raise EvalSetError(f"{path}: case #{idx} message 缺失或非空字符串")
     # parse history
     history: tuple[HistoryMessage, ...] = ()
     raw_history = case.get("history")
@@ -155,15 +187,51 @@ def _parse_item(path: Path, idx: int, case: object) -> AgentEvalItem:
         if not isinstance(raw_tags, list) or not all(isinstance(t, str) for t in raw_tags):
             raise EvalSetError(f"{path}: case #{idx} tags 必须为字符串数组")
         tags = tuple(raw_tags)
+    seed = _seed(path, idx, case, turns=turns, message=message)
     return AgentEvalItem(
         id=str(case_id).strip(),
         name=str(name).strip() if name else str(case_id).strip(),
-        message=message.strip(),
+        message=message,
         history=history,
         guest_overrides=guest_overrides,
         expected=expected,
         tags=tags,
+        turns=turns,
+        seed=seed,
     )
+
+
+def _seed(
+    path: Path, idx: int, case: dict[str, Any], *, turns: tuple[str, ...], message: str
+) -> str | None:
+    """解析前置状态夹具声明，并校验占位符/夹具一致（无夹具却引用订单号即报错）。"""
+    raw = case.get("seed")
+    if raw is None:
+        if ORDER_NO_PLACEHOLDER in message or any(ORDER_NO_PLACEHOLDER in t for t in turns):
+            raise EvalSetError(
+                f"{path}: case #{idx} 引用了 {ORDER_NO_PLACEHOLDER} 但未声明 seed 夹具"
+            )
+        return None
+    if not isinstance(raw, str) or raw not in SEED_STATES:
+        raise EvalSetError(
+            f"{path}: case #{idx} seed 必须是 {sorted(SEED_STATES)} 之一，实际：{raw!r}"
+        )
+    return raw
+
+
+def _turns(path: Path, idx: int, case: dict[str, Any]) -> tuple[str, ...]:
+    """解析多轮用例的用户消息序列；未声明返回空元组（单轮用例）。"""
+    raw = case.get("turns")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not raw:
+        raise EvalSetError(f"{path}: case #{idx} turns 必须为非空数组")
+    parsed: list[str] = []
+    for t_idx, text in enumerate(raw):
+        if not isinstance(text, str) or not text.strip():
+            raise EvalSetError(f"{path}: case #{idx} turns[{t_idx}] 必须为非空字符串")
+        parsed.append(text.strip())
+    return tuple(parsed)
 
 
 def _parse_expected(raw: dict[str, Any]) -> ExpectedSpec:

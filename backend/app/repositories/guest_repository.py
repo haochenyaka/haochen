@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Guest
@@ -43,7 +44,15 @@ class GuestRepository:
         existing = await self.get_by_user_id(user_id)
         if existing is not None:
             return existing
-        return await self.create(user_id=user_id, nickname=nickname)
+        try:
+            async with self._session.begin_nested():
+                return await self.create(user_id=user_id, nickname=nickname)
+        except IntegrityError:
+            # 并发工具调用同时建档：唯一索引裁决，落败方复用胜出行
+            existing = await self.get_by_user_id(user_id)
+            if existing is None:
+                raise
+            return existing
 
     async def update_fields(self, guest_id: UUID, values: dict[str, object]) -> bool:
         result = await self._session.execute(

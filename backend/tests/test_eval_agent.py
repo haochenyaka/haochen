@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import pytest
 import yaml
 
+from app.config import get_settings
 from app.eval.agent.dataset import (
     AgentEvalItem,
     EvalSetError,
@@ -16,12 +19,17 @@ from app.eval.agent.dataset import (
     fingerprint,
     load_eval_set,
 )
+from app.eval.agent.executor import RealCaseExecutor, task_success_from, tool_calls_from_audit
 from app.eval.agent.metrics import aggregate, score_question
 from app.eval.agent.runner import (
     DEFAULT_DATASET_DIR,
+    EvalRunError,
     ScriptedCaseExecutor,
+    config_fingerprint_value,
     evaluate_items,
+    executor_identity,
 )
+from app.repositories.audit_repository import AuditEntry
 
 
 def _make_item(
@@ -119,6 +127,65 @@ class TestDataset:
         items = load_eval_set(path)
         assert items[0].guest_overrides == {"name": "张三"}
 
+    def test_multi_turn_declares_turns_only(self, tmp_path: Path) -> None:
+        """多轮用例可只给 turns：message 取末条，供展示与报告。"""
+        case = _yaml_case()
+        case.pop("message")
+        case["turns"] = ["你们有哪些房型？", "就订那间大床房，今晚一晚"]
+        path = _write_dataset(tmp_path, "turns.yaml", [case])
+        items = load_eval_set(path)
+        assert items[0].turns == ("你们有哪些房型？", "就订那间大床房，今晚一晚")
+        assert items[0].message == "就订那间大床房，今晚一晚"
+        assert items[0].effective_turns() == items[0].turns
+
+    def test_single_turn_effective_turns_is_message(self) -> None:
+        item = _make_item()
+        assert item.turns == ()
+        assert item.effective_turns() == ("我要订一间大床房",)
+
+    def test_message_must_match_last_turn(self, tmp_path: Path) -> None:
+        """message 与 turns 末条不一致即报错：两处各写一遍最容易漂移。"""
+        case = _yaml_case(message="第三轮")
+        case["turns"] = ["第一轮", "第二轮"]
+        path = _write_dataset(tmp_path, "mismatch.yaml", [case])
+        with pytest.raises(EvalSetError, match="turns 末条"):
+            load_eval_set(path)
+
+    def test_message_may_repeat_last_turn(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="第二轮")
+        case["turns"] = ["第一轮", "第二轮"]
+        path = _write_dataset(tmp_path, "match.yaml", [case])
+        assert load_eval_set(path)[0].message == "第二轮"
+
+    def test_seed_parsed_and_carried_into_fingerprint(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        case["seed"] = "paid"
+        path = _write_dataset(tmp_path, "seed.yaml", [case])
+        items = load_eval_set(path)
+        assert items[0].seed == "paid"
+        assert items[0].as_dict()["seed"] == "paid"
+
+    def test_unknown_seed_rejected(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        case["seed"] = "no-such-state"
+        path = _write_dataset(tmp_path, "bad_seed.yaml", [case])
+        with pytest.raises(EvalSetError, match="seed"):
+            load_eval_set(path)
+
+    def test_placeholder_without_seed_rejected(self, tmp_path: Path) -> None:
+        case = _yaml_case(message="订单 {order_no} 我要续订")
+        path = _write_dataset(tmp_path, "no_seed.yaml", [case])
+        with pytest.raises(EvalSetError, match="未声明 seed 夹具"):
+            load_eval_set(path)
+
+    @pytest.mark.parametrize("bad", [[], "不是数组", ["第一轮", "  "]])
+    def test_turns_invalid(self, tmp_path: Path, bad: object) -> None:
+        case = _yaml_case()
+        case["turns"] = bad
+        path = _write_dataset(tmp_path, "bad_turns.yaml", [case])
+        with pytest.raises(EvalSetError, match="turns"):
+            load_eval_set(path)
+
 
 class TestFingerprint:
     def test_stability(self) -> None:
@@ -140,6 +207,13 @@ class TestFingerprint:
 
     def test_fingerprint_deterministic(self) -> None:
         assert fingerprint({"a": 1}) == fingerprint({"a": 1})
+
+    def test_turns_change_fingerprint(self) -> None:
+        """同一条末轮消息，单轮与多轮不是同一份评测：指纹必须能区分。"""
+        last = "算了，先不订了"
+        single = AgentEvalItem(id="a", name="a", message=last)
+        multi = AgentEvalItem(id="a", name="a", message=last, turns=("我要订一间大床房", last))
+        assert dataset_fingerprint([single]) != dataset_fingerprint([multi])
 
 
 class TestMetrics:
@@ -248,6 +322,94 @@ class TestMetrics:
         assert d["item_id"] == "test-001"
 
 
+class TestDatasetToolAlignment:
+    @pytest.mark.eval
+    def test_eval_dataset_tools_registered(self) -> None:
+        """防漂移：出厂数据集期望的工具名必须已在注册表注册。
+
+        数据集引用了不存在（或已改名）的工具时，评测比对的是永远匹配不上的名字，
+        指标会静默失真；此守卫在数据集与工具注册表之间拉一条硬连线。
+        """
+        from app.agents.toolkits.registry import default_registry
+
+        registered = set(default_registry().names())
+        missing: list[str] = []
+        for fpath in sorted(DEFAULT_DATASET_DIR.glob("*.yaml")):
+            for item in load_eval_set(fpath):
+                if item.expected is None or not item.expected.tool_sequence:
+                    continue
+                for spec in item.expected.tool_sequence:
+                    if spec.name not in registered:
+                        missing.append(f"{fpath.name}:{item.id}:{spec.name}")
+        assert not missing, f"数据集引用了未注册的工具：{missing}"
+
+
+def _audit_entry(
+    *,
+    kind: Literal["model", "tool"] = "tool",
+    seq: int = 1,
+    status: str = "completed",
+    tool_name: str | None = None,
+    args_digest: dict[str, object] | None = None,
+) -> AuditEntry:
+    return AuditEntry(
+        kind=kind,
+        id=seq,
+        run_id="run-1",
+        seq=seq,
+        agent_slug="front-desk",
+        status=status,
+        created_at=datetime(2026, 10, 16, tzinfo=UTC),
+        tool_name=tool_name,
+        args_digest=args_digest,
+    )
+
+
+class TestRealExecutorAuditReadback:
+    """真实执行器的审计回读口径（纯函数，不触库不触图）。"""
+
+    pytestmark = pytest.mark.eval
+
+    def test_tool_calls_ordered_by_seq_and_filtered(self) -> None:
+        entries = [
+            _audit_entry(seq=3, tool_name="create_order", args_digest={"room_type_code": "A"}),
+            _audit_entry(kind="model", seq=2),
+            _audit_entry(seq=1, tool_name="list_room_types"),
+        ]
+        calls = tool_calls_from_audit(entries)
+        assert [call["name"] for call in calls] == ["list_room_types", "create_order"]
+        assert calls[0]["args"] == {}
+        assert calls[1]["args"] == {"room_type_code": "A"}
+
+    def test_task_success_rules(self) -> None:
+        failed = [_audit_entry(seq=1, status="failed", tool_name="create_order")]
+        ok = [_audit_entry(seq=1, status="completed", tool_name="list_room_types")]
+        assert task_success_from("completed", ok) is True
+        assert task_success_from("completed", []) is True
+        assert task_success_from("completed", failed) is False
+        assert task_success_from("failed", ok) is False
+        assert task_success_from("cancelled", ok) is False
+
+    def test_executor_identity_distinguishes_scripted_and_real(self) -> None:
+        assert executor_identity(ScriptedCaseExecutor()) == "scripted"
+        assert executor_identity(RealCaseExecutor()) == "real-graph"
+
+    def test_config_fingerprint_covers_executor_and_judge(self) -> None:
+        settings = get_settings()
+        scripted = config_fingerprint_value(settings, "scripted", "judge-a")
+        real = config_fingerprint_value(settings, "real-graph", "judge-a")
+        other_judge = config_fingerprint_value(settings, "real-graph", "judge-b")
+        assert scripted != real
+        assert real != other_judge
+
+    @pytest.mark.anyio
+    async def test_execute_without_model_key_fails_loudly(self) -> None:
+        settings = get_settings().model_copy(update={"model_api_key": ""})
+        executor = RealCaseExecutor(settings=settings)
+        with pytest.raises(EvalRunError, match="模型密钥"):
+            await executor.execute(_make_item("no-key"))
+
+
 class TestRunner:
     @pytest.mark.anyio
     async def test_evaluate_items_with_scripted_executor(self) -> None:
@@ -270,10 +432,22 @@ class TestRunner:
         assert report.metrics["avg_tool_accuracy"] == 0.0
 
     def test_default_datasets_exist(self) -> None:
-        """出厂数据集存在且可加载。"""
+        """出厂数据集存在且可加载；规模、多轮与覆盖类别是 P2.2 的验收面，做成守卫。"""
         assert DEFAULT_DATASET_DIR.is_dir()
         yaml_files = list(DEFAULT_DATASET_DIR.glob("*.yaml"))
         assert len(yaml_files) >= 3  # orders, checkin, dispatch
-        for fpath in yaml_files:
-            items = load_eval_set(fpath)
-            assert len(items) >= 1
+        items = [item for fpath in yaml_files for item in load_eval_set(fpath)]
+        assert len(items) >= 50, "Agent 评测集规模下限（P2.2：8 → 50+）"
+        assert any(item.turns for item in items), "缺少多轮用例"
+        covered = {tag for item in items for tag in item.tags}
+        required = {
+            "order",
+            "reschedule",
+            "cancel",
+            "invoice",
+            "dispatch",
+            "handoff",
+            "multi-turn",
+            "edge",
+        }
+        assert required <= covered, f"覆盖类别缺失：{sorted(required - covered)}"

@@ -1,0 +1,68 @@
+# 复合多意图评估集 v3
+#
+# 一句话里包含多个意图，期望按话语中的**出现顺序**跨子 Agent 拆分。校准后只保留
+# 「无需确认即可执行」的意图组合：派单/清洁/查询/时间都不要求二次确认，而下单类写动作
+# 按确认策略单独成多轮用例（见 orders.yaml），避免把「等确认」误判成拆分失败。
+#
+# 跨域组合拆成两轮，每轮只承载一个域的意图：单轮同时出现「咨询+服务」时，supervisor
+# 的派发顺序与子 Agent 边界会随路由摇摆，指标测到的就不再是复合能力。拆轮后顺序由轮次
+# 固定，仍验证跨子 Agent 的连续处理；同域组合（清洁+配送）保持单轮。
+fingerprint_meta:
+  name: 复合多意图评估集 v3
+  description: 清洁+配送、配送+投诉、咨询+配送、咨询+清洁、房态+配送
+cases:
+  - id: "comp-001"
+    name: "清洁并配送毛巾"
+    message: "我在 302 房间，帮我打扫一下房间，再送两条毛巾上来"
+    expected:
+      tool_sequence:
+        - name: "request_room_clean"
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["composite", "dispatch"]
+
+  - id: "comp-002"
+    name: "补送饮用水并投诉"
+    turns:
+      - "我在 302 房间，帮我送两瓶水上来"
+      - "对，送两瓶水到 302 房间，另外隔壁太吵了我要投诉"
+    expected:
+      tool_sequence:
+        - name: "request_robot_delivery"
+        - name: "request_handoff"
+      task_success: true
+    tags: ["composite", "dispatch", "handoff", "multi-turn"]
+
+  - id: "comp-003"
+    name: "咨询早餐并送水"
+    turns:
+      - "早餐几点开始？"
+      - "另外 302 房间麻烦送两瓶水上来"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["composite", "dispatch", "knowledge", "multi-turn"]
+
+  - id: "comp-004"
+    name: "咨询早餐并请求清洁"
+    message: "早餐几点开始？另外 302 房间帮我打扫一下"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+        - name: "request_room_clean"
+      task_success: true
+    tags: ["composite", "dispatch", "knowledge"]
+
+  - id: "comp-005"
+    name: "房态咨询并送水"
+    turns:
+      - "皓晨双床房今晚还有吗？"
+      - "另外 302 房间麻烦送两瓶水上来"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "request_robot_delivery"
+      task_success: true
+    tags: ["composite", "dispatch", "order", "multi-turn"]

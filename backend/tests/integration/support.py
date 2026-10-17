@@ -88,6 +88,60 @@ class ScriptedToolChatModel(BaseChatModel):
         return self._generate(messages, stop=stop, **kwargs)
 
 
+class PerTurnToolChatModel(BaseChatModel):
+    """确定性模型替身（多轮）：只看**最后一条**消息是不是工具结果。
+
+    与 `ScriptedToolChatModel` 的差别在判据：后者看到任意历史工具结果就给最终回复，多轮
+    用例第二轮会因此不再发工具调用；本替身每轮都会真实产生一次工具事实，用于验证多轮
+    工具序列的聚合口径。
+    """
+
+    model_name: str = "scripted-tool"
+    tool_name: str = "test_echo"
+    tool_args: dict[str, Any] = Field(default_factory=lambda: {"text": "你好"})
+    call_count: int = 0
+
+    @property
+    def _llm_type(self) -> str:
+        return self.model_name
+
+    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> BaseChatModel:
+        return self
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        self.call_count += 1
+        if messages and isinstance(messages[-1], ToolMessage):
+            reply = AIMessage(content="最终回复：" + str(messages[-1].content))
+        else:
+            reply = AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": self.tool_name,
+                        "args": dict(self.tool_args),
+                        "id": f"call-{self.call_count}",
+                        "type": "tool_call",
+                    }
+                ],
+            )
+        return ChatResult(generations=[ChatGeneration(message=reply)])
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        return self._generate(messages, stop=stop, **kwargs)
+
+
 class RecordingDispatcher:
     def __init__(self) -> None:
         self.enqueued: list[UUID] = []

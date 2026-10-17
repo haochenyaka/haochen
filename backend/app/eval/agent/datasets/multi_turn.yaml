@@ -1,0 +1,85 @@
+# 多轮语境评估集 v2
+#
+# 这些用例检验的是**跨轮语境**（指代、信息补全、改主意、连续追问），不依赖夹具：
+# 下单类按确认策略补一轮「确认下单」，工具序列按轮序聚合；改主意用例用 args_contain
+# 断言最终落到行政房（EXEC），否则「先双床后行政」会退化成只看创建过一次订单。
+#
+# 每轮一个 Run，工具序列按轮序聚合——所以 multi-006 的期望是两次 query_kb。
+fingerprint_meta:
+  name: 多轮语境评估集 v2
+  description: 指代消解、信息补全、改主意与连续追问
+cases:
+  - id: "multi-001"
+    name: "指代消解后下单"
+    turns:
+      - "你们有哪些房型？"
+      - "就订那间皓晨双床房，今晚一晚，两位"
+      - "确认下单"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["multi-turn", "coreference"]
+
+  - id: "multi-002"
+    name: "补充信息后下单"
+    turns:
+      - "我要订房"
+      - "皓晨双床房，明天入住，住一晚，两位"
+      - "确认下单"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+      task_success: true
+    tags: ["multi-turn", "clarification"]
+
+  - id: "multi-003"
+    name: "先比价再下单"
+    turns:
+      - "有便宜点的房型吗？"
+      - "那就订皓晨双床房，今晚一晚，两位"
+      - "确认下单"
+    expected:
+      tool_sequence:
+        - name: "list_room_types"
+        - name: "create_order"
+      task_success: true
+    tags: ["multi-turn", "coreference"]
+
+  - id: "multi-004"
+    name: "澄清入住人数"
+    turns:
+      - "我想订房"
+      - "两位，皓晨双床房，今晚一晚"
+      - "确认下单"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+      task_success: true
+    tags: ["multi-turn", "clarification"]
+
+  - id: "multi-005"
+    name: "跨轮改主意"
+    turns:
+      - "帮我订一间皓晨双床房，今晚一晚，两位"
+      - "算了，改成皓晨行政房"
+      - "确认下单"
+    expected:
+      tool_sequence:
+        - name: "create_order"
+          args_contain: { "room_type_code": "EXEC" }
+      task_success: true
+    tags: ["multi-turn", "change-of-mind"]
+
+  - id: "multi-006"
+    name: "连续知识追问"
+    turns:
+      - "早餐几点开始？"
+      - "那健身房几点开门？"
+    expected:
+      tool_sequence:
+        - name: "query_kb"
+        - name: "query_kb"
+      task_success: true
+    tags: ["multi-turn", "knowledge"]

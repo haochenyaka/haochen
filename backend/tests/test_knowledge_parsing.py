@@ -91,6 +91,30 @@ def test_chunk_text_marks_chunk_ordinals_contiguous() -> None:
     assert [draft.ordinal for draft in drafts] == list(range(len(drafts)))
 
 
+def test_chunk_text_splits_on_markdown_sections() -> None:
+    text = "# 说明\n\n## 早餐\n\n" + "早餐内容。" * 20 + "\n\n## 网络\n\n" + "网络内容。" * 20
+    drafts = chunk_text(text, max_chars=100, overlap_chars=10)
+    assert len(drafts) >= 3
+    # 分块不跨小节：没有一块同时混入两个主题的正文，重叠区只在节内保留
+    assert all(
+        not ("早餐内容" in draft.content and "网络内容" in draft.content) for draft in drafts
+    )
+    assert [draft.ordinal for draft in drafts] == list(range(len(drafts)))
+    for draft in drafts:
+        assert text[draft.char_start : draft.char_end] == draft.content
+        assert len(draft.content) <= 100
+    assert _uncovered_non_space(text, drafts) == []
+
+
+def test_chunk_text_attaches_title_only_heading_to_next_section() -> None:
+    text = "# 皓晨酒店介绍\n\n## 酒店概况\n\n皓晨酒店是无人酒店。\n\n## 房型\n\n共有 12 间客房。"
+    drafts = chunk_text(text, max_chars=700, overlap_chars=80)
+    assert len(drafts) == 2
+    assert drafts[0].content.startswith("# 皓晨酒店介绍")
+    assert "酒店概况" in drafts[0].content and "房型" not in drafts[0].content
+    assert "房型" in drafts[1].content
+
+
 def _uncovered_non_space(text: str, drafts: list[object]) -> list[int]:
     covered: set[int] = set()
     for draft in drafts:

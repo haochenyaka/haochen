@@ -77,13 +77,27 @@ class AgentEvalReportData:
         }
 
 
-def config_fingerprint_value(settings: Settings, executor_name: str | None = None) -> str:
-    """配置指纹：模型名与评估参数。"""
+def config_fingerprint_value(
+    settings: Settings,
+    executor_name: str | None = None,
+    judge_name: str | None = None,
+) -> str:
+    """配置指纹：模型名、执行器身份与评判器模型。
+
+    执行器身份必须入指纹——脚本替身与真实图在同一数据集同一模型下产出的分数不可比，
+    不区分会让两类报告互相作废。
+    """
     payload: dict[str, object] = {
         "model": settings.model_name or "none",
-        "evaluator": executor_name,
+        "executor": executor_name,
+        "judge": judge_name,
     }
     return fingerprint(payload)
+
+
+def executor_identity(executor: CaseExecutor) -> str:
+    """执行器身份：显式声明优先，缺省退化为类名。"""
+    return str(getattr(executor, "name", None) or type(executor).__name__)
 
 
 async def evaluate_items(
@@ -103,7 +117,9 @@ async def evaluate_items(
         outcomes.append(outcome)
     metrics = aggregate(outcomes)
     cfp = config_fingerprint_value(
-        settings, judge.model_name if judge and judge.available else None
+        settings,
+        executor_identity(executor),
+        judge.model_name if judge is not None and judge.available else None,
     )
     return AgentEvalReportData(
         dataset_path=str(dataset_path),
@@ -180,6 +196,8 @@ async def persist_report(session: AsyncSession, report: AgentEvalReportData) -> 
 
 class ScriptedCaseExecutor:
     """确定性执行器（测试用）：返回预设的工具调用列表。"""
+
+    name = "scripted"
 
     def __init__(
         self,

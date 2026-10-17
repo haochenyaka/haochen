@@ -178,3 +178,30 @@ def test_recorder_seq_conflict_fails_explicitly(runtime_db_url: str) -> None:
 
     result = run_with_session_factory(runtime_db_url, _body)
     assert result["model_count"] == 1
+
+
+def test_concurrent_tool_facts_get_distinct_seq(runtime_db_url: str) -> None:
+    """同一 Run 内并发工具事实各自拿到唯一 seq，不撞 uq_tool_audit_run_seq。
+
+    一次模型回复可含多个工具调用、由图并行执行，每个事实走独立事务；`max(seq)+1` 的
+    读后写必须串行化，否则并发事实都读到同一个 max、整轮 Run 直接失败。
+    """
+
+    async def _body(factory: SessionFactoryArg) -> list[int]:
+        async with factory() as session:
+            intake = await intake_message(session, username="audit-concurrent-tester")
+        assert intake.run_id is not None
+        recorder = AuditRecorder(
+            run_id=intake.run_id, agent_slug="handoff", session_factory=factory
+        )
+        await asyncio.gather(
+            *[
+                recorder.tool_call(tool_name=f"tool_{index}", status=TOOL_STATUS_COMPLETED)
+                for index in range(5)
+            ]
+        )
+        async with factory() as session:
+            timeline = await AuditRepository(session).list_timeline(run_id=intake.run_id)
+        return sorted(entry.seq for entry in timeline.entries)
+
+    assert run_with_session_factory(runtime_db_url, _body) == [1, 2, 3, 4, 5]
