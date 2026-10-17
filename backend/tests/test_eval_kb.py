@@ -270,6 +270,20 @@ def test_score_question_metrics_follow_documented_denominators() -> None:
     assert (miss.recall, miss.precision, miss.f1, miss.primary_top1) == (0.0, 0.0, 0.0, False)
 
 
+def test_aggregate_uses_chunk_recall_as_primary_without_judge() -> None:
+    """P2.4：有分块级黄金参考时，无答案评判的主指标是 chunk_recall，而不是文档级 recall。"""
+    hit_item = replace(_item("q1", "一", gold=("A",), primary="A"), gold_chunks=(ChunkRef("A", 0),))
+    miss_item = replace(
+        _item("q2", "二", gold=("A",), primary="A"), gold_chunks=(ChunkRef("A", 0),)
+    )
+    hit = score_question(hit_item, ["A"], k=5, retrieved=[chunk_digest(_chunk(0, "A"))])
+    miss = score_question(miss_item, ["A"], k=5, retrieved=[chunk_digest(_chunk(1, "A"))])
+    metrics = aggregate([hit, miss], k=5)
+    assert metrics.overall_metric == "chunk_recall@5"
+    assert metrics.overall_score == metrics.chunk_recall_at_k == 0.5
+    assert metrics.recall_at_k == 1.0
+
+
 def test_aggregate_prefers_answer_correctness_when_judged() -> None:
     item = _item("q1", "问题一", gold=("A",), primary="A")
     unjudged = aggregate([score_question(item, ["A"], k=5), score_question(item, ["B"], k=5)], k=5)

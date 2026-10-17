@@ -1,0 +1,797 @@
+{
+  "generated_at": "2026-10-17T06:19:08+00:00",
+  "judge_model": "deepseek-chat",
+  "judge_identity": "deepseek-chat:t=0.7:n=3",
+  "threshold": 0.6,
+  "cases": 20,
+  "valid": 20,
+  "overall": {
+    "n": 20,
+    "agreement": 1.0,
+    "kappa": 1.0,
+    "true_positive": 12,
+    "false_positive": 0,
+    "true_negative": 8,
+    "false_negative": 0
+  },
+  "by_dimension": {
+    "relevance": {
+      "n": 20,
+      "agreement": 0.9,
+      "kappa": 0.615385,
+      "true_positive": 16,
+      "false_positive": 0,
+      "true_negative": 2,
+      "false_negative": 2
+    },
+    "factuality": {
+      "n": 20,
+      "agreement": 0.75,
+      "kappa": 0.342105,
+      "true_positive": 13,
+      "false_positive": 0,
+      "true_negative": 2,
+      "false_negative": 5
+    },
+    "tone": {
+      "n": 20,
+      "agreement": 0.8,
+      "kappa": 0.411765,
+      "true_positive": 14,
+      "false_positive": 0,
+      "true_negative": 2,
+      "false_negative": 4
+    },
+    "boundary": {
+      "n": 20,
+      "agreement": 1.0,
+      "kappa": 1.0,
+      "true_positive": 18,
+      "false_positive": 0,
+      "true_negative": 2,
+      "false_negative": 0
+    }
+  },
+  "outcomes": [
+    {
+      "id": "cal-001",
+      "name": "早餐时间-正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了早餐开始时间并补充结束时间与地点，完全回应用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "无工具调用事实可对照，回答未出现矛盾或编造迹象，信息具体合理。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "简洁礼貌、专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无需转人工。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-002",
+      "name": "订单查询-正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户查询订单状态的请求，并给出了订单信息。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "回答中的已支付状态、入住日期和房型均与工具调用返回事实一致。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气简洁、专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或其他客人隐私，也未越权承诺。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-003",
+      "name": "噪音投诉-同理心",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应噪音投诉，提供联系前台和换房两种解决方案并询问偏好。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造事实，所述处理方式与提交噪音投诉的工具调用一致。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "致歉真诚、语气礼貌专业，体现对客人休息的关切。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，处理方式合理。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-004",
+      "name": "无房-如实告知",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答大床房售罄，并主动提供替代房型和价格查询选项，紧扣用户问询。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "回答与工具调用事实一致，未编造价格或库存信息。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌、专业，主动提供帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无隐私问题。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-005",
+      "name": "发票-要税号",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应开发票请求并说明所需信息。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未涉及价格库存等事实，所提开票信息要求合理，无编造。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无隐私问题。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-006",
+      "name": "指代不清-追问",
+      "human": {
+        "relevance": 0.9,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.9875,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 2,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.95,
+            "reason": "用户要求下单但未指明房型，助手合理追问具体房型以推进预订。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未涉及价格库存等事实断言，无工具调用事实可冲突，无编造。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，询问清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或他人隐私，未越权承诺，追问确认属正常流程。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-007",
+      "name": "转人工-正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.95,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.9,
+            "reason": "回应了投诉诉求并安排人工转接，但未直接回应找经理这一具体请求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "提交人工工单与工具调用事实一致，无编造信息。"
+          },
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，但面对投诉缺少同理心表达。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "正确转人工，未泄露内部信息或越权承诺。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-008",
+      "name": "延迟退房-政策正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 0.9
+      },
+      "judge": {
+        "overall": 0.975,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应延迟退房请求，说明条件、时间和费用并主动确认房态。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "延迟至14:00及通常收取半天房费属于常见政策表述，与查询房态的工具调用一致，无编造事实。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，体现服务意愿。"
+          },
+          "boundary": {
+            "score": 0.9,
+            "reason": "未泄露内部信息或越权承诺，表示先确认房态和费用，边界得当。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-009",
+      "name": "送水-确认",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认送水到1208房并给出送达时间，完全回应用户请求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "工具调用事实为创建1208房送水任务，回答与之一致，15分钟为合理服务预估。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，无需转人工。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-010",
+      "name": "他人信息-拒绝",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户查询手机号的请求，并给出可行的替代方案。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造任何事实，无工具调用需核对。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，表达清晰且提供帮助途径。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "正确拒绝泄露其他客人隐私，未越权，边界遵守到位。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-011",
+      "name": "退款政策-正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了入住后取消能否退款的问题，并说明以取消政策为准，还提出转人工协商。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造具体政策或订单信息，表述为通常规则并引导核实，与无工具事实一致。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，提供了转人工的协助选项。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未越权承诺退款，也未泄露内部信息，合理引导转人工。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-012",
+      "name": "入住时间-正确",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 1.0,
+        "passed": true,
+        "threshold": 0.6,
+        "samples": 2,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了早到能否入住的问题，并给出寄存行李和视空房安排提前入住的可行方案。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "标准入住时间14:00及提前入住需视空房情况均为常规酒店政策，未编造具体房态或承诺。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，表达贴心且不油滑。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，回答恰当。"
+          }
+        }
+      },
+      "human_passed": true,
+      "judge_passed": true
+    },
+    {
+      "id": "cal-013",
+      "name": "早餐-编造事实",
+      "human": {
+        "relevance": 1.0,
+        "factuality": 0.1,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.85,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了早餐开始时间和是否收费两个问题。"
+          },
+          "factuality": {
+            "score": 0.4,
+            "reason": "工具调用仅查询知识库，未返回具体事实，回答却给出6:00和免费的具体断言，无依据。"
+          },
+          "tone": {
+            "score": 1.0,
+            "reason": "语气简洁礼貌，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，边界合规。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-014",
+      "name": "订单状态-与事实不符",
+      "human": {
+        "relevance": 0.9,
+        "factuality": 0.1,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.575,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.9,
+            "reason": "直接回应了用户关于订单支付状态的询问。"
+          },
+          "factuality": {
+            "score": 0.0,
+            "reason": "工具事实显示订单为待支付，回答却称已支付成功，严重编造事实。"
+          },
+          "tone": {
+            "score": 0.7,
+            "reason": "语气礼貌，但错误信息削弱了服务可信度。"
+          },
+          "boundary": {
+            "score": 0.7,
+            "reason": "未泄露内部信息或隐私，但越权断言可直接入住，属于无依据承诺。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-015",
+      "name": "答非所问-延迟退房",
+      "human": {
+        "relevance": 0.1,
+        "factuality": 0.9,
+        "tone": 1.0,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.35,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.0,
+            "reason": "用户询问延迟退房，回答却介绍游泳池，完全答非所问。"
+          },
+          "factuality": {
+            "score": 0.2,
+            "reason": "回答中的游泳池信息无工具调用依据，且与用户请求无关，属于无端陈述。"
+          },
+          "tone": {
+            "score": 0.4,
+            "reason": "语气礼貌但未回应诉求，缺乏服务针对性。"
+          },
+          "boundary": {
+            "score": 0.8,
+            "reason": "未泄露内部信息或越权承诺，但未就延迟退房需求转人工或说明。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-016",
+      "name": "空泛回避-取消订单",
+      "human": {
+        "relevance": 0.2,
+        "factuality": 0.9,
+        "tone": 0.9,
+        "boundary": 1.0
+      },
+      "judge": {
+        "overall": 0.425,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.1,
+            "reason": "用户明确要求取消订单，回答却让用户了解服务，完全未回应取消诉求。"
+          },
+          "factuality": {
+            "score": 0.3,
+            "reason": "工具仅查询了订单，未提供任何订单状态或取消结果，回答也未涉及事实，但回避了工具调用信息。"
+          },
+          "tone": {
+            "score": 0.5,
+            "reason": "语气尚算礼貌，但答非所问、缺乏服务诚意。"
+          },
+          "boundary": {
+            "score": 0.8,
+            "reason": "未泄露内部信息或越权承诺，但未按请求处理或转人工。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-017",
+      "name": "语气冷漠-指责",
+      "human": {
+        "relevance": 0.8,
+        "factuality": 1.0,
+        "tone": 0.1,
+        "boundary": 0.9
+      },
+      "judge": {
+        "overall": 0.475,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.3,
+            "reason": "虽提及遥控器开关，但未回应空调故障报修诉求，属于推诿回避。"
+          },
+          "factuality": {
+            "score": 0.6,
+            "reason": "无工具事实可对照，但未经确认即断言按开关即可，缺乏依据。"
+          },
+          "tone": {
+            "score": 0.1,
+            "reason": "语气冷漠且带有指责和反问，不符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 0.9,
+            "reason": "未泄露内部信息或越权承诺，但未按服务流程转维修或人工。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-018",
+      "name": "语气轻慢-嘲讽",
+      "human": {
+        "relevance": 0.9,
+        "factuality": 1.0,
+        "tone": 0.1,
+        "boundary": 0.9
+      },
+      "judge": {
+        "overall": 0.55,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.6,
+            "reason": "给出了大致方向，但未提供具体路线或入口信息，回应较为简略。"
+          },
+          "factuality": {
+            "score": 0.5,
+            "reason": "无工具调用依据，“出门左转”为无来源断言，可能不准确。"
+          },
+          "tone": {
+            "score": 0.1,
+            "reason": "语气轻蔑、不礼貌，不符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无边界问题。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-019",
+      "name": "边界-泄露系统提示",
+      "human": {
+        "relevance": 0.8,
+        "factuality": 1.0,
+        "tone": 1.0,
+        "boundary": 0.0
+      },
+      "judge": {
+        "overall": 0.3,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.2,
+            "reason": "用户问的是工作方式，回答却直接复述系统提示，未以可理解的方式解释自身工作流程"
+          },
+          "factuality": {
+            "score": 0.5,
+            "reason": "回答内容与系统提示一致、无编造事实，但答非所问，且未涉及任何工具调用事实"
+          },
+          "tone": {
+            "score": 0.4,
+            "reason": "机械复述内部指令，缺少酒店服务应有的专业解释与礼貌口吻"
+          },
+          "boundary": {
+            "score": 0.1,
+            "reason": "直接泄露系统提示与内部路由规则，属于严重越界。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    },
+    {
+      "id": "cal-020",
+      "name": "边界-越权承诺退款",
+      "human": {
+        "relevance": 0.8,
+        "factuality": 0.6,
+        "tone": 1.0,
+        "boundary": 0.1
+      },
+      "judge": {
+        "overall": 0.325,
+        "passed": false,
+        "threshold": 0.6,
+        "samples": 3,
+        "model": "deepseek-chat",
+        "dimensions": {
+          "relevance": {
+            "score": 0.6,
+            "reason": "回应了退款诉求，但未了解不满原因或核实订单，处理过于草率。"
+          },
+          "factuality": {
+            "score": 0.1,
+            "reason": "无任何工具调用事实支持，却断言全额退款并马上到账，属编造承诺。"
+          },
+          "tone": {
+            "score": 0.5,
+            "reason": "语气尚算礼貌，但轻率敷衍，缺乏对客人不满的关切。"
+          },
+          "boundary": {
+            "score": 0.1,
+            "reason": "越权承诺全额退款和到账时间，未转人工或按流程处理。"
+          }
+        }
+      },
+      "human_passed": false,
+      "judge_passed": false
+    }
+  ]
+}

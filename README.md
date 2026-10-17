@@ -14,7 +14,7 @@
 ## 项目亮点
 
 - **三端一体的 Agent 落地**：客人小程序、保洁小程序、管理后台共用一套 Agent 运行时，把自然语言对话接到真实的订单、门锁、客房服务业务链路上，而不是只做问答 Demo。
-- **混合检索知识库**：Milvus 向量检索（含 BM25 稀疏向量）+ Neo4j 关系图检索双路召回，经 Rerank 精排管道，FAQ 评测集 `recall@10` 达 **0.9863**（详见 [评估基线](docs/eval/kb-baseline.json)）。
+- **混合检索知识库**：Milvus 向量检索（含 BM25 稀疏向量）+ Neo4j 关系图检索双路召回，经 Rerank 精排管道；169 题分块级黄金锚点的 `chunk_recall@10` 达 **0.9675**、`primary@1` **0.6036**（开发态确定性 embedding，详见 [评估基线](docs/eval/kb-baseline.json)）。
 - **可观测的 Agent 运行时**：Langfuse 做数据集驱动的评估与链路追踪，全量审计事实可通过 SQL 聚合派生报表，端到端可观测。
 - **数据湖分析层**：业务表增量导出到 MinIO（Parquet + zstd），由嵌入的 DuckDB 直读生成按日预聚合，报表查询提速 **10–100x**，预聚合缺失时自动降级回 PostgreSQL。
 - **异步与隔离**：API 与 Worker 分离，LangGraph 会话执行与知识索引、质检跑批等后台任务解耦，避免长任务阻塞交互链路。
@@ -194,14 +194,14 @@ npm install && npm run dev
 
 ## 知识库评估基线
 
-评估集为 JSONL（`backend/app/eval/kb_faq.jsonl`，73 题，金标为文档标题级），CLI 逐题读当前检索配置出分，报告落 `kb_eval_reports` 表（只追加；内容/配置指纹变化时旧报告标记作废）：
+评估集为 JSONL（`backend/app/eval/kb_faq.jsonl`，169 题，金标为 `(document_title, ordinal)` 分块级锚点），CLI 逐题读当前检索配置出分，报告落 `kb_eval_reports` 表（只追加；内容/配置指纹变化时旧报告标记作废）：
 
 ```bash
 cd backend
 python -m app.eval.kb_runner --k 10 --out ../docs/eval/kb-baseline.json   # 加 --no-persist 只试跑不落库
 ```
 
-已交付基线见 [docs/eval/kb-baseline.json](docs/eval/kb-baseline.json)：K=10、`recall@10` 0.9863、`primary@1` 0.3973。该数字跑在开发态确定性 embedding 上，用于验证检索链路；接入真实向量模型后须重跑并作废旧基线。
+已交付基线见 [docs/eval/kb-baseline.json](docs/eval/kb-baseline.json)：K=10、`chunk_recall@10` 0.9675、`primary@1` 0.6036；文档级 `recall@10` 0.9763 作为参考口径保留。无答案评判时 `overall_score` 以 `chunk_recall@10` 为主指标。该数字跑在开发态确定性 embedding + 词面重排上，用于验证检索链路；接入真实 BGE-M3/reranker 后须重跑并作废旧基线。
 
 ## Agent 评估基线
 
@@ -212,7 +212,16 @@ cd backend
 pytest -m eval tests/integration/test_eval_agent_real.py
 ```
 
-真实模型 `deepseek-chat` 下的已交付基线见 [docs/eval/agent-baseline.json](docs/eval/agent-baseline.json)：61/61 通过、平均工具准确率 1.0、参数匹配率 1.0、任务成功率 1.0，对应报告 ID 16–22（数据集/配置指纹与逐题工具序列见基线文件）。
+真实模型 `deepseek-chat` 下的已交付基线见 [docs/eval/agent-baseline.json](docs/eval/agent-baseline.json)：61/61 通过、平均工具准确率 1.0、参数匹配率 1.0、任务成功率 1.0，对应报告 ID 39–45（数据集/配置指纹与逐题工具序列见基线文件）。
+
+答案质量由可选的 LLM-as-judge 补充：按相关性、事实性、语气、边界遵守四维给 0–1 分并附理由；同一答案自一致性采样 3 次取逐维中位数，评判温度 0.7（生成侧默认 0.2），配置指纹包含评判器身份。评判结果写入报告的 `avg_judge_score` / `judge_pass_rate` / `judge_dimensions` 与逐题 `judge` 字段。同一次全量评测中评判覆盖 61/61，四维均分 0.9622、单题通过率 0.9016（逐维均分：相关性 0.9344 / 事实性 0.9443 / 语气 0.9791 / 边界 0.9910）。评判器用 20 条人工标注样本校准，命令与产物：
+
+```bash
+cd backend
+MODEL_API_KEY=... python -m app.eval.agent.calibration
+```
+
+已交付校准结果见 [docs/eval/agent-judge-calibration.json](docs/eval/agent-judge-calibration.json)：20/20 有效，判通过/不通过与人工标注完全一致，Cohen's kappa = **1.0**（逐维一致率 0.75–1.0，混淆计数与逐题明细见产物）。
 
 前置条件：开发库已迁移并执行 `python -m app.seed`、知识库已导入（`query_kb` 用例）、设备模拟器在线（门锁密码用例），并配置 `MODEL_API_KEY` / `MODEL_NAME` / `MODEL_BASE_URL`。评测会为 `eval-*` 客人写入订单/任务等业务副作用；执行器在每条用例前释放旧评测订单，可重复执行。模型温度沿用 Agent 运行时配置（默认 0.2），跨轮组合类用例按单轮单意图设计以消除路由摇摆。
 
