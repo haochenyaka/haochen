@@ -28,6 +28,17 @@ from app.repositories import (
     AgentRunRepository,
     MessageRepository,
 )
+from app.services.observability_service import (
+    SSE_CLIENT_DISCONNECT,
+    SSE_FOLLOW_ERROR,
+    SSE_READ_ERROR,
+    SSE_STREAM_COMPLETED,
+    SSE_STREAM_ERROR,
+    SSE_STREAM_STARTED,
+    NullSseMetrics,
+    SseMetricName,
+    SseMetrics,
+)
 from app.services.run_event_bus import RunEventBus, RunEventRecord, is_stream_id
 from app.services.run_events import (
     EVENT_MESSAGE_COMPLETED,
@@ -77,9 +88,11 @@ class RunStreamService:
         session_factory: async_sessionmaker[AsyncSession] = SessionFactory,
         heartbeat_seconds: float | None = None,
         follow_block_ms: int | None = None,
+        metrics: SseMetrics | None = None,
     ) -> None:
         settings = get_settings()
         self._bus = bus
+        self._metrics = metrics or NullSseMetrics()
         self._session_factory = session_factory
         self._heartbeat_seconds = (
             settings.sse_heartbeat_seconds if heartbeat_seconds is None else heartbeat_seconds
@@ -107,62 +120,87 @@ class RunStreamService:
         self, *, run: RunStreamView, last_event_id: str | None = None
     ) -> AsyncIterator[str]:
         """SSE 事件生成器：回放 → 跟随 → 终态收流；客户端断开由框架取消生成器。"""
-        cursor = last_event_id if is_stream_id(last_event_id) else None
-        saw_reply = False
-        projected = count(1)
+        await self._record(SSE_STREAM_STARTED)
+        completed = False
+        try:
+            cursor = last_event_id if is_stream_id(last_event_id) else None
+            saw_reply = False
+            projected = count(1)
 
-        for record in await self._safe_read(run.run_id, after=cursor):
-            cursor = record.id
-            saw_reply = saw_reply or record.event == EVENT_MESSAGE_COMPLETED
-            yield format_sse_event(record)
-            if record.event in TERMINAL_EVENT_TYPES:
-                return
-
-        if run.status in TERMINAL_RUN_STATUSES:
-            for record in await self._project_terminal(run, saw_reply=saw_reply, ids=projected):
-                yield format_sse_event(record)
-            return
-
-        heartbeat_due = monotonic() + self._heartbeat_seconds
-        while True:
-            records = await self._safe_follow(
-                run.run_id, after=cursor, block_ms=self._follow_block_ms
-            )
-            for record in records:
+            for record in await self._safe_read(run.run_id, after=cursor):
                 cursor = record.id
                 saw_reply = saw_reply or record.event == EVENT_MESSAGE_COMPLETED
                 yield format_sse_event(record)
                 if record.event in TERMINAL_EVENT_TYPES:
+                    completed = True
                     return
 
-            view = await self._load_view(run.run_id)
-            if view is None:
-                yield format_sse_event(
-                    _projected_record(
-                        run,
-                        next(projected),
-                        EVENT_RUN_FAILED,
-                        {"status": "failed", "error": "运行不存在"},
-                    )
-                )
-                return
-            if view.status in TERMINAL_RUN_STATUSES:
-                for record in await self._project_terminal(
-                    view, saw_reply=saw_reply, ids=projected
-                ):
+            if run.status in TERMINAL_RUN_STATUSES:
+                for record in await self._project_terminal(run, saw_reply=saw_reply, ids=projected):
                     yield format_sse_event(record)
+                completed = True
                 return
 
-            now = monotonic()
-            if now >= heartbeat_due:
-                yield SSE_HEARTBEAT_COMMENT
-                heartbeat_due = now + self._heartbeat_seconds
+            heartbeat_due = monotonic() + self._heartbeat_seconds
+            while True:
+                records = await self._safe_follow(
+                    run.run_id, after=cursor, block_ms=self._follow_block_ms
+                )
+                for record in records:
+                    cursor = record.id
+                    saw_reply = saw_reply or record.event == EVENT_MESSAGE_COMPLETED
+                    yield format_sse_event(record)
+                    if record.event in TERMINAL_EVENT_TYPES:
+                        completed = True
+                        return
+
+                view = await self._load_view(run.run_id)
+                if view is None:
+                    yield format_sse_event(
+                        _projected_record(
+                            run,
+                            next(projected),
+                            EVENT_RUN_FAILED,
+                            {"status": "failed", "error": "运行不存在"},
+                        )
+                    )
+                    completed = True
+                    return
+                if view.status in TERMINAL_RUN_STATUSES:
+                    for record in await self._project_terminal(
+                        view, saw_reply=saw_reply, ids=projected
+                    ):
+                        yield format_sse_event(record)
+                    completed = True
+                    return
+
+                now = monotonic()
+                if now >= heartbeat_due:
+                    yield SSE_HEARTBEAT_COMMENT
+                    heartbeat_due = now + self._heartbeat_seconds
+        except asyncio.CancelledError:
+            # 客户端断开由框架取消任务：指标写入用 shield 防止被同一次取消吞掉
+            await asyncio.shield(self._record(SSE_CLIENT_DISCONNECT))
+            raise
+        except Exception:
+            await asyncio.shield(self._record(SSE_STREAM_ERROR))
+            raise
+        finally:
+            if completed:
+                await asyncio.shield(self._record(SSE_STREAM_COMPLETED))
+
+    async def _record(self, metric: SseMetricName) -> None:
+        try:
+            await self._metrics.record(metric)
+        except Exception:
+            logger.debug("SSE 指标写入失败（不阻断流）：%s", metric, exc_info=True)
 
     async def _safe_read(self, run_id: UUID, *, after: str | None) -> list[RunEventRecord]:
         try:
             return await self._bus.read(run_id, after=after)
         except Exception:
             logger.warning("run event read failed; falling back to db projection: %s", run_id)
+            await self._record(SSE_READ_ERROR)
             return []
 
     async def _safe_follow(
@@ -173,6 +211,7 @@ class RunStreamService:
         except Exception:
             # Redis 故障：按跟随周期放慢轮询，数据库终态兜底仍然生效
             logger.warning("run event follow failed; falling back to db projection: %s", run_id)
+            await self._record(SSE_FOLLOW_ERROR)
             await asyncio.sleep(block_ms / 1000)
             return []
 

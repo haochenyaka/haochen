@@ -116,6 +116,11 @@ class AgentRun(Base):
             "lease_expires_at",
             postgresql_where=text("status = 'running'"),
         ),
+        Index(
+            "ix_agent_runs_active_heartbeat",
+            "last_heartbeat_at",
+            postgresql_where=text("status IN ('running', 'cancel_requested')"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -148,6 +153,12 @@ class AgentRunAttempt(Base):
     __tablename__ = "agent_run_attempts"
     __table_args__ = (
         UniqueConstraint("run_id", "attempt_no", name="uq_agent_run_attempts_run_attempt"),
+        Index(
+            "ix_agent_run_attempts_finished_started",
+            "started_at",
+            "finished_at",
+            postgresql_where=text("finished_at IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

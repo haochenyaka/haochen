@@ -143,6 +143,29 @@ def test_cache_hit_trend(api: Api) -> None:
     assert len(payload) >= 0  # 可能有当天数据
 
 
+def test_alerts_report_contains_all_rules(api: Api) -> None:
+    """告警端点返回四类规则与可定位事实；阈值来自配置。"""
+    admin = _token(api, role="admin")
+
+    resp = api.client.get("/api/admin/health/alerts", headers=_auth(admin))
+    assert resp.status_code == 200, resp.text
+    payload = resp.json()
+    assert payload["status"] in {"ok", "warning", "critical"}
+    assert payload["evaluated_at"]
+    rules = {rule["rule"]: rule for rule in payload["rules"]}
+    assert set(rules) == {
+        "run_stuck",
+        "lease_expiry_rate",
+        "sse_disconnect",
+        "db_pool_exhaustion",
+    }
+    for rule in rules.values():
+        assert rule["severity"] in {"warning", "critical"}
+        assert isinstance(rule["triggered"], bool)
+        assert isinstance(rule["facts"], dict)
+        assert rule["summary"]
+
+
 def test_health_endpoints_enforce_role_matrix(api: Api) -> None:
     staff = _token(api, role="staff")
     customer = _token(api, role="customer")
@@ -151,6 +174,7 @@ def test_health_endpoints_enforce_role_matrix(api: Api) -> None:
     for path in [
         "/api/admin/health/run-status-distribution",
         "/api/admin/health/cache-hit-trend",
+        "/api/admin/health/alerts",
     ]:
         assert api.client.get(path).status_code == 401
         assert api.client.get(path, headers=_auth(staff)).status_code == 403

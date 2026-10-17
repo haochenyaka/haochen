@@ -7,14 +7,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.security import Identity, require_roles
+from app.services.alert_service import AlertReport, AlertService
+from app.services.observability_service import NullSseMetrics, SseMetrics
 from app.services.report_service import ReportService
 
 router = APIRouter(prefix="/admin/health", tags=["admin-health"])
@@ -70,6 +72,56 @@ class CacheHitTrendModel(BaseModel):
     cached_prompt_tokens: int
     hit_rate: float | None
     estimated_saving: float
+
+
+class AlertRuleModel(BaseModel):
+    rule: str
+    severity: str
+    triggered: bool
+    value: float | None
+    threshold: float | None
+    summary: str
+    facts: dict[str, Any]
+
+
+class AlertsModel(BaseModel):
+    status: str
+    evaluated_at: datetime
+    rules: list[AlertRuleModel]
+
+
+def _get_sse_metrics(request: Request) -> SseMetrics:
+    metrics: SseMetrics | None = getattr(request.app.state, "sse_metrics", None)
+    return metrics if metrics is not None else NullSseMetrics()
+
+
+@router.get("/alerts", response_model=AlertsModel)
+async def get_alerts(
+    session: SessionDep,
+    _identity: GuardDep,
+    request: Request,
+) -> AlertsModel:
+    """告警评估：Run 卡死、租约过期率、SSE 断流、连接池耗尽。
+
+    状态为 ok/warning/critical；阈值来自配置，事实可按同一窗口重算（验收主张 A4）。
+    """
+    report: AlertReport = await AlertService(session, metrics=_get_sse_metrics(request)).evaluate()
+    return AlertsModel(
+        status=report.status,
+        evaluated_at=report.evaluated_at,
+        rules=[
+            AlertRuleModel(
+                rule=rule.rule,
+                severity=rule.severity,
+                triggered=rule.triggered,
+                value=rule.value,
+                threshold=rule.threshold,
+                summary=rule.summary,
+                facts=rule.facts,
+            )
+            for rule in report.rules
+        ],
+    )
 
 
 @router.get("/run-status-distribution", response_model=RunStatusDistributionModel)
