@@ -50,6 +50,9 @@ class OutcomeModel(BaseModel):
     tool_accuracy: float
     task_success: bool | None
     tags: list[str]
+    answer: str | None = None
+    judge: dict[str, Any] | None = None
+    judge_score: float | None = None
 
 
 class MetricsModel(BaseModel):
@@ -59,6 +62,10 @@ class MetricsModel(BaseModel):
     task_success_rate: float | None
     total_passed: int
     by_tag: dict[str, dict[str, float]]
+    avg_judge_score: float | None = None
+    judge_scored: int = 0
+    judge_pass_rate: float | None = None
+    judge_dimensions: dict[str, float] | None = None
 
 
 class ReportItem(BaseModel):
@@ -291,6 +298,10 @@ def _build_detail(
             task_success_rate=metrics.get("task_success_rate"),
             total_passed=metrics.get("total_passed", 0),
             by_tag=metrics.get("by_tag", {}),
+            avg_judge_score=metrics.get("avg_judge_score"),
+            judge_scored=metrics.get("judge_scored", 0),
+            judge_pass_rate=metrics.get("judge_pass_rate"),
+            judge_dimensions=metrics.get("judge_dimensions"),
         ),
         outcomes=[
             OutcomeModel(
@@ -299,6 +310,9 @@ def _build_detail(
                 tool_accuracy=float(o.get("tool_accuracy", 0.0)),
                 task_success=o.get("task_success"),
                 tags=o.get("tags", []),
+                answer=o.get("answer"),
+                judge=o.get("judge"),
+                judge_score=o.get("judge_score"),
             )
             for o in outcomes
         ],

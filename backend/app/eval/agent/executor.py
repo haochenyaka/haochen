@@ -29,7 +29,7 @@ from app.agents import ResourcePolicy, ToolRegistry
 from app.config import Settings, get_settings
 from app.db import SessionFactory
 from app.eval.agent.dataset import ORDER_NO_PLACEHOLDER, AgentEvalItem
-from app.eval.agent.runner import EvalRunError
+from app.eval.agent.runner import CaseExecution, EvalRunError
 from app.eval.agent.seeds import apply_seed, release_eval_orders
 from app.repositories import (
     AUDIT_READ_LIMIT,
@@ -111,7 +111,7 @@ class RealCaseExecutor:
         self._session_factory = session_factory
         self._settings = settings
 
-    async def execute(self, item: AgentEvalItem) -> tuple[list[dict[str, object]], bool | None]:
+    async def execute(self, item: AgentEvalItem) -> CaseExecution:
         settings = self._settings or get_settings()
         if not settings.model_api_key:
             raise EvalRunError(
@@ -136,21 +136,30 @@ class RealCaseExecutor:
         entries: list[AuditEntry] = []
         thread_id: UUID | None = None
         outcome = ""
+        answer: str | None = None
         for turn_no, text in enumerate(turns, start=1):
             thread_id, run_id = await self._intake(item, text=text, thread_id=thread_id)
             outcome = str(await executor.execute(run_id))
             turn_entries = await self._audit_entries(run_id)
             entries.extend(turn_entries)
             tool_calls.extend(tool_calls_from_audit(turn_entries))
+            turn_answer = await self._answer_for_run(run_id)
+            if turn_answer is not None:
+                answer = turn_answer
             logger.info(
-                "评测用例 %s 第 %d 轮：run=%s outcome=%s 工具事实=%d",
+                "评测用例 %s 第 %d 轮：run=%s outcome=%s 工具事实=%d 回答=%d 字",
                 item.id,
                 turn_no,
                 run_id,
                 outcome,
                 len(turn_entries),
+                len(turn_answer or ""),
             )
-        return tool_calls, task_success_from(outcome, entries)
+        return CaseExecution(
+            tool_calls=tuple(tool_calls),
+            task_success=task_success_from(outcome, entries),
+            answer=answer,
+        )
 
     async def _intake(
         self, item: AgentEvalItem, *, text: str, thread_id: UUID | None
@@ -205,3 +214,12 @@ class RealCaseExecutor:
                 run_id=run_id, limit=AUDIT_READ_LIMIT
             )
         return list(timeline.entries)
+
+    async def _answer_for_run(self, run_id: UUID) -> str | None:
+        """回读该 Run 的最终助手回复；无回复（失败/中断）返回 None。"""
+        async with self._session_factory() as session:
+            message = await MessageRepository(session).get_reply_for_run(run_id)
+        if message is None or not isinstance(message.content, dict):
+            return None
+        text = message.content.get("text")
+        return text if isinstance(text, str) else None

@@ -19,14 +19,14 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前真正的"手上事"：P1 分支尚未提交（验收已全达成）
+当前状态：Phase 0–2 已全部交付（P2 经 PR #5 合入 main），下一入口为 Phase 3.1（BGE-M3 可行性 spike）
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
 | --- | --- | --- |
 | 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
 | 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
-| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | 排队 |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–2 ✅；Phase 3 待启动 |
 | 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
 
 ---
@@ -130,16 +130,12 @@
 
 **依赖**：P1 完成（数据集工具链校准依赖 Agent 拓扑）。**可提前做**：P2.1 + P2.2 的工具名对齐测试。
 
-- [ ] **P2.1 真实执行器**：新增 `RealCaseExecutor`：调真实编译图（同 `run_body` 路径），返回实际工具调用序列与任务成功标志。`runner.py:138` 的 `ScriptedCaseExecutor` 仅留给测试；生产入口 `admin_eval_agent_router.py:126` 注入 `RealCaseExecutor`。
-- [ ] **P2.2 数据集重建（LLM 生成 + 人工审核）**：
-  - Agent 评测集 **8 → 50+ 条**（订房/改期/取消/发票/客房服务/转人工/多轮/边界）。
-  - KB 评测集 **73 → 150+ 条**，gold 从**标题级升级到 chunk 级**。
-  - 生成流程：LLM 生成候选 → 导出 Excel/MD 供人工逐条审核 → 入库。
-  - **对齐工具名**：`orders.yaml:12` 的 `inquire_room_type` → `list_room_types`；`checkin.yaml` 的 `check_in` → `get_checkin_info`；`dispatch.yaml` 的 `dispatch_cleaning` → `request_room_clean`。加防漂移测试 `test_eval_dataset_tools_registered`（期望工具名必须存在于 `default_registry().names()`）。
-- [ ] **P2.3 LLM-as-judge 真实现**：`eval/agent/judge.py` 当前是占位（恒返回 None）。要点：实现相关性/事实性/语气/边界遵守评分（0-1 + 理由）；**judge 与生成用不同模型或不同温度**降自评偏差；加 self-consistency（多次采样取中位）；抽 10-20 条人工标注作校准集，报告 Cohen's kappa。
-- [ ] **P2.4 指标诚实化**：KB 报告以 `primary_top1_rate` + **chunk 级 recall** 为主指标，`recall@10` 降为参考；README 数字全部换「真实 embedding + 真实 rerank + chunk 级 gold」下的重测值（**须等 Phase 3 完成才能回填**）。
+- [x] **P2.1 真实执行器**：✅ 已交付 `RealCaseExecutor`（线程/消息/请求 → 队头 Run → `RunExecutor` → `tool_audit` 回读），支持同线程多轮回放并回读末轮回答；`ScriptedCaseExecutor` 仅留测试，管理端注入真实执行器。
+- [x] **P2.2 数据集重建（LLM 生成 + 人工审核）**：✅ Agent 评测集 8 → **61 条**（checkin 12 / orders 18 / dispatch 7 / handoff 6 / multi_turn 6 / composite 5 / edge 7，含 20 条多轮）；KB 评测集 73 → **169 题**，gold 升级为 `(document_title, ordinal)` 分块级锚点；人工审核记录在 `docs/eval/review/`；工具名已对齐并加防漂移守卫 `test_eval_dataset_tools_registered`。
+- [x] **P2.3 LLM-as-judge 真实现**：✅ 四维评分（相关性/事实性/语气/边界，0–1 + 理由）；评判温度 0.7（生成侧默认 0.2，可用 `AGENT_JUDGE_MODEL_NAME` 换模型）；自一致性采样 3 次逐维取中位；20 条人工校准集 + Cohen's kappa（产物 `docs/eval/agent-judge-calibration.json`，本次 **kappa=1.0**）；评判指标与逐题明细已写入报告，评判器身份进配置指纹。
+- [x] **P2.4 指标诚实化**：✅ 无答案评判时 KB `overall_score` 主指标切到 `chunk_recall@K`（无分块 gold 才退回文档级 `recall@K`）；README 已更新为 169 题、分块级 gold、`chunk_recall@10` 0.9675 / `primary@1` 0.6036，并标注开发态 embedding 口径；真实 embedding + rerank 数字仍留待 Phase 3 重测。
 
-**验收**：`pytest -m eval` 真跑通；报告落库且可复现（`runner.py` 已有 fingerprint 机制）；README 评测段落每个数字都能追到一份报告。
+**验收**：✅ `pytest -m eval` 真跑通（61/61，报告 ID 39–45）；评判覆盖 61/61、四维均分 0.9622、单题通过率 0.9016；报告落库且可复现（指纹机制含执行器与评判器身份）；README 评测段落数字均可追到报告或校准产物。
 
 ---
 

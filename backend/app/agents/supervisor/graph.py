@@ -156,7 +156,13 @@ def _resolve_route(
     Agent（按 `SUB_AGENT_ROUTES` 优先级）；全部子 Agent 都无工具时按原决策派发，保留无工具
     直答行为。
     """
-    if next_route == ROUTE_FINISH or len(dispatched) >= MAX_DISPATCHES:
+    if next_route == ROUTE_FINISH:
+        if dispatched:
+            return None
+        # 首轮没有任何子 Agent 处理过就收尾，等于把客人请求丢掉且图不会产出助手回复：
+        # 回落默认子 Agent（继续走下方的授权感知改派），由它给出可见答复。
+        next_route = DEFAULT_ROUTE
+    if len(dispatched) >= MAX_DISPATCHES:
         return None
     if next_route in dispatched:
         return None

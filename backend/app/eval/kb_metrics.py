@@ -9,7 +9,8 @@
 - chunk_recall@K / chunk_precision@K / chunk_f1@K = 同口径的分块级版本，锚点为
   (document_title, ordinal)，需题目给出 gold_chunks 且检索明细可解析，否则记 None；
 - answer_correctness 由评判模型给出（0–1），未配置模型时为 None；
-- overall_score 取有答案评判时的 answer_correctness，否则 recall@K（主指标切换见 P2.4）。
+- overall_score 的主指标优先级：有答案评判取 answer_correctness；否则有分块级黄金参考时取
+  chunk_recall@K；两者都没有才退回文档级 recall@K（recall@K 降为参考口径）。
 """
 
 from __future__ import annotations
@@ -170,7 +171,16 @@ def aggregate(outcomes: list[QuestionOutcome], *, k: int) -> EvalMetrics:
     scored = [item.answer_correctness for item in outcomes if item.answer_correctness is not None]
     answer_correctness = sum(scored) / len(scored) if scored else None
     recall = _mean([item.recall for item in outcomes])
-    overall_score = answer_correctness if answer_correctness is not None else recall
+    chunk_recall = _mean_or_none([item.chunk_recall for item in outcomes])
+    if answer_correctness is not None:
+        overall_score = answer_correctness
+        overall_metric = "answer_correctness"
+    elif chunk_recall is not None:
+        overall_score = chunk_recall
+        overall_metric = f"chunk_recall@{k}"
+    else:
+        overall_score = recall
+        overall_metric = f"recall@{k}"
     return EvalMetrics(
         questions=total,
         k=k,
@@ -182,8 +192,8 @@ def aggregate(outcomes: list[QuestionOutcome], *, k: int) -> EvalMetrics:
         answer_correctness=answer_correctness,
         answered=len(scored),
         overall_score=overall_score,
-        overall_metric="answer_correctness" if answer_correctness is not None else f"recall@{k}",
-        chunk_recall_at_k=_mean_or_none([item.chunk_recall for item in outcomes]),
+        overall_metric=overall_metric,
+        chunk_recall_at_k=chunk_recall,
         chunk_precision_at_k=_mean_or_none([item.chunk_precision for item in outcomes]),
         chunk_f1_at_k=_mean_or_none([item.chunk_f1 for item in outcomes]),
     )

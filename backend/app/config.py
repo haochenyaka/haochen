@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     model_temperature: float = 0.2
     model_timeout_seconds: float = 60.0
 
+    # P2.3 Agent 答案评判：与生成侧不同模型或不同温度，多次采样取中位（自一致性）。
+    # 评判模型留空时复用 MODEL_NAME，但温度默认与生成温度 0.2 区分。
+    agent_judge_model_name: str = ""
+    agent_judge_temperature: float = 0.7
+    agent_judge_samples: int = 3
+    agent_judge_pass_threshold: float = 0.6
+
     # 上下文与中间件：阈值是压缩与卸载的唯一口径，仅按环境覆盖
     workdir_root: str = "data/workdir"
     # Skill 内容根：留空取与 app 包同级的 skills/（源码树 backend/skills，容器 /srv/app/skills）

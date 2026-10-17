@@ -1,6 +1,6 @@
 {
-  "report_id": 2,
-  "generated_at": "2026-10-16T14:05:28+00:00",
+  "report_id": 3,
+  "generated_at": "2026-10-17T06:20:20+00:00",
   "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\kb_faq.jsonl",
   "k": 10,
   "dataset_fingerprint": "sha256:11ab3b5ffc113f0c9ff09719b5468b90b4d5a71f1b85f228f9dfdbdebffcccf2",
@@ -31,13 +31,15 @@
     "hit_rate": 0.982249,
     "answer_correctness": null,
     "answered": 0,
-    "overall_score": 0.976331,
-    "overall_metric": "recall@10",
+    "overall_score": 0.967456,
+    "overall_metric": "chunk_recall@10",
     "chunk_recall_at_k": 0.967456,
     "chunk_precision_at_k": 0.116967,
     "chunk_f1_at_k": 0.206766
   },
-  "comparable_reports": [],
+  "comparable_reports": [
+    2
+  ],
   "superseded_reports": [],
   "outcomes": [
     {

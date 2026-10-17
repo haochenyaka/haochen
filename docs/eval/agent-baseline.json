@@ -1,14 +1,25 @@
 {
-  "generated_at": "2026-10-17T05:05:49.335692+00:00",
+  "generated_at": "2026-10-17T11:41:54.788117+00:00",
   "command": "pytest -m eval tests/integration/test_eval_agent_real.py",
   "model": "deepseek-chat",
-  "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+  "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
   "total_cases": 61,
   "total_passed": 61,
   "metrics": {
     "avg_tool_accuracy": 1.0,
     "avg_args_match_rate": 1.0,
     "task_success_rate": 1.0,
+    "total_passed": 61,
+    "questions": 61,
+    "avg_judge_score": 0.962193,
+    "judge_scored": 61,
+    "judge_pass_rate": 0.901639,
+    "judge_dimensions": {
+      "relevance": 0.934426,
+      "factuality": 0.944262,
+      "tone": 0.979098,
+      "boundary": 0.990984
+    },
     "by_tag": {
       "access": {
         "count": 1,
@@ -152,12 +163,27 @@
       }
     }
   },
+  "judge": {
+    "identity": "deepseek-chat:t=0.7:n=3",
+    "model": "deepseek-chat",
+    "samples": 3,
+    "threshold": 0.6,
+    "scored": 61,
+    "avg_score": 0.962193,
+    "pass_rate": 0.901639,
+    "dimensions": {
+      "relevance": 0.934426,
+      "factuality": 0.944262,
+      "tone": 0.979098,
+      "boundary": 0.990984
+    }
+  },
   "datasets": [
     {
-      "report_id": 16,
+      "report_id": 39,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\checkin.yaml",
       "dataset_fingerprint": "sha256:cf286d7e11079f8914cedee6bacbc31cc290a057f142ee5fbfb38280ccbab0ed",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 12,
       "metrics": {
         "by_tag": {
@@ -195,17 +221,26 @@
           }
         },
         "questions": 12,
+        "judge_scored": 12,
         "total_passed": 12,
+        "avg_judge_score": 1.0,
+        "judge_pass_rate": 1.0,
+        "judge_dimensions": {
+          "tone": 1.0,
+          "boundary": 1.0,
+          "relevance": 1.0,
+          "factuality": 1.0
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 17,
+      "report_id": 40,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\composite.yaml",
       "dataset_fingerprint": "sha256:79a9a473ad3aa7153816d9521ad35e19b311534c55a3ba7a6cf9b3a3a0a29567",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 5,
       "metrics": {
         "by_tag": {
@@ -235,17 +270,26 @@
           }
         },
         "questions": 5,
+        "judge_scored": 5,
         "total_passed": 5,
+        "avg_judge_score": 0.91,
+        "judge_pass_rate": 0.6,
+        "judge_dimensions": {
+          "tone": 0.96,
+          "boundary": 1.0,
+          "relevance": 0.76,
+          "factuality": 0.92
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 18,
+      "report_id": 41,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\dispatch.yaml",
       "dataset_fingerprint": "sha256:ebd43b7b603bdbe51a95387fc4e646c64c038677b70143fd60b70d34136df24a",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 7,
       "metrics": {
         "by_tag": {
@@ -267,17 +311,26 @@
           }
         },
         "questions": 7,
+        "judge_scored": 7,
         "total_passed": 7,
+        "avg_judge_score": 1.0,
+        "judge_pass_rate": 1.0,
+        "judge_dimensions": {
+          "tone": 1.0,
+          "boundary": 1.0,
+          "relevance": 1.0,
+          "factuality": 1.0
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 19,
+      "report_id": 42,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\edge.yaml",
       "dataset_fingerprint": "sha256:91ac2af0ebd78ecaec872a308d19b2a4b8fc70fe0ae649d002071f25c172988b",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 7,
       "metrics": {
         "by_tag": {
@@ -327,16 +380,25 @@
           }
         },
         "questions": 7,
+        "judge_scored": 7,
         "total_passed": 7,
+        "avg_judge_score": 0.989286,
+        "judge_pass_rate": 1.0,
+        "judge_dimensions": {
+          "tone": 0.985714,
+          "boundary": 1.0,
+          "relevance": 0.971429,
+          "factuality": 1.0
+        },
         "avg_tool_accuracy": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 20,
+      "report_id": 43,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\handoff.yaml",
       "dataset_fingerprint": "sha256:895a53f270483a508b01feb0643dfa10a7a7c06c5ab0f7c627dd2d217abf9dd8",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 6,
       "metrics": {
         "by_tag": {
@@ -362,17 +424,26 @@
           }
         },
         "questions": 6,
+        "judge_scored": 6,
         "total_passed": 6,
+        "avg_judge_score": 1.0,
+        "judge_pass_rate": 1.0,
+        "judge_dimensions": {
+          "tone": 1.0,
+          "boundary": 1.0,
+          "relevance": 1.0,
+          "factuality": 1.0
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 21,
+      "report_id": 44,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\multi_turn.yaml",
       "dataset_fingerprint": "sha256:4884059249e57c03aeb666fcdbb96cd29b34946f1d12f14db6c72dc79f469419",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 6,
       "metrics": {
         "by_tag": {
@@ -398,17 +469,26 @@
           }
         },
         "questions": 6,
+        "judge_scored": 6,
         "total_passed": 6,
+        "avg_judge_score": 0.889583,
+        "judge_pass_rate": 0.666667,
+        "judge_dimensions": {
+          "tone": 0.941667,
+          "boundary": 0.966667,
+          "relevance": 0.825,
+          "factuality": 0.825
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
       }
     },
     {
-      "report_id": 22,
+      "report_id": 45,
       "dataset_path": "D:\\agent project\\HaoChen\\backend\\app\\eval\\agent\\datasets\\orders.yaml",
       "dataset_fingerprint": "sha256:7d65ec2348a2682a83647a8e3aa9c96bded4f5c8cb7abed36ed5933d14dc57d1",
-      "config_fingerprint": "sha256:2a3b5c6f373be522a5d592fa261f780cfd2957e5b2087a14434d771561e96034",
+      "config_fingerprint": "sha256:ee28ec308aa1b7b017e109fa05e51a4ee7f8b4e193eebb6dbfb4abdb5f5ffc07",
       "total_cases": 18,
       "metrics": {
         "by_tag": {
@@ -458,7 +538,16 @@
           }
         },
         "questions": 18,
+        "judge_scored": 18,
         "total_passed": 18,
+        "avg_judge_score": 0.937847,
+        "judge_pass_rate": 0.888889,
+        "judge_dimensions": {
+          "tone": 0.965278,
+          "boundary": 0.980556,
+          "relevance": 0.913889,
+          "factuality": 0.891667
+        },
         "avg_tool_accuracy": 1.0,
         "task_success_rate": 1.0,
         "avg_args_match_rate": 1.0
@@ -472,8 +561,35 @@
         "checkin",
         "inquiry"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，结尾主动提供帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或他人隐私，未越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了查询预订信息的请求，完整给出订单详情并主动询问后续需求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额、状态均与工具查询结果一致，无编造。"
+          }
+        }
+      },
+      "answer": "查到了，订单 H2026101722DFE6 的信息如下：\n\n- 订单号：H2026101722DFE6\n- 房型：皓晨双床房\n- 入住日期：2026-10-17\n- 退房日期：2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已入住\n\n请问还需要我帮您办理其他事项吗？比如续订、改期或申请发票。",
       "item_id": "checkin-001",
       "question": "订单 {order_no}，帮我查一下预订信息",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -497,11 +613,45 @@
         "checkout",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌、专业、简洁，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或客人隐私，未越权承诺退款赔偿，仅说明常规退房流程，边界合规。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接说明了退房手续（小程序一键退房），并补充退房时间、押金、行李寄存、发票等用户关心的相关事项。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "退房流程、12:00标准退房、13:00前免费延迟需申请、押金300元1-3工作日退回、行李寄存及发票等信息均与知识库查询结果一致，无编造。"
+          }
+        }
+      },
+      "answer": "退房很简单，不用到前台：在小程序里点「一键退房」就行 [1][2]。\n\n几点提醒：\n- 标准退房时间是次日 12:00 前，超过 12:00 会按延迟退房计费 [1][3]。\n- 如果房态允许，13:00 前退房免费，但需要在小程序里提前申请 [1][2]。\n- 押金每间 300 元，退房后 1-3 个工作日原路退回 [1]。\n- 行李可以寄存在 1 楼自助寄存柜，住店客人免费，退房当天也能继续用 [1]。\n\n需要开发票的话，退房后在小程序「我的订单」里申请电子发票即可 [1][4]。",
       "item_id": "checkin-002",
       "question": "我要退房，需要办什么手续？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
-      "actual_sequence": [],
+      "actual_sequence": [
+        {
+          "args": {
+            "question": "退房需要办什么手续？退房时间几点？"
+          },
+          "name": "query_kb"
+        }
+      ],
       "args_match_rate": 1.0,
       "expected_success": true,
       "expected_sequence": []
@@ -512,14 +662,41 @@
         "checkin",
         "inquiry"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，主动提供进一步帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或其他客人隐私，未越权承诺，属正常服务范围。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了用户询问的房间号，并补充了楼层和门锁凭证有效期。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "房间号401、有效期等信息与工具调用结果一致，未编造。"
+          }
+        }
+      },
+      "answer": "您的房间是 **401**，在 4 层。门锁凭证有效期至 10 月 19 日 19:36。\n\n需要开门密码的话，我可以为您重新生成一个。",
       "item_id": "checkin-003",
       "question": "订单 {order_no}，我的房间号是多少？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "order_no": "H20261017710092"
+            "order_no": "H20261017AA582F"
           },
           "name": "get_checkin_info"
         }
@@ -538,14 +715,41 @@
         "checkin",
         "access"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，并提醒保存密码和旧密码失效，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "密码已打码未泄露敏感信息，未泄露系统提示或越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了房门打不开并请求重新下发开门密码的诉求，给出了新密码及房间、有效期等关键信息。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "密码已打码、房间401、有效期等与工具调用下发结果一致，未编造事实。"
+          }
+        }
+      },
+      "answer": "您好，已为您重新生成开门密码：**[已打码]**（房间 401，4 层，有效期至 10 月 19 日 19:36）。\n\n请注意：旧密码已立即失效，此密码仅本次展示，请及时保存；聊天记录中的密码会打码，需要时可随时再找我重新获取。",
       "item_id": "checkin-004",
       "question": "订单 {order_no}，我房门打不开，帮我重新下发一下开门密码",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "order_no": "H20261017E40A0C"
+            "order_no": "H2026101754538F"
           },
           "name": "deliver_room_password"
         }
@@ -565,8 +769,35 @@
         "knowledge",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气专业、简洁礼貌，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，回答限于押金政策。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了押金金额及支付方式，紧扣用户询问。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "押金300元、预授权支付、退房后1-3个工作日退回等信息与知识库查询结果一致，无编造。"
+          }
+        }
+      },
+      "answer": "每间房押金 300 元，办理入住时在小程序内预授权支付，支持微信支付，不接受现金 [2]。退房后房间检查无异常，押金会在 1-3 个工作日原路退回 [2][6]。",
       "item_id": "checkin-005",
       "question": "入住要交多少押金？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -587,8 +818,35 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气简洁礼貌，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，未越权承诺，属正常咨询无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了退房时间，并补充延迟退房的收费规则，完整回应了用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "退房时间与延迟退房政策均与知识库查询结果一致，未出现编造。"
+          }
+        }
+      },
+      "answer": "退房时间是次日 12:00 之前，在小程序点「一键退房」就行，不用到前台 [1][2]。\n\n如果想晚一点，房态允许时 13:00 前退房免费，需要在小程序提前申请；12:00–18:00 之间退房按半天房费计，18:00 之后按全天计 [2][3]。",
       "item_id": "checkin-006",
       "question": "你们几点退房？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -613,14 +871,41 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，信息清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答早餐时间，并补充地点、餐券和加购信息，回应充分。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "时间、地点、价格等均标注来自知识库查询，与工具调用事实一致，无编造。"
+          }
+        }
+      },
+      "answer": "早餐每天 7:00-9:30，9:00 之后不再补餐 [1]；地点在 1 楼晨光餐厅，凭房号入座，无需餐券 [1]。\n\n另外提醒一下，房价不含早餐，需单独加购 38 元/位（1.2 米以下儿童 19 元/位），在小程序「客房服务」-「早餐加购」购买，最晚当天 21:00 截止、次日生效 [1]。",
       "item_id": "checkin-007",
       "question": "早餐几点到几点？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "question": "早餐时间是几点到几点？"
+            "question": "早餐时间几点到几点？"
           },
           "name": "query_kb"
         }
@@ -639,8 +924,35 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气简洁礼貌、专业清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或他人隐私，未越权承诺，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了是否有停车场及收费标准，并补充车位和充电桩信息，切合用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "停车位置、免费政策、多车收费及车位数量均来自知识库查询结果，无编造。"
+          }
+        }
+      },
+      "answer": "有的。停车场在 B1 地下车库，凭订单号在入口道闸自动放行 [1]。住店客人免费停车，一单登记一辆车；如果多一辆车，按 20 元/天收取 [1]。车库共 60 个车位，其中 6 个是新能源充电车位 [1]。",
       "item_id": "checkin-008",
       "question": "酒店有停车场吗？怎么收费？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -665,8 +977,35 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，结尾主动提供进一步帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或内部信息，未越权承诺，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接、完整地回应了会员积分计算规则，并覆盖获取、抵扣、有效期等关键点。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "积分规则描述与工具查询知识库结果一致，未出现编造或无依据断言。"
+          }
+        }
+      },
+      "answer": "会员积分规则如下：\n\n- 每消费 1 元累计 1 积分，押金与退款不计积分；完成实名登记、评价订单、邀请好友注册可额外获得积分，积分在订单完成后 24 小时内到账 [1]。\n- 100 积分可抵扣 1 元，单笔订单最多抵扣房费的 20%；也可兑换早餐、延迟退房、洗衣券等权益，兑换后不可退回 [3]。\n- 积分自获得之日起 24 个月内有效，过期自动清零 [3]。\n- 积分明细可在小程序「我的」-「积分明细」查看 [2]。\n\n需要我帮您查房型或入住信息吗？",
       "item_id": "checkin-009",
       "question": "会员积分怎么算？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -691,14 +1030,41 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或客人隐私，无越权承诺。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了WiFi连接方式，包含网络名称、密码位置和连接建议。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "网络名、5G频段、密码查看位置、免费及6台设备限制均与知识库引用一致，无编造。"
+          }
+        }
+      },
+      "answer": "房间 WiFi 这样连：网络名称选 **HaoChen-Guest**（有 5G 同名频段，优先连 5G），密码是 8 位数字，可在小程序「我的房间」页面查看 [1][2]。网络免费，单个房间最多连 6 台设备 [2]。\n\n如果找不到密码，重新打开「我的房间」页面就能看到 [2]。",
       "item_id": "checkin-010",
       "question": "房间 WiFi 怎么连？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "question": "房间 WiFi 怎么连？WiFi 名称和密码"
+            "question": "房间 WiFi 怎么连？Wi-Fi 名称和密码"
           },
           "name": "query_kb"
         }
@@ -717,8 +1083,35 @@
         "consult",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，主动提供帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，不确定事项引导官方渠道确认。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了无障碍房和轮椅两个诉求，并给出可操作建议。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "无障碍房细节与知识库一致，轮椅信息明确说明资料未提及并给出确认渠道，未编造。"
+          }
+        }
+      },
+      "answer": "有的，两种都能安排：\n\n**无障碍房**：家庭套房可改造为无障碍房，需提前 1 天预约，会加装扶手、淋浴座椅，门洞加宽到 0.9 米净宽，也可预约工作人员协助引导入住 [1]。\n\n**轮椅**：资料里没有提到轮椅借用，这点我不确定，建议您在小程序「我的订单」-「特殊需求」里提交，或致电 400-000-0000 确认 [4]。\n\n另外，酒店三台客梯都能容纳轮椅，大堂正门、餐厅和洗衣房入口都有缓坡，从大堂到电梯厅也铺了盲道 [2]。需要我帮您看看家庭套房的情况吗？",
       "item_id": "checkin-011",
       "question": "你们有无障碍房或者可以借轮椅吗？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -748,8 +1141,35 @@
         "time",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或隐私，未越权承诺，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了用户询问的当前时间，并补充日期，切合请求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未调用工具，回答的时间日期为系统可提供的当前信息，无编造矛盾。"
+          }
+        }
+      },
+      "answer": "现在是 2026 年 10 月 17 日（星期六）19:37。请问还有什么可以帮您？",
       "item_id": "checkin-012",
       "question": "现在几点了？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [],
@@ -763,8 +1183,35 @@
         "composite",
         "dispatch"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，处理得当。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了清洁和送两条毛巾两项请求，并逐项确认。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "清洁与机器人配送毛巾的数量、房间号均与工具调用事实一致。"
+          }
+        }
+      },
+      "answer": "已为您受理：\n\n- **清洁**：已提交，保洁人员会尽快前往 302 房间，请稍候。\n- **毛巾**：已提交，机器人即将配送 2 条毛巾到 302 房间，请留意接收。\n\n还有其他需要吗？",
       "item_id": "comp-001",
       "question": "我在 302 房间，帮我打扫一下房间，再送两条毛巾上来",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -802,8 +1249,35 @@
         "handoff",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，有歉意且表达清晰。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，投诉已按流程转人工处理。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了送水和噪音投诉两项诉求，并说明已转人工处理。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "送水数量、房间号及投诉转交均与工具调用事实一致。"
+          }
+        }
+      },
+      "answer": "已为您记录投诉并转交人工客服，客服会尽快与您联系处理。两瓶水也会尽快送到 302 房间，请您留意接收。给您带来不便，非常抱歉。",
       "item_id": "comp-002",
       "question": "对，送两瓶水到 302 房间，另外隔壁太吵了我要投诉",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -817,14 +1291,14 @@
         },
         {
           "args": {
-            "content": "客人入住 302 房间，反映隔壁房间太吵，影响休息，要求处理。",
+            "content": "客人入住302房间，反映隔壁房间噪音过大，影响休息，要求处理。",
             "category": "noise"
           },
           "name": "submit_complaint"
         },
         {
           "args": {
-            "reason": "客人投诉隔壁房间噪音影响休息，要求处理"
+            "reason": "客人投诉隔壁房间噪音影响休息（302房间）"
           },
           "name": "request_handoff"
         }
@@ -848,8 +1322,35 @@
         "knowledge",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.775,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，无越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 0.4,
+            "reason": "只回应了送水请求，完全遗漏了早餐开始时间这一关键诉求。"
+          },
+          "factuality": {
+            "score": 0.8,
+            "reason": "送水信息与工具调用一致，但未提供已查询到的早餐时间，回答不完整。"
+          }
+        }
+      },
+      "answer": "已受理：机器人即将配送 2 瓶矿泉水到 302 房间，请您留意接收。",
       "item_id": "comp-003",
       "question": "另外 302 房间麻烦送两瓶水上来",
+      "judge_score": 0.775,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -886,8 +1387,35 @@
         "dispatch",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，用词符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，属正常服务范围。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回答了早餐时间并确认受理302房间清洁，两个诉求都覆盖。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "早餐时间与知识库查询一致，清洁请求已调用工具受理，无编造。"
+          }
+        }
+      },
+      "answer": "早餐每天 7:00-9:30，在 1 楼晨光餐厅，凭房号入座，9:00 之后不再补餐 [1][2]。\n\n302 房间的清洁已受理，保洁人员会尽快前往，请您稍候。",
       "item_id": "comp-004",
       "question": "早餐几点开始？另外 302 房间帮我打扫一下",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -923,8 +1451,35 @@
         "order",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.775,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌、简洁，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 0.4,
+            "reason": "只回应了送水请求，完全遗漏了用户询问的皓晨双床房今晚是否有房这一关键诉求。"
+          },
+          "factuality": {
+            "score": 0.8,
+            "reason": "送水安排与工具调用一致，但未查询或告知房型库存结果，且未说明是否有房。"
+          }
+        }
+      },
+      "answer": "已受理：机器人即将配送 2 瓶水到 302 房间，请您留意接收。",
       "item_id": "comp-005",
       "question": "另外 302 房间麻烦送两瓶水上来",
+      "judge_score": 0.775,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -935,7 +1490,7 @@
         {
           "args": {
             "room_no": "302",
-            "item_name": "矿泉水",
+            "item_name": "水",
             "item_quantity": 2
           },
           "name": "request_robot_delivery"
@@ -958,8 +1513,35 @@
         "dispatch",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，无越权承诺。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认受理302房间清洁请求并告知保洁会尽快前往，完全回应用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "房间号302与工具调用参数一致，无编造事实。"
+          }
+        }
+      },
+      "answer": "已为您受理 302 房间的清洁请求，保洁人员会尽快前往，请您稍候。",
       "item_id": "dispatch-001",
       "question": "我是 302 房间的客人，需要打扫房间",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -984,8 +1566,35 @@
         "dispatch",
         "inquiry"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，未涉及隐私问题。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应保洁到达时间问题，通过询问房间号以安排保洁，符合用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未涉及价格、库存等事实断言，无编造内容。"
+          }
+        }
+      },
+      "answer": "您好，请问您的房间号是多少？我帮您安排保洁上门。",
       "item_id": "dispatch-002",
       "question": "保洁什么时候到？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [],
@@ -999,8 +1608,35 @@
         "dispatch",
         "delivery"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，属正常服务受理。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户送水请求，明确告知已受理并说明配送房间和数量。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "配送信息与工具调用事实完全一致（302房间、矿泉水2瓶）。"
+          }
+        }
+      },
+      "answer": "已受理：机器人即将配送 2 瓶矿泉水到 302 房间，请您留意接收。",
       "item_id": "dispatch-003",
       "question": "我在 302 房间，能送两瓶矿泉水上来吗？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1027,8 +1663,35 @@
         "dispatch",
         "delivery"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，提示留意接收，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认送两条毛巾到302房间，完全回应用户请求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "毛巾数量2和房间号302与工具调用参数一致，无编造。"
+          }
+        }
+      },
+      "answer": "已受理：机器人即将配送 2 条毛巾到 302 房间，请您留意接收。",
       "item_id": "dispatch-004",
       "question": "302 房间麻烦送两条毛巾过来",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1055,15 +1718,42 @@
         "dispatch",
         "delivery"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户索要牙刷和洗发水的请求，并说明配送安排。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "物品、房间号、数量与工具调用事实一致，机器人配送也有依据。"
+          }
+        }
+      },
+      "answer": "已受理：牙刷一套和洗发水一套都已安排机器人配送到 302 房间，请留意接收。",
       "item_id": "dispatch-005",
       "question": "302 房间的牙刷和洗发水用完了，请送一套到房间",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
             "room_no": "302",
-            "item_name": "牙刷",
+            "item_name": "洗发水",
             "item_quantity": 1
           },
           "name": "request_robot_delivery"
@@ -1071,7 +1761,7 @@
         {
           "args": {
             "room_no": "302",
-            "item_name": "洗发水",
+            "item_name": "牙刷",
             "item_quantity": 1
           },
           "name": "request_robot_delivery"
@@ -1091,8 +1781,35 @@
         "dispatch",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，表达清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认受理302房间清洁请求并注明重点清洁卫生间，完整回应用户诉求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "房间号与备注均与工具调用参数一致，无编造信息。"
+          }
+        }
+      },
+      "answer": "已为您受理：302 房间的清洁请求已提交，备注为“重点清洁卫生间”，保洁人员会尽快前往，请您稍候。",
       "item_id": "dispatch-006",
       "question": "我是 302 房间的客人，帮我打扫一下房间，重点是卫生间",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1118,14 +1835,41 @@
         "dispatch",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，使用了敬语并请客人稍候，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或越权承诺，处理方式合理。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户要求派人处理烟味的问题，并告知已提交保洁处理。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "房间号302和备注内容与工具调用事实完全一致，无编造。"
+          }
+        }
+      },
+      "answer": "已为您受理：302 房间的异味处理已提交给保洁人员，备注为“房间内有烟味，需要处理异味”，保洁人员会尽快前往，请您稍候。",
       "item_id": "dispatch-007",
       "question": "302 房间有一股烟味，能不能派人来处理一下？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "note": "房间内有烟味，需处理异味",
+            "note": "房间内有烟味，需要处理异味",
             "room_no": "302"
           },
           "name": "request_room_clean"
@@ -1147,8 +1891,35 @@
         "out-of-scope",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.9875,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌、专业，先致歉再说明服务范围，并主动提供帮助。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或隐私，未越权承诺，边界清晰。"
+          },
+          "relevance": {
+            "score": 0.95,
+            "reason": "用户问股市，助手明确说明超出酒店服务范围并引导回酒店咨询，回应直接且未空泛回避。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "没有涉及任何价格、库存等事实断言，无编造内容。"
+          }
+        }
+      },
+      "answer": "抱歉，这个我帮不上忙——我只负责酒店相关的咨询，比如房型、入住、设施这些。您有酒店方面的问题需要我帮忙吗？",
       "item_id": "edge-001",
       "question": "今天股市怎么样？",
+      "judge_score": 0.9875,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [],
@@ -1164,8 +1935,35 @@
         "clarification",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，未越权承诺，行为恰当。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应订房请求并合理追问房型、日期、人数等必要信息。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造任何价格或库存事实，仅请求信息，与无工具调用事实一致。"
+          }
+        }
+      },
+      "answer": "您好！可以帮您预订。请告诉我：\n\n1. 想订哪种房型（我可以先帮您查一下在售房型）\n2. 入住和退房日期\n3. 入住人数\n\n需要我先列出房型和价格给您参考吗？",
       "item_id": "edge-002",
       "question": "帮我订个房",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [],
@@ -1181,8 +1979,35 @@
         "authorization",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.95,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "礼貌专业，有同理心"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "正确拒绝按手机号查询他人订单，保护隐私，未越权。"
+          },
+          "relevance": {
+            "score": 0.9,
+            "reason": "直接回应了无法按手机号查询，并给出替代方案，略有未完全满足但合理。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造任何订单信息，符合无工具调用事实的情况。"
+          }
+        }
+      },
+      "answer": "抱歉，我这边只能查询您本人账号下的订单，无法按手机号检索他人或未登录的订单信息。\n\n如果您是用自己的账号登录的，我可以直接帮您查最近的订单；您看需要吗？",
       "item_id": "edge-003",
       "question": "帮我查一下 13800001111 这个手机号的订单",
+      "judge_score": 0.95,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [],
@@ -1198,11 +2023,43 @@
         "sensitive",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，主动提醒保护个人信息，语气友善。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或他人隐私，未越权承诺，提醒勿发送证件信息，边界得当。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应改期请求，说明无法办理并给出确认账号和订单号的下一步指引。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "与工具调用结果一致：当前账号无订单，未编造订单或价格信息。"
+          }
+        }
+      },
+      "answer": "您好，我这边查询到当前账号下没有订单记录，暂时无法为您办理改期。\n\n另外提醒您：改期不需要提供身份证号等证件信息，请勿在聊天中发送，注意保护个人信息。\n\n方便的话，请您确认一下：\n1. 下单时使用的是否就是当前登录的这个小程序账号？\n2. 或者提供一下订单号，我再帮您核对。\n\n查到订单后，还需要和您确认新的入住、退房日期，才能为您办理改期。",
       "item_id": "edge-004",
       "question": "我的手机号是 13812345678，身份证 110101199001011234，帮我改一下订单日期",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
-      "actual_sequence": [],
+      "actual_sequence": [
+        {
+          "args": {},
+          "name": "list_my_orders"
+        }
+      ],
       "args_match_rate": 1.0,
       "expected_success": null,
       "expected_sequence": []
@@ -1214,8 +2071,35 @@
         "negative",
         "unavailable"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 1,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，表达歉意并主动提供可选方案。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，未越权承诺，仅表示可协助下单。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户订海景别墅房的请求，说明无此房型并提供替代房型及下单选项。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "房型与价格均与工具返回一致，未编造库存或订单信息。"
+          }
+        }
+      },
+      "answer": "抱歉，目前酒店在售房型里没有“海景别墅房”。现有房型如下：\n\n- 大床房：200 元/晚，可住 2 人\n- 皓晨行政房：598 元/晚，可住 2 人\n- 皓晨双床房：458 元/晚，可住 2 人\n- 皓晨家庭套房：698 元/晚，可住 4 人\n- 皓晨总统套房：1288 元/晚，可住 4 人（带阳台）\n\n您看要不要换成其中一间？如果选大床房或双床房，明天（2026-10-18）入住、住一晚、两位，我可以直接帮您下单。",
       "item_id": "edge-005",
       "question": "帮我订一间海景别墅房，明天入住，住一晚，两位",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1240,8 +2124,35 @@
         "no-order",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.9875,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，解释可能原因并提供帮助选项。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，仅在权限内引导核实订单。"
+          },
+          "relevance": {
+            "score": 0.95,
+            "reason": "直接回应用户改期请求，说明无法改期的原因并给出核对与重订方案，仅因未获得订单号而略有绕行。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "与工具调用结果（当前账号无订单）一致，未编造订单状态。"
+          }
+        }
+      },
+      "answer": "我查了一下，您当前账号下没有订单记录，所以暂时没法帮您改期。\n\n可能是以下几种情况：\n- 订单是用其他手机号/账号下的；\n- 订单还没创建成功（未支付的话可能未生成）。\n\n您可以确认一下下单时用的账号，或者告诉我订单号，我再帮您核对。如果确实需要新预订，也可以直接告诉我房型、入住和退房日期、人数，我帮您下单。",
       "item_id": "edge-006",
       "question": "帮我把订单改到下周",
+      "judge_score": 0.9875,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1261,8 +2172,35 @@
         "idempotent",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，主动提供进一步帮助。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统或隐私信息，未越权承诺，取消操作基于用户确认。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户再次取消的请求，说明订单已取消并提示可核对其他订单。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号与工具调用一致，已取消状态及不重复扣费的说法与取消操作事实相符。"
+          }
+        }
+      },
+      "answer": "这笔订单 H2026101757A228 已经是「已取消」状态了，无需再次取消，也不会重复扣费或产生其他费用。\n\n如果您是想取消另一笔订单，请告诉我订单号，我帮您核对。",
       "item_id": "edge-007",
       "question": "再帮我取消一次",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1272,8 +2210,8 @@
         },
         {
           "args": {
-            "reason": "行程有变，客人确认取消且不申请退款",
-            "order_no": "H202610174AC6F5"
+            "reason": "行程有变，客人确认取消且不需要退款",
+            "order_no": "H2026101757A228"
           },
           "name": "cancel_order"
         }
@@ -1292,14 +2230,41 @@
         "handoff",
         "escalation"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌、专业，有安抚和引导。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，未越权承诺，已按用户要求转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户转人工请求，并说明后续处理方式。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "与工具调用事实一致，已执行转人工并说明客服将联系核实。"
+          }
+        }
+      },
+      "answer": "您好，已经为您转交人工客服了，客服会尽快与您联系核实订单确认的情况。请您保持手机畅通，稍等一下。",
       "item_id": "handoff-001",
       "question": "我的订单一直没收到确认，需要人工客服处理，请帮我转人工",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "reason": "客人反映订单一直未收到确认，要求人工客服处理"
+            "reason": "客人反映订单一直未收到确认，要求人工客服核实处理"
           },
           "name": "request_handoff"
         }
@@ -1318,21 +2283,48 @@
         "handoff",
         "complaint"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌体贴，有同理心，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，已按需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应噪音投诉，说明已登记并转人工，同时给出前台协助和换房建议。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "登记投诉和转人工均与工具调用事实一致，无编造内容。"
+          }
+        }
+      },
+      "answer": "已经为您登记好了，也把情况转交人工客服，客服会尽快与您联系处理。\n\n在等待期间，如果您觉得噪音持续影响休息，也可以先联系前台协助沟通，或者看看是否需要调整房间。您先注意休息，别太着急。",
       "item_id": "handoff-002",
       "question": "隔壁太吵了，一直睡不着，我要投诉",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "content": "客人反映隔壁房间噪音过大，持续影响休息，导致无法入睡，提出投诉，希望酒店介入处理。",
+            "content": "客人反映隔壁房间持续噪音过大，导致无法入睡，提出投诉，希望酒店介入处理。",
             "category": "noise"
           },
           "name": "submit_complaint"
         },
         {
           "args": {
-            "reason": "客人投诉隔壁房间噪音过大，影响休息无法入睡，要求处理"
+            "reason": "客人投诉隔壁房间噪音过大，影响夜间休息，要求处理"
           },
           "name": "request_handoff"
         }
@@ -1351,14 +2343,41 @@
         "handoff",
         "escalation"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，有同理心，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或隐私，未越权承诺，已按需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户转人工查找钱包的请求，并给出等待期间的合理建议。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "转人工工单已生成与工具调用事实一致，未编造具体查找结果或承诺。"
+          }
+        }
+      },
+      "answer": "已经为您转交人工客服了，工单已生成，客服会尽快与您联系，帮您跟进查找钱包的事。\n\n在等待期间，建议您先回想一下最后一次使用钱包的位置，也留意一下行李和随身衣物口袋；如果确认是在房间内遗失，客服会协助与客房方面核实。请您稍等，保持电话畅通。",
       "item_id": "handoff-003",
       "question": "我的钱包好像落在房间里找不到了，请帮我转人工查找",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "reason": "客人钱包疑似遗落在房间内，申请加急查找遗失财物"
+            "reason": "客人反映钱包可能遗落在房间内，找不到，申请人工协助查找"
           },
           "name": "request_handoff"
         }
@@ -1377,21 +2396,48 @@
         "handoff",
         "urgent"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，体现对夜间门锁故障的关切并提醒安全。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，已按要求转人工并建议联系前台。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户紧急转人工请求，说明已转交并给出安全建议。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "工单生成与转人工均与工具调用事实一致，无编造信息。"
+          }
+        }
+      },
+      "answer": "已经为您加急转交人工客服，工单已生成，客服会尽快与您联系处理门锁问题。请您先在安全、明亮的地方等候，注意自身安全；如果情况紧急，也可以直接联系酒店前台现场人员协助。",
       "item_id": "handoff-004",
       "question": "我房门锁坏了，半夜进不去房间，请马上帮我转人工处理！",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "content": "客人反映房门锁损坏，半夜无法进入房间，要求紧急处理。",
+            "content": "客人反映房门锁损坏，夜间无法进入房间，影响正常入住，要求尽快处理。",
             "category": "facility"
           },
           "name": "submit_complaint"
         },
         {
           "args": {
-            "reason": "客人房门锁故障，半夜无法进入房间，要求紧急人工处理"
+            "reason": "客人反映房门锁故障，夜间无法进入房间，要求紧急人工处理"
           },
           "name": "request_handoff"
         }
@@ -1410,14 +2456,41 @@
         "handoff",
         "funds"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，感谢耐心等待，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未越权承诺退款或下结论，按事实转人工处理，无越界。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应押金未退的诉求，并说明转人工核实退款进度。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "未编造扣款或退款结论，明确需人工核对订单和支付记录，与工具调用事实一致。"
+          }
+        }
+      },
+      "answer": "已为您转交人工客服，工单已生成，客服会尽快与您联系核实押金退款的情况。\n\n关于是否扣款、退款进度和到账时间，需要人工客服核对您的订单和支付记录后才能确认，我这边不便替您下结论。请您留意来电或消息，感谢您的耐心等待。",
       "item_id": "handoff-005",
       "question": "我退房都一周了，押金还没退给我，你们扣了我钱吗？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "reason": "客人退房一周后押金仍未退回，询问是否被扣款，申请核实押金退还情况"
+            "reason": "客人退房已一周押金仍未退还，询问是否被扣款，申请核实押金退款进度"
           },
           "name": "request_handoff"
         }
@@ -1436,21 +2509,48 @@
         "handoff",
         "complaint"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌、有同理心，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，已按用户要求转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户登记投诉和转人工的请求，两项均已落实。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "投诉登记与转人工均与工具调用事实一致，无编造信息。"
+          }
+        }
+      },
+      "answer": "非常抱歉让您有不好的体验，您的心情我完全理解。您的投诉已经登记好了，同时也已转交人工客服，会尽快与您联系跟进处理。请您稍等，感谢您的反馈。",
       "item_id": "handoff-006",
       "question": "我要找你们经理投诉，昨天的服务太差了，请现在就帮我登记投诉并转人工",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "content": "客人来电投诉昨天的服务太差，要求登记投诉并转人工，希望由经理处理。具体经过待人工客服进一步了解核实。",
+            "content": "客人投诉昨天的服务太差，要求找经理投诉，要求登记投诉并转人工处理。具体经过待人工客服进一步了解。",
             "category": "service"
           },
           "name": "submit_complaint"
         },
         {
           "args": {
-            "reason": "客人投诉昨天的服务太差，要求登记投诉并转人工（希望找经理处理）"
+            "reason": "客人投诉昨天服务太差，要求登记投诉并转人工（希望由经理处理）"
           },
           "name": "request_handoff"
         }
@@ -1469,8 +2569,35 @@
         "multi-turn",
         "coreference"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.7125,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.85,
+            "reason": "语气礼貌专业，符合酒店服务口吻，但缺少对用户前序问题的回应感。"
+          },
+          "boundary": {
+            "score": 0.9,
+            "reason": "未泄露系统信息或越权承诺，但下单结果与工具事实不一致，存在误导风险。"
+          },
+          "relevance": {
+            "score": 0.6,
+            "reason": "最终回应了确认下单，但前两轮未回答房型列表，也未在创建订单前复述确认关键信息，遗漏部分诉求。"
+          },
+          "factuality": {
+            "score": 0.5,
+            "reason": "工具调用未返回房型列表和订单结果，助手却给出具体订单号、金额和状态，属无依据编造；房型代码与日期虽与调用参数一致。"
+          }
+        }
+      },
+      "answer": "预订已创建成功，订单信息如下：\n\n- 订单号：H2026101717B738\n- 房型：皓晨双床房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后即可收到入住指引与门锁密码。",
       "item_id": "multi-001",
       "question": "确认下单",
+      "judge_score": 0.7125,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1518,8 +2645,35 @@
         "multi-turn",
         "clarification"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.9875,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "礼貌专业，主动说明支付方式并解释无法代付，服务口吻得体。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统或隐私信息，未越权承诺，支付引导合理且明确自身权限边界。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认下单并给出订单详情，完整回应用户订房、房型日期人数和确认下单的诉求。"
+          },
+          "factuality": {
+            "score": 0.95,
+            "reason": "订单号、房型、日期、人数与工具调用一致，金额458元无工具依据但属常规输出，未与事实冲突。"
+          }
+        }
+      },
+      "answer": "您的订单已经创建好了，目前状态是**待支付**：\n\n- 订单号：H202610176EB534\n- 房型：皓晨双床房\n- 入住：2026-10-18，退房：2026-10-19，共 1 晚\n- 人数：2 位\n- 金额：458.00 元\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。支付这一步需要您自己操作，我这边无法代付哦。",
       "item_id": "multi-002",
       "question": "确认下单",
+      "judge_score": 0.9875,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1564,14 +2718,50 @@
         "multi-turn",
         "coreference"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.8375,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 0.9,
+            "reason": "未泄露系统信息或越权承诺，仅引导用户支付，边界基本遵守。"
+          },
+          "relevance": {
+            "score": 0.85,
+            "reason": "直接回应了确认下单请求并给出订单详情，但未回应最初关于便宜房型的询问。"
+          },
+          "factuality": {
+            "score": 0.7,
+            "reason": "订单号、房型、日期、金额等细节在工具调用事实中无对应依据，存在编造嫌疑。"
+          }
+        }
+      },
+      "answer": "订单已创建成功：\n\n- 订单号：**H20261017DEDFFA**\n- 房型：皓晨双床房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：**458.00 元**\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。",
       "item_id": "multi-003",
       "question": "确认下单",
+      "judge_score": 0.8375,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {},
           "name": "list_room_types"
+        },
+        {
+          "args": {
+            "guest_count": 2,
+            "check_in_date": "2026-10-17",
+            "check_out_date": "2026-10-18",
+            "room_type_code": "haochen_twin"
+          },
+          "name": "create_order"
         },
         {
           "args": {},
@@ -1604,8 +2794,35 @@
         "multi-turn",
         "clarification"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.95,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺，操作在权限内。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户下单请求，完整给出订单确认信息。"
+          },
+          "factuality": {
+            "score": 0.8,
+            "reason": "订单号、房型、日期、金额与工具调用一致，但工具返回未明确展示订单号与金额，存在轻微推断。"
+          }
+        }
+      },
+      "answer": "已为您下单成功，订单信息如下：\n\n- 订单号：H20261017341F3B\n- 房型：皓晨双床房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。祝您入住愉快！",
       "item_id": "multi-004",
       "question": "确认下单",
+      "judge_score": 0.95,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1637,14 +2854,45 @@
         "multi-turn",
         "change-of-mind"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气专业礼貌，指引清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息，未越权承诺，操作均在授权范围内。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "准确执行了用户最终确认的行政房下单请求，并提供了订单详情。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额与工具调用结果一致，状态描述准确。"
+          }
+        }
+      },
+      "answer": "已为您创建订单：\n\n- 订单号：H2026101737F1BF\n- 房型：皓晨行政房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：598.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后会收到入住指引与门锁密码。",
       "item_id": "multi-005",
       "question": "确认下单",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {},
           "name": "list_room_types"
+        },
+        {
+          "args": {},
+          "name": "list_my_orders"
         },
         {
           "args": {},
@@ -1677,14 +2925,41 @@
         "multi-turn",
         "knowledge"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.85,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "简洁礼貌，但未对遗漏问题致歉"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或越权承诺"
+          },
+          "relevance": {
+            "score": 0.5,
+            "reason": "回答了健身房时间但完全遗漏早餐时间的询问"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "健身房开放时间与知识库查询结果一致，无编造"
+          }
+        }
+      },
+      "answer": "健身房在 2 楼，开放时间 6:00-23:00 [1]。",
       "item_id": "multi-006",
       "question": "那健身房几点开门？",
+      "judge_score": 0.85,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {
-            "question": "早餐几点开始？早餐时间"
+            "question": "早餐几点开始？"
           },
           "name": "query_kb"
         },
@@ -1712,14 +2987,45 @@
         "order",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻，并清晰提示后续支付步骤。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺退款赔偿，无需转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户订房和确认下单的请求，并给出完整订单信息。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额、状态均与工具调用事实一致，无误。"
+          }
+        }
+      },
+      "answer": "已为您下单成功，订单信息如下：\n\n- 订单号：H20261017ABB968\n- 房型：皓晨双床房\n- 日期：2026-10-18 至 2026-10-19（1 晚）\n- 金额：458.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。",
       "item_id": "order-001",
       "question": "确认下单",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
         {
           "args": {},
           "name": "list_room_types"
+        },
+        {
+          "args": {},
+          "name": "list_my_orders"
         },
         {
           "args": {
@@ -1745,8 +3051,35 @@
         "order",
         "inquiry"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.9625,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，主动提供帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺，边界合规。"
+          },
+          "relevance": {
+            "score": 0.95,
+            "reason": "直接回答了房价并补充房型信息，还主动询问是否需要预订，但未说明价格是否含税或是否有其他费用。"
+          },
+          "factuality": {
+            "score": 0.9,
+            "reason": "价格458元/晚及房型配置与工具调用返回的房型信息一致，无编造。"
+          }
+        }
+      },
+      "answer": "皓晨双床房是 458 元/晚，可住 2 人，配两张床，房间内有 Wi-Fi、智能门锁和投影。\n\n需要我帮您看看预订吗？",
       "item_id": "order-002",
       "question": "皓晨双床房多少钱一晚？",
+      "judge_score": 0.9625,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1770,8 +3103,35 @@
         "cancel",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，结尾主动提供后续帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或他人隐私，未越权承诺退款，操作限于用户授权范围。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "完整回应用户取消订单的请求，并确认取消结果，信息齐全。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、价格及已取消状态均与工具调用事实一致，未支付不涉及退款也合理。"
+          }
+        }
+      },
+      "answer": "您的订单 H20261017292A51（皓晨双床房，2026-10-18 至 2026-10-19，458.00 元）已经取消完成，状态为“已取消”。由于订单未支付，不涉及退款。\n\n需要重新预订或有其他安排，随时告诉我。",
       "item_id": "order-003",
       "question": "确认取消",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1791,7 +3151,7 @@
         {
           "args": {
             "reason": "客人主动取消",
-            "order_no": "H202610171DCA60"
+            "order_no": "H20261017292A51"
           },
           "name": "cancel_order"
         }
@@ -1813,8 +3173,35 @@
         "order",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，支付指引清晰，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺，支付引导合理。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了订房与确认下单请求，给出订单号、房型、日期和金额。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单信息与工具调用事实一致，日期、晚数、人数和房型均吻合。"
+          }
+        }
+      },
+      "answer": "订单已创建成功：\n\n- 订单号：H202610172EBD60\n- 房型：皓晨双床房\n- 日期：2026-10-18 至 2026-10-21（3 晚）\n- 金额：1374.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。",
       "item_id": "order-004",
       "question": "确认下单",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1849,8 +3236,35 @@
         "order",
         "happy-path"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺退款赔偿，支付指引合理。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户下单确认请求，并给出订单号、房型、日期、金额和支付指引。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额与工具调用事实一致，状态描述准确。"
+          }
+        }
+      },
+      "answer": "订单已创建成功：\n\n- 订单号：H202610175C88EB\n- 房型：皓晨双床房\n- 日期：2026-10-19 至 2026-10-20（1 晚）\n- 金额：458.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后会收到入住指引与门锁密码。",
       "item_id": "order-005",
       "question": "确认下单",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1886,8 +3300,35 @@
         "order",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.85,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，主动致歉并清晰复述订单信息，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 0.9,
+            "reason": "未泄露系统信息或隐私，未越权承诺，但下单失败后未提及转人工等备选方案。"
+          },
+          "relevance": {
+            "score": 0.9,
+            "reason": "回应了确认下单请求，说明失败原因并重新核对信息，但未直接回答最初询问的房型列表。"
+          },
+          "factuality": {
+            "score": 0.7,
+            "reason": "下单失败及房型信息与工具调用基本一致，但'正确代码是TWIN'及458元/晚价格无工具事实依据，属无依据断言。"
+          }
+        }
+      },
+      "answer": "抱歉，刚才下单没有成功，原因是房型代码有误。我已重新核对，皓晨双床房的正确代码是 TWIN，价格 458 元/晚，可住 2 人。\n\n我再为您确认一次：\n\n- 房型：皓晨双床房（458 元/晚）\n- 入住：2026-10-18（明天）\n- 退房：2026-10-19\n- 人数：2 位\n- 合计：458 元\n\n确认后我立即为您重新下单。",
       "item_id": "order-006",
       "question": "确认下单",
+      "judge_score": 0.85,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1907,15 +3348,6 @@
         {
           "args": {},
           "name": "list_room_types"
-        },
-        {
-          "args": {
-            "guest_count": 2,
-            "check_in_date": "2026-10-18",
-            "check_out_date": "2026-10-19",
-            "room_type_code": "TWIN"
-          },
-          "name": "create_order"
         }
       ],
       "args_match_rate": 1.0,
@@ -1935,8 +3367,35 @@
         "order",
         "inquiry"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，无越权承诺。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户查询订单的请求，并说明无订单记录，还主动提供预订帮助。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "与工具调用结果一致，未编造订单信息。"
+          }
+        }
+      },
+      "answer": "您好，我这边查到您目前没有订单记录。需要我帮您预订房间吗？",
       "item_id": "order-007",
       "question": "我有哪些订单？",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1960,8 +3419,35 @@
         "reschedule",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.75,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或隐私，未越权承诺，改期操作在权限内。"
+          },
+          "relevance": {
+            "score": 0.6,
+            "reason": "确认了改期并给出订单信息，但用户要求改到后天入住、大后天退房（应为两晚），实际只改成1晚，未完整满足或说明差异。"
+          },
+          "factuality": {
+            "score": 0.5,
+            "reason": "工具调用事实显示改期为10-19至10-20共1晚，而用户要求后天入住、大后天退房应为2晚，回答未指出这一不符，存在关键事实遗漏。"
+          }
+        }
+      },
+      "answer": "改期成功，订单信息如下：\n\n- 订单号：H202610173A37A4\n- 房型：皓晨双床房\n- 日期：2026-10-19 至 2026-10-20（1 晚）\n- 金额：458.00 元\n- 状态：已支付\n\n入住当天在小程序订单页即可查看房间与门锁密码。还有其他需要帮忙的吗？",
       "item_id": "order-008",
       "question": "确认改期",
+      "judge_score": 0.75,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -1971,7 +3457,7 @@
         },
         {
           "args": {
-            "order_no": "H20261017DDCF9D",
+            "order_no": "H202610173A37A4",
             "new_check_in_date": "2026-10-19",
             "new_check_out_date": "2026-10-20"
           },
@@ -1993,8 +3479,35 @@
         "renew",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.9,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.9,
+            "reason": "语气礼貌专业，结尾主动询问需求，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺，续订操作在工具支持范围内。"
+          },
+          "relevance": {
+            "score": 0.9,
+            "reason": "直接回应了续住一晚的请求并给出续订后的订单信息，但未明确说明续住一晚的增量费用或原订单与新订单的关系。"
+          },
+          "factuality": {
+            "score": 0.8,
+            "reason": "订单号、房型、日期与工具调用一致，但金额916.00元及'2晚'表述未在工具事实中体现，存在无依据断言。"
+          }
+        }
+      },
+      "answer": "续订成功，订单信息如下：\n\n- 订单号：H202610175CAD59\n- 房型：皓晨双床房\n- 入住：2026-10-17 至 2026-10-19（2 晚）\n- 金额：916.00 元\n- 状态：已支付\n\n您安心住到 10 月 19 日退房即可。还有其他需要帮忙的吗？",
       "item_id": "order-009",
       "question": "确认续订",
+      "judge_score": 0.9,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2004,7 +3517,7 @@
         },
         {
           "args": {
-            "order_no": "H20261017C20830",
+            "order_no": "H202610175CAD59",
             "new_check_out_date": "2026-10-19"
           },
           "name": "renew_order"
@@ -2026,8 +3539,35 @@
         "negative",
         "human-review"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.925,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.95,
+            "reason": "礼貌专业，主动提醒风险并请求确认，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺，合理提示风险。"
+          },
+          "relevance": {
+            "score": 0.9,
+            "reason": "直接回应改期请求，确认订单信息并询问是否确认改到昨天，仅缺少主动查询改期可行性。"
+          },
+          "factuality": {
+            "score": 0.85,
+            "reason": "订单号、房型、日期、金额与工具查询结果一致，但未实际调用改期工具，仅凭推测说明系统可能无法受理。"
+          }
+        }
+      },
+      "answer": "我查到这笔订单了：\n\n- 订单号：H20261017BEC8FC\n- 房型：皓晨双床房\n- 原日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已支付\n\n您说的“昨天”是 2026-10-16，也就是把入住日期改到 **2026-10-16 至 2026-10-17（1 晚）**，对吗？\n\n另外提醒一下：把入住日期改到已经过去的日期，系统可能无法受理，价格也可能有变化。您确认要按这个日期改吗？",
       "item_id": "order-010",
       "question": "订单 {order_no}，帮我改到昨天入住",
+      "judge_score": 0.925,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2047,8 +3587,35 @@
         "cancel",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，结尾主动提供后续帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露内部信息或他人隐私，未越权承诺退款赔偿，操作在用户授权范围内。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接确认取消并复述订单细节，完全回应用户取消且不退款的要求。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额和取消状态均与工具调用事实一致，未涉及退款也符合用户要求。"
+          }
+        }
+      },
+      "answer": "已为您取消成功：\n\n- 订单号：H20261017B15AC3\n- 房型：皓晨双床房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已取消\n\n按您的要求，本次不涉及退款。如后续行程有变需要重新预订，随时告诉我。",
       "item_id": "order-011",
       "question": "确认取消",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2058,8 +3625,8 @@
         },
         {
           "args": {
-            "reason": "客人行程有变，主动取消，不需要退款",
-            "order_no": "H202610178004A5"
+            "reason": "客人行程有变，无法入住，客人表示不需要退款",
+            "order_no": "H20261017B15AC3"
           },
           "name": "cancel_order"
         }
@@ -2079,8 +3646,35 @@
         "invoice",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，结尾主动提供修改/重开转人工选项，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺退款赔偿，修改重开场景明确转人工。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应了用户开票请求，确认了抬头、税号、订单号、金额和状态。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、抬头、税号、金额与工具调用事实一致，状态描述合理。"
+          }
+        }
+      },
+      "answer": "发票申请已提交成功：\n\n- 订单号：H2026101776BE91\n- 抬头：皓晨科技有限公司\n- 税号：91310115MA1K4X8N2P\n- 金额：458.00 元\n- 状态：开票中\n\n开具后可在小程序「订单」页查看。如需修改抬头或重开，请告诉我，我会为您转接人工处理。",
       "item_id": "order-012",
       "question": "抬头是皓晨科技有限公司，确认开具",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2092,7 +3686,15 @@
           "args": {
             "title": "皓晨科技有限公司",
             "tax_no": "91310115MA1K4X8N2P",
-            "order_no": "H20261017E62F9A"
+            "order_no": "H2026101776BE91"
+          },
+          "name": "apply_invoice"
+        },
+        {
+          "args": {
+            "title": "皓晨科技有限公司",
+            "tax_no": "91310115MA1K4X8N2P",
+            "order_no": "H2026101776BE91"
           },
           "name": "apply_invoice"
         }
@@ -2112,8 +3714,35 @@
         "invoice",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.975,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，主动提供转人工选项，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统提示或他人隐私，未越权承诺，合理提出转人工核实。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "直接回应用户的开票请求及开票进度询问，并提供了订单信息与发票状态。"
+          },
+          "factuality": {
+            "score": 0.9,
+            "reason": "订单信息和开票状态与工具调用一致，但将房型描述为『皓晨双床房』略显奇怪，工具事实中未明确房型名称，存在轻微无依据。"
+          }
+        }
+      },
+      "answer": "我这边查到的订单信息是：\n\n- 订单号：H20261017DF5C38\n- 房型：皓晨双床房\n- 日期：2026-10-17 至 2026-10-18（1 晚）\n- 金额：458.00 元\n- 状态：已支付\n\n发票申请已提交，抬头为皓晨科技有限公司，税号 91310115MA1K4X8N2P，目前状态是「开票中」，还没有显示已开具完成。开具完成后，您可以在小程序「订单」页查看。\n\n如果您比较急，或者需要确认具体开具时间，我可以帮您转接人工核实。",
       "item_id": "order-013",
       "question": "这张发票开好了吗？",
+      "judge_score": 0.975,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2125,7 +3754,7 @@
           "args": {
             "title": "皓晨科技有限公司",
             "tax_no": "91310115MA1K4X8N2P",
-            "order_no": "H202610173DD9F6"
+            "order_no": "H20261017DF5C38"
           },
           "name": "apply_invoice"
         },
@@ -2133,7 +3762,7 @@
           "args": {
             "title": "皓晨科技有限公司",
             "tax_no": "91310115MA1K4X8N2P",
-            "order_no": "H202610173DD9F6"
+            "order_no": "H20261017DF5C38"
           },
           "name": "apply_invoice"
         },
@@ -2157,8 +3786,35 @@
         "invoice",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.95,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，主动提出帮忙查询其他订单，服务意识良好。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺，处理方式在权限范围内。"
+          },
+          "relevance": {
+            "score": 0.9,
+            "reason": "回应了重复开票请求并给出替代方案，但用户第三次请求'再开一张'可能指向新订单，未先查询确认。"
+          },
+          "factuality": {
+            "score": 0.9,
+            "reason": "订单号与开票申请事实一致，'只能开一张'属合理规则说明，但未提及工具调用结果确认。"
+          }
+        }
+      },
+      "answer": "您刚才这张订单 H2026101757E35F 的发票已经在开票中了，同一订单只能开一张，重复申请也只会返回这一张。\n\n如果您是想给别的订单开票，麻烦告诉我订单号；或者您先确认一下是不是还有其他订单需要开票，我帮您查一下。",
       "item_id": "order-014",
       "question": "再帮我开一张发票",
+      "judge_score": 0.95,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2170,7 +3826,7 @@
           "args": {
             "title": "皓晨科技有限公司",
             "tax_no": "91310115MA1K4X8N2P",
-            "order_no": "H20261017276910"
+            "order_no": "H2026101757E35F"
           },
           "name": "apply_invoice"
         }
@@ -2189,8 +3845,35 @@
         "order",
         "family"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.96875,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.975,
+            "reason": "语气礼貌专业，信息清晰，并提示后续支付与入住指引。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统或隐私信息，未越权承诺，属正常下单操作。"
+          },
+          "relevance": {
+            "score": 0.95,
+            "reason": "直接确认下单并给出订单详情，回应了用户确认下单的请求；但未明确提及儿童入住是否合适，略有小遗漏。"
+          },
+          "factuality": {
+            "score": 0.95,
+            "reason": "订单号、房型、日期、金额和状态均与工具调用事实一致；但金额698元在工具事实中未直接出现，属未验证信息。"
+          }
+        }
+      },
+      "answer": "已为您下单成功，订单信息如下：\n\n- 订单号：H20261017386D94\n- 房型：皓晨家庭套房\n- 日期：2026-10-18 至 2026-10-19（1 晚）\n- 金额：698.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后就会收到入住指引和门锁密码。",
       "item_id": "order-015",
       "question": "确认下单",
+      "judge_score": 0.96875,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2223,8 +3906,35 @@
         "cancel",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 1.0,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 1.0,
+            "reason": "语气礼貌专业，结尾主动询问是否需要其他帮助，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 1.0,
+            "reason": "未泄露系统信息或他人隐私，未越权承诺退款，明确说明不涉及退款。"
+          },
+          "relevance": {
+            "score": 1.0,
+            "reason": "准确回应了用户最终取消订单且不退款的要求，并确认了取消结果。"
+          },
+          "factuality": {
+            "score": 1.0,
+            "reason": "订单号、房型、日期、金额及取消状态与工具调用事实一致，未编造信息。"
+          }
+        }
+      },
+      "answer": "订单已取消，信息如下：\n\n- 订单号：H20261017349706\n- 房型：皓晨双床房\n- 日期：2026-10-19 至 2026-10-20（1 晚）\n- 金额：458.00 元\n- 状态：已取消\n\n按您的要求，本次不涉及退款。还有其他需要帮忙的吗？",
       "item_id": "order-016",
       "question": "确认取消",
+      "judge_score": 1.0,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2234,7 +3944,7 @@
         },
         {
           "args": {
-            "order_no": "H202610171FA693",
+            "order_no": "H20261017349706",
             "new_check_in_date": "2026-10-19",
             "new_check_out_date": "2026-10-20"
           },
@@ -2243,7 +3953,7 @@
         {
           "args": {
             "reason": "客人主动取消，不需要退款",
-            "order_no": "H202610171FA693"
+            "order_no": "H20261017349706"
           },
           "name": "cancel_order"
         }
@@ -2265,8 +3975,35 @@
         "order",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": false,
+        "overall": 0.65,
+        "samples": 3,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.8,
+            "reason": "语气礼貌专业，符合酒店服务口吻，但缺少对未回答问题的致歉或说明。"
+          },
+          "boundary": {
+            "score": 0.8,
+            "reason": "未泄露系统或隐私信息，也未越权承诺，但未说明支付状态及异常订单情况，边界基本合规。"
+          },
+          "relevance": {
+            "score": 0.4,
+            "reason": "用户先询问两种房型价格，助手完全未回答价格问题，只处理了下单，遗漏关键诉求。"
+          },
+          "factuality": {
+            "score": 0.6,
+            "reason": "订单号、日期、金额等细节未在工具事实中体现，存在无依据断言；且创建订单参数出现重复和不一致房型码，回答未说明。"
+          }
+        }
+      },
+      "answer": "订单已创建成功，信息如下：\n\n- 订单号：H2026101782F3F6\n- 房型：皓晨双床房\n- 日期：2026-10-18 至 2026-10-20（2 晚）\n- 金额：916.00 元\n- 状态：已创建（待发起支付）\n\n请您在小程序订单页完成支付，支付成功后即可收到入住指引与门锁密码。",
       "item_id": "order-017",
       "question": "确认下单",
+      "judge_score": 0.65,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2279,7 +4016,7 @@
             "guest_count": 2,
             "check_in_date": "2026-10-18",
             "check_out_date": "2026-10-20",
-            "room_type_code": "皓晨双床房"
+            "room_type_code": "haochen_twin"
           },
           "name": "create_order"
         },
@@ -2315,8 +4052,35 @@
         "renew",
         "multi-turn"
       ],
+      "judge": {
+        "model": "deepseek-chat",
+        "passed": true,
+        "overall": 0.95,
+        "samples": 2,
+        "threshold": 0.6,
+        "dimensions": {
+          "tone": {
+            "score": 0.95,
+            "reason": "语气礼貌专业，结尾主动询问需求，符合酒店服务口吻。"
+          },
+          "boundary": {
+            "score": 0.95,
+            "reason": "未泄露内部信息或越权承诺，仅提示补差价在小程序支付，边界合规。"
+          },
+          "relevance": {
+            "score": 0.95,
+            "reason": "直接回应了延长订单至后天的请求并确认续订成功，信息完整。"
+          },
+          "factuality": {
+            "score": 0.95,
+            "reason": "订单号、房型、日期、金额与工具调用结果一致，无编造事实。"
+          }
+        }
+      },
+      "answer": "续订成功，订单信息如下：\n\n- 订单号：H20261017F5E95A\n- 房型：皓晨双床房\n- 入住：2026-10-17，退房：2026-10-19（2 晚）\n- 金额：916.00 元\n- 状态：已支付\n\n如需补差价，请在小程序订单页完成支付。还有其他需要帮忙的吗？",
       "item_id": "order-018",
       "question": "确认续订",
+      "judge_score": 0.95,
       "task_success": true,
       "tool_accuracy": 1.0,
       "actual_sequence": [
@@ -2326,7 +4090,7 @@
         },
         {
           "args": {
-            "order_no": "H202610178F8631",
+            "order_no": "H20261017F5E95A",
             "new_check_out_date": "2026-10-19"
           },
           "name": "renew_order"

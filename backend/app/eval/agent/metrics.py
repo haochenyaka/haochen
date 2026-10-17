@@ -11,11 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.eval.agent.dataset import AgentEvalItem, ToolCallSpec
+from app.eval.agent.judge import JudgeResult
 
 
 @dataclass(frozen=True)
 class AgentQuestionOutcome:
-    """逐题结果：工具链比对明细。"""
+    """逐题结果：工具链比对明细与可选的答案评判。"""
 
     item_id: str
     name: str
@@ -27,9 +28,12 @@ class AgentQuestionOutcome:
     task_success: bool | None
     expected_success: bool | None
     tags: tuple[str, ...]
+    answer: str | None = None
+    judge: dict[str, object] | None = None
+    judge_score: float | None = None
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "item_id": self.item_id,
             "name": self.name,
             "question": self.question,
@@ -41,6 +45,13 @@ class AgentQuestionOutcome:
             "expected_success": self.expected_success,
             "tags": list(self.tags),
         }
+        if self.answer is not None:
+            payload["answer"] = self.answer
+        if self.judge is not None:
+            payload["judge"] = dict(self.judge)
+        if self.judge_score is not None:
+            payload["judge_score"] = round(self.judge_score, 6)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -53,6 +64,10 @@ class AgentEvalMetrics:
     task_success_rate: float | None
     total_passed: int
     by_tag: dict[str, dict[str, float]]
+    avg_judge_score: float | None = None
+    judge_scored: int = 0
+    judge_pass_rate: float | None = None
+    judge_dimensions: dict[str, float] | None = None
 
     def as_dict(self) -> dict[str, object]:
         payload: dict[str, object] = {
@@ -64,6 +79,15 @@ class AgentEvalMetrics:
         }
         if self.task_success_rate is not None:
             payload["task_success_rate"] = round(self.task_success_rate, 6)
+        if self.avg_judge_score is not None:
+            payload["avg_judge_score"] = round(self.avg_judge_score, 6)
+            payload["judge_scored"] = self.judge_scored
+        if self.judge_pass_rate is not None:
+            payload["judge_pass_rate"] = round(self.judge_pass_rate, 6)
+        if self.judge_dimensions is not None:
+            payload["judge_dimensions"] = {
+                name: round(value, 6) for name, value in self.judge_dimensions.items()
+            }
         return payload
 
 
@@ -72,6 +96,8 @@ def score_question(
     actual_tool_calls: list[dict[str, object]],
     *,
     task_success: bool | None = None,
+    answer: str | None = None,
+    judge_result: JudgeResult | None = None,
 ) -> AgentQuestionOutcome:
     """按题打分：比对预期与实际工具序列；用例未定义 expected 时按空预期处理。"""
     expected = item.expected
@@ -80,6 +106,7 @@ def score_question(
         expected_specs = expected.tool_sequence
     tool_accuracy = _compare_sequence(expected_specs, actual_tool_calls)
     args_match_rate = _compare_args(expected_specs, actual_tool_calls)
+    judge = judge_result.as_dict() if judge_result is not None else None
     return AgentQuestionOutcome(
         item_id=item.id,
         name=item.name,
@@ -91,6 +118,9 @@ def score_question(
         task_success=task_success,
         expected_success=expected.task_success if expected is not None else None,
         tags=item.tags,
+        answer=answer,
+        judge=judge,
+        judge_score=judge_result.overall if judge_result is not None else None,
     )
 
 
@@ -131,6 +161,8 @@ def aggregate(outcomes: list[AgentQuestionOutcome]) -> AgentEvalMetrics:
             "count": g_total,
             "pass_rate": round(g_passed / g_total, 6) if g_total else 0.0,
         }
+    judged = [o for o in outcomes if o.judge_score is not None]
+    judge_passed = sum(1 for o in judged if _judge_passed(o))
     return AgentEvalMetrics(
         questions=total,
         avg_tool_accuracy=_mean([o.tool_accuracy for o in outcomes]),
@@ -138,7 +170,39 @@ def aggregate(outcomes: list[AgentQuestionOutcome]) -> AgentEvalMetrics:
         task_success_rate=task_success_rate,
         total_passed=passed,
         by_tag=by_tag,
+        avg_judge_score=_mean([o.judge_score for o in judged if o.judge_score is not None])
+        if judged
+        else None,
+        judge_scored=len(judged),
+        judge_pass_rate=judge_passed / len(judged) if judged else None,
+        judge_dimensions=_dimension_means(judged),
     )
+
+
+def _judge_passed(outcome: AgentQuestionOutcome) -> bool:
+    judge = outcome.judge or {}
+    return bool(judge.get("passed", False))
+
+
+def _dimension_means(outcomes: list[AgentQuestionOutcome]) -> dict[str, float] | None:
+    """四维分均值：只统计有评判结果的题目。"""
+    sums: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for outcome in outcomes:
+        dimensions = (outcome.judge or {}).get("dimensions")
+        if not isinstance(dimensions, dict):
+            continue
+        for name, payload in dimensions.items():
+            if not isinstance(payload, dict):
+                continue
+            value = payload.get("score")
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            sums[name] = sums.get(name, 0.0) + float(value)
+            counts[name] = counts.get(name, 0) + 1
+    if not sums:
+        return None
+    return {name: sums[name] / counts[name] for name in sorted(sums)}
 
 
 def _compare_sequence(expected: list[ToolCallSpec], actual: list[dict[str, object]]) -> float:

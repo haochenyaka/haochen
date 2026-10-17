@@ -41,10 +41,19 @@ class EvalRunError(RuntimeError):
     """评估无法执行：数据集缺失、配置非法。"""
 
 
-class CaseExecutor(Protocol):
-    """单条用例执行器：输入消息，返回工具调用列表与任务成功标志。"""
+@dataclass(frozen=True)
+class CaseExecution:
+    """单条用例的执行事实：工具序列、任务成功标志与末轮回答文本。"""
 
-    async def execute(self, item: AgentEvalItem) -> tuple[list[dict[str, object]], bool | None]: ...
+    tool_calls: tuple[dict[str, object], ...]
+    task_success: bool | None
+    answer: str | None = None
+
+
+class CaseExecutor(Protocol):
+    """单条用例执行器：输入用例，返回工具序列、任务成功标志与回答文本。"""
+
+    async def execute(self, item: AgentEvalItem) -> CaseExecution: ...
 
 
 @dataclass(frozen=True)
@@ -82,7 +91,7 @@ def config_fingerprint_value(
     executor_name: str | None = None,
     judge_name: str | None = None,
 ) -> str:
-    """配置指纹：模型名、执行器身份与评判器模型。
+    """配置指纹：模型名、执行器身份与评判器身份（模型/温度/采样数）。
 
     执行器身份必须入指纹——脚本替身与真实图在同一数据集同一模型下产出的分数不可比，
     不区分会让两类报告互相作废。
@@ -111,15 +120,29 @@ async def evaluate_items(
     """纯评估路径（不触库）：逐条执行比对，可选评判，最后宏观聚合。"""
     settings = settings or get_settings()
     outcomes: list[AgentQuestionOutcome] = []
+    active_judge = judge if judge is not None and judge.available else None
     for item in items:
-        tool_calls, task_success = await executor.execute(item)
-        outcome = score_question(item, tool_calls, task_success=task_success)
+        execution = await executor.execute(item)
+        judge_result = None
+        if active_judge is not None and execution.answer is not None:
+            judge_result = await active_judge.evaluate(
+                item,
+                answer=execution.answer,
+                tool_calls=execution.tool_calls,
+            )
+        outcome = score_question(
+            item,
+            list(execution.tool_calls),
+            task_success=execution.task_success,
+            answer=execution.answer,
+            judge_result=judge_result,
+        )
         outcomes.append(outcome)
     metrics = aggregate(outcomes)
     cfp = config_fingerprint_value(
         settings,
         executor_identity(executor),
-        judge.model_name if judge is not None and judge.available else None,
+        active_judge.identity if active_judge is not None else None,
     )
     return AgentEvalReportData(
         dataset_path=str(dataset_path),
@@ -139,15 +162,17 @@ async def run_eval(
     dataset_path: Path,
     executor: CaseExecutor | None = None,
     settings: Settings | None = None,
+    use_judge: bool = True,
 ) -> AgentEvalReportData:
     """完整评估路径：加载数据集 → 执行 → 聚合。
 
-    执行器缺省时用 ScriptedCaseExecutor（仅用于测试）。
+    执行器缺省时用 ScriptedCaseExecutor（仅用于测试）。评判器缺省按配置构建；
+    `use_judge=False` 显式关闭——脚本模型的集成测试不该触达外部评判 API。
     """
     settings = settings or get_settings()
     items = load_eval_set(dataset_path)
     active_executor = executor or ScriptedCaseExecutor()
-    judge = build_agent_judge(settings)
+    judge = build_agent_judge(settings) if use_judge else None
     return await evaluate_items(
         items=items,
         executor=active_executor,
@@ -203,12 +228,18 @@ class ScriptedCaseExecutor:
         self,
         tool_calls: list[dict[str, object]] | None = None,
         task_success: bool | None = True,
+        answer: str | None = None,
     ) -> None:
         self._tool_calls = tool_calls or []
         self._task_success = task_success
+        self._answer = answer
 
-    async def execute(self, item: AgentEvalItem) -> tuple[list[dict[str, object]], bool | None]:
-        return self._tool_calls, self._task_success
+    async def execute(self, item: AgentEvalItem) -> CaseExecution:
+        return CaseExecution(
+            tool_calls=tuple(self._tool_calls),
+            task_success=self._task_success,
+            answer=self._answer,
+        )
 
 
 def _invalidation_reason(old: object, report: AgentEvalReportData) -> str:
