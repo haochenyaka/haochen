@@ -11,8 +11,8 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.data_pipeline import DataCleaningRule, DataPipelineRun
-from app.services.task_dispatch import TaskDispatcher
-from app.services.task_service import submit_task
+from app.services.task_dispatch import TaskDispatcher, dispatch_task
+from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +107,18 @@ class DataPipelineService:
         config: dict[str, object] | None,
         dispatcher: TaskDispatcher | None = None,
     ) -> DataPipelineRun:
-        """创建运行记录 + 提交 durable task（先写库后 dispatch）。"""
+        """创建运行记录 + 提交 durable task。
+
+        **竞态修复**：run 行与 task 行在同一事务内落库并**提交**，提交后才投递 ARQ。
+        此前先 `add` 后 `submit_task`（后者自持事务、提交即派发），worker 可能在 run 行
+        提交前执行 handler，`complete_run` 的 `WHERE status='running'` 匹配 0 行，run 永
+        卡 `running`。现在把 task 行并入本 session 提交，投递发生在提交之后。
+        """
         pipeline_run = DataPipelineRun(
             id=run_id,
             rule_id=rule_id,
             trigger=trigger,
+            task_type=task_type,
             status="running",
         )
         self._session.add(pipeline_run)
@@ -122,16 +129,31 @@ class DataPipelineService:
             "trigger": trigger,
             "config": config or {},
         }
-        submission = await submit_task(
+        # task 行并入同一事务（不在此处投递）；去重键按 run 维度，避免跨 run 复用任务
+        submission = await TaskService(self._session).submit(
             task_type=task_type,
             handler_version=handler_version,
             payload=payload,
-            dedupe_key=None,
-            dispatcher=dispatcher,
+            dedupe_key=f"pipeline:{run_id}",
         )
         pipeline_run.task_id = submission.task_id
-        await self._session.flush()
+        await self._session.commit()
+
+        # 提交之后才投递：投递失败由 pending 补发恢复，run 行已可见
+        if submission.should_dispatch:
+            await dispatch_task(dispatcher, submission.task_id)
+
         return pipeline_run
+
+    async def _has_active_run(self, rule_id: int) -> bool:
+        """是否已有 pending/running 的运行（同规则并发互斥的判定）。"""
+        stmt = (
+            select(sa_func.count())
+            .select_from(DataPipelineRun)
+            .where(DataPipelineRun.rule_id == rule_id)
+            .where(DataPipelineRun.status.in_(("pending", "running")))
+        )
+        return bool((await self._session.execute(stmt)).scalar() or 0)
 
     async def trigger_pipeline(
         self,
@@ -140,9 +162,16 @@ class DataPipelineService:
         trigger: str = "manual",
         dispatcher: TaskDispatcher | None = None,
     ) -> DataPipelineRun | None:
-        """触发规则对应的清洗管道。"""
+        """触发规则对应的清洗管道。
+
+        规则不存在/已禁用、或已有运行中的同规则任务时返回 None（调用方据此拒绝）。
+        并发互斥在 DB 层判定：不产生孤儿 run 行（durable task 的去重按 run 维度，不复用）。
+        """
         rule = await self.get_rule(rule_id)
         if rule is None or not rule.enabled:
+            return None
+        if await self._has_active_run(rule_id):
+            logger.info("规则已有运行中的管道，拒绝重复触发：rule_id=%s", rule_id)
             return None
 
         return await self._create_run_and_task(

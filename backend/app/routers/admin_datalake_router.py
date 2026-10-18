@@ -123,7 +123,7 @@ async def preview_table(
     """预览表的前 N 行数据。"""
     svc = DatalakeQueryService()
     try:
-        result = await svc.query(f'SELECT * FROM "{table}" LIMIT {min(limit, 100)}', limit=0)
+        result = await svc.preview_table(table, limit=limit)
         return QueryResponse(**result)
     except DatalakeQueryError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

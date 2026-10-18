@@ -53,6 +53,8 @@ class DataPipelineRun(Base):
     """关联的 durable task ID；null 表示尚未创建 task"""
     trigger: Mapped[str] = mapped_column(String(32), nullable=False)
     """触发方式：manual / scheduled / api"""
+    task_type: Mapped[str | None] = mapped_column(String(64))
+    """本次运行的管道 task_type，如 data_pipeline.clean_conversations（供展示与排查）"""
     status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="pending")
     """pending / running / completed / failed"""
     source_table: Mapped[str | None] = mapped_column(String(64))

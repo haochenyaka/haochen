@@ -328,7 +328,7 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
               v-if="!runsLoading && runs.length > 0"
               :data-source="runs"
               :columns="[
-                { title: '管道', dataIndex: 'task_id', width: 180 },
+                { title: '管道', dataIndex: 'task_type', width: 180 },
                 { title: '触发方式', dataIndex: 'trigger', width: 90 },
                 { title: '状态', dataIndex: 'status', width: 90 },
                 { title: '数据源', dataIndex: 'source_table', width: 130 },
@@ -336,14 +336,15 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
                 { title: '影响行数', dataIndex: 'affected_rows', width: 90 },
                 { title: '耗时', dataIndex: 'duration_seconds', width: 80 },
                 { title: '时间', dataIndex: 'created_at', width: 160 },
+                { title: '错误', dataIndex: 'error', width: 200, ellipsis: true },
               ]"
               :pagination="{ pageSize: 10 }"
               row-key="id"
               size="small"
             >
               <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'task_id'">
-                  {{ pipelineTypeLabel(record.summary ? null : record.task_id) }}
+                <template v-if="column.dataIndex === 'task_type'">
+                  {{ pipelineTypeLabel(record.task_type) }}
                 </template>
                 <template v-else-if="column.dataIndex === 'trigger'">
                   {{ TRIGGER_LABELS[record.trigger] || record.trigger }}
@@ -361,6 +362,10 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
                 </template>
                 <template v-else-if="column.dataIndex === 'created_at'">
                   {{ record.created_at?.substring(0, 19)?.replace('T', ' ') }}
+                </template>
+                <template v-else-if="column.dataIndex === 'error'">
+                  <span v-if="record.error" style="color: var(--error)">{{ record.error }}</span>
+                  <span v-else>-</span>
                 </template>
               </template>
             </a-table>

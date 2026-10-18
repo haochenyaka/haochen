@@ -72,6 +72,7 @@ class PipelineRunResponse(BaseModel):
     rule_id: int | None
     task_id: str | None
     trigger: str
+    task_type: str | None
     status: str
     source_table: str | None
     processed_rows: int | None
@@ -202,8 +203,7 @@ async def trigger_pipeline(
     svc = DataPipelineService(session)
     run = await svc.trigger_pipeline(rule_id, trigger="manual", dispatcher=dispatcher)
     if run is None:
-        raise HTTPException(status_code=400, detail="规则不存在或已禁用")
-    await session.commit()
+        raise HTTPException(status_code=400, detail="规则不存在、已禁用，或已有运行中的同规则管道")
     return TriggerResponse(run_id=str(run.id))
 
 
@@ -298,6 +298,7 @@ def _run_to_response(run: object) -> PipelineRunResponse:
         rule_id=r.rule_id,
         task_id=str(r.task_id) if r.task_id else None,
         trigger=r.trigger,
+        task_type=r.task_type,
         status=r.status,
         source_table=r.source_table,
         processed_rows=r.processed_rows,
