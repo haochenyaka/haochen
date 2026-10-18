@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -100,8 +101,11 @@ class Settings(BaseSettings):
     workdir_root: str = "data/workdir"
     # Skill 内容根：留空取与 app 包同级的 skills/（源码树 backend/skills，容器 /srv/app/skills）
     skills_root: str = ""
-    summary_threshold: int = 100_000
+    # 摘要阈值必须低于常见 32K/64K 上下文窗口：10 万 token 会在摘要触发前先撞模型上限
+    summary_threshold: int = 24_000
     summary_keep_messages: int = 10
+    # 单次 Run 加载的最近消息条数；更早消息不进入上下文，截断时显式告警
+    message_history_limit: int = 200
     large_result_threshold_bytes: int = 8192
     large_result_preview_chars: int = 200
     model_retry_max_attempts: int = 3
@@ -112,6 +116,14 @@ class Settings(BaseSettings):
     run_event_maxlen: int = 512
     sse_heartbeat_seconds: float = 15.0
     sse_follow_block_ms: int = 2000
+
+    # P4.4 容量：checkpoint 每进程一个连接池，按部署并发与 DB 连接上限调整
+    checkpoint_pool_min_size: int = 1
+    checkpoint_pool_max_size: int = 4
+    checkpoint_pool_open_timeout_seconds: float = 10.0
+    # 审计事实合并窗口：窗口内并发事实共用一次提交；0 表示逐条提交
+    audit_batch_window_ms: int = 5
+    audit_batch_max_facts: int = 32
 
     # 后台任务 worker 槽位（ARQ_MAX_JOBS）：与 Run 队列分离，长知识任务不占 AgentRun 容量
     arq_max_jobs: int = 4
@@ -172,6 +184,24 @@ class Settings(BaseSettings):
     rate_limit_tenant_id: str = "haochen"
     # 仅在可信反向代理（覆盖写入 X-Forwarded-For）之后才信任该头
     rate_limit_trust_forwarded_for: bool = True
+
+    @model_validator(mode="after")
+    def _validate_capacity(self) -> "Settings":
+        if self.checkpoint_pool_min_size < 1:
+            raise ValueError("CHECKPOINT_POOL_MIN_SIZE 至少为 1")
+        if self.checkpoint_pool_max_size < self.checkpoint_pool_min_size:
+            raise ValueError("CHECKPOINT_POOL_MAX_SIZE 不能小于 CHECKPOINT_POOL_MIN_SIZE")
+        if self.checkpoint_pool_open_timeout_seconds <= 0:
+            raise ValueError("CHECKPOINT_POOL_OPEN_TIMEOUT_SECONDS 必须大于 0")
+        if self.message_history_limit < 1:
+            raise ValueError("MESSAGE_HISTORY_LIMIT 至少为 1")
+        if self.summary_threshold < 1:
+            raise ValueError("SUMMARY_THRESHOLD 至少为 1")
+        if self.audit_batch_window_ms < 0:
+            raise ValueError("AUDIT_BATCH_WINDOW_MS 不能为负")
+        if self.audit_batch_max_facts < 1:
+            raise ValueError("AUDIT_BATCH_MAX_FACTS 至少为 1")
+        return self
 
     @property
     def is_production(self) -> bool:

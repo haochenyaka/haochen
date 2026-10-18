@@ -85,7 +85,7 @@ async def extract_memories(ctx: TaskContext) -> Mapping[str, Any]:
         if guest is None:
             return {"skipped": "no_guest"}
         guest_id = guest.id
-        history = await MessageRepository(session).list_for_thread(
+        history = await MessageRepository(session).latest_for_thread(
             thread_id, limit=TRANSCRIPT_MESSAGE_LIMIT
         )
         transcript = render_transcript(history)

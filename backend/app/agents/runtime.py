@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.context import ResourceSnapshot
 from app.agents.skills import SkillCatalog
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import SessionFactory
 from app.services.audit_service import AuditRecorder
 from app.services.run_events import RunEventEmitter
@@ -39,9 +39,28 @@ else:  # 运行期占位：pydantic 解析字段注解只要求名字可解析�
 logger = logging.getLogger(__name__)
 
 
-CHECKPOINT_POOL_MIN_SIZE = 1
-CHECKPOINT_POOL_MAX_SIZE = 4
-CHECKPOINT_POOL_OPEN_TIMEOUT_SECONDS = 10.0
+@dataclass(frozen=True)
+class CheckpointPoolSettings:
+    """checkpoint 连接池口径：进程级共享，容量随部署并发调整。"""
+
+    min_size: int
+    max_size: int
+    open_timeout_seconds: float
+
+
+def resolve_checkpoint_pool_settings(settings: Settings | None = None) -> CheckpointPoolSettings:
+    resolved = settings or get_settings()
+    if resolved.checkpoint_pool_min_size < 1:
+        raise ValueError("CHECKPOINT_POOL_MIN_SIZE 至少为 1")
+    if resolved.checkpoint_pool_max_size < resolved.checkpoint_pool_min_size:
+        raise ValueError("CHECKPOINT_POOL_MAX_SIZE 不能小于 CHECKPOINT_POOL_MIN_SIZE")
+    if resolved.checkpoint_pool_open_timeout_seconds <= 0:
+        raise ValueError("CHECKPOINT_POOL_OPEN_TIMEOUT_SECONDS 必须大于 0")
+    return CheckpointPoolSettings(
+        min_size=resolved.checkpoint_pool_min_size,
+        max_size=resolved.checkpoint_pool_max_size,
+        open_timeout_seconds=resolved.checkpoint_pool_open_timeout_seconds,
+    )
 
 
 class RetrievalRefCollector:
@@ -109,17 +128,23 @@ async def get_shared_checkpointer() -> AsyncPostgresSaver:
     global _pool, _saver
     async with _lock:
         if _saver is None:
+            settings = get_settings()
+            pool_settings = resolve_checkpoint_pool_settings(settings)
             pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
-                conninfo=get_settings().psycopg_dsn,
-                min_size=CHECKPOINT_POOL_MIN_SIZE,
-                max_size=CHECKPOINT_POOL_MAX_SIZE,
+                conninfo=settings.psycopg_dsn,
+                min_size=pool_settings.min_size,
+                max_size=pool_settings.max_size,
                 open=False,
                 kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
             )
-            await pool.open(wait=True, timeout=CHECKPOINT_POOL_OPEN_TIMEOUT_SECONDS)
+            await pool.open(wait=True, timeout=pool_settings.open_timeout_seconds)
             _pool = pool
             _saver = AsyncPostgresSaver(pool)
-            logger.info("checkpoint store ready")
+            logger.info(
+                "checkpoint store ready: pool=%d-%d",
+                pool_settings.min_size,
+                pool_settings.max_size,
+            )
         return _saver
 
 
