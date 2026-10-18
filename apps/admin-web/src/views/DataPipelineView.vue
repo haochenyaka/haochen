@@ -15,6 +15,16 @@ import {
   type RuleCreateBody,
   type RuleUpdateBody,
 } from '@/api/dataPipeline'
+import {
+  listDatalakeTables,
+  listDatalakePartitions,
+  previewDatalakeTable,
+  queryDatalake,
+  getRoomTypeMonthly,
+  type DatalakePartition,
+  type DatalakeQueryResult,
+  type RoomTypeMonthlyRow,
+} from '@/api/datalake'
 import { EmptyState, SectionCard, StatCard, StatGrid } from '@/components'
 
 /* ---- State ---- */
@@ -286,6 +296,88 @@ function fmtDuration(seconds: number | null): string {
 function ruleTaskTypeLabel(rule: CleaningRule): string {
   return PIPELINE_TYPES[rule.task_type] || rule.task_type
 }
+
+/* ---- 数据湖 tab ---- */
+
+const lakeTables = ref<string[]>([])
+const lakeLoading = ref(false)
+const lakeError = ref('')
+const selectedTable = ref<string | null>(null)
+const lakePartitions = ref<DatalakePartition[]>([])
+const previewResult = ref<DatalakeQueryResult | null>(null)
+const sqlText = ref('SELECT * FROM messages LIMIT 50')
+const sqlResult = ref<DatalakeQueryResult | null>(null)
+const sqlRunning = ref(false)
+const monthlyRows = ref<RoomTypeMonthlyRow[]>([])
+const monthlyFrom = ref<string | null>(null)
+const monthlyTo = ref<string | null>(null)
+const monthlyLoading = ref(false)
+const monthlyError = ref('')
+
+async function loadLakeTables() {
+  lakeLoading.value = true
+  lakeError.value = ''
+  try {
+    lakeTables.value = (await listDatalakeTables()).map((t) => t.name)
+  } catch (err) {
+    lakeError.value = (err as { message?: string }).message || '数据湖不可达'
+    lakeTables.value = []
+  } finally {
+    lakeLoading.value = false
+  }
+}
+
+async function selectLakeTable(table: string) {
+  selectedTable.value = table
+  previewResult.value = null
+  lakePartitions.value = []
+  try {
+    lakePartitions.value = await listDatalakePartitions(table)
+    previewResult.value = await previewDatalakeTable(table, 20)
+  } catch (err) {
+    message.error((err as { message?: string }).message || '加载表失败')
+  }
+}
+
+async function runSql() {
+  if (!sqlText.value.trim()) return
+  sqlRunning.value = true
+  try {
+    sqlResult.value = await queryDatalake(sqlText.value, 1000)
+    if (sqlResult.value.row_count === 0) message.info('查询无结果')
+  } catch (err) {
+    message.error((err as { message?: string }).message || '查询失败')
+    sqlResult.value = null
+  } finally {
+    sqlRunning.value = false
+  }
+}
+
+async function loadMonthly() {
+  monthlyLoading.value = true
+  monthlyError.value = ''
+  try {
+    monthlyRows.value = await getRoomTypeMonthly(
+      monthlyFrom.value || undefined,
+      monthlyTo.value || undefined,
+    )
+  } catch (err) {
+    monthlyRows.value = []
+    monthlyError.value = (err as { message?: string }).message || '房型月度指标不可用（需先跑预聚合）'
+  } finally {
+    monthlyLoading.value = false
+  }
+}
+
+function fmtFen(fen: unknown): string {
+  if (fen === null || fen === undefined) return '-'
+  return `¥${(Number(fen) / 100).toFixed(2)}`
+}
+
+function onTabChange(key: string) {
+  if (key === 'datalake' && lakeTables.value.length === 0) loadLakeTables()
+  if (key === 'datalake-monthly') loadMonthly()
+}
 </script>
 
 <template>
@@ -293,7 +385,7 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
     <a-alert v-if="error" type="warning" :message="error" show-icon closable @close="error = ''" />
 
     <SectionCard title="数据管道">
-      <a-tabs v-model:activeKey="activeTab">
+      <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
         <!-- ========== 概览 ========== -->
         <a-tab-pane key="overview" tab="概览">
           <a-spin :spinning="loading">
@@ -427,6 +519,112 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
                   <span v-else>-</span>
                 </template>
               </template>
+            </a-table>
+          </a-spin>
+        </a-tab-pane>
+
+        <!-- ========== 数据湖 ========== -->
+        <a-tab-pane key="datalake" tab="数据湖">
+          <a-alert
+            v-if="lakeError"
+            type="warning"
+            :message="`数据湖不可达，按契约降级：${lakeError}`"
+            show-icon
+            style="margin-bottom: 12px"
+          />
+          <a-spin :spinning="lakeLoading">
+            <a-row :gutter="16">
+              <a-col :span="6">
+                <a-card size="small" title="表">
+                  <EmptyState v-if="lakeTables.length === 0" description="暂无数据湖表" />
+                  <a-list v-else :data-source="lakeTables" size="small">
+                    <template #renderItem="{ item }">
+                      <a-list-item
+                        style="cursor: pointer"
+                        :style="{ fontWeight: selectedTable === item ? 'bold' : 'normal' }"
+                        @click="selectLakeTable(item)"
+                      >
+                        <code>{{ item }}</code>
+                      </a-list-item>
+                    </template>
+                  </a-list>
+                </a-card>
+              </a-col>
+              <a-col :span="18">
+                <a-card size="small" :title="selectedTable ? `预览 · ${selectedTable}` : '预览'">
+                  <EmptyState v-if="!selectedTable" description="选择左侧表查看分区与预览" />
+                  <template v-else>
+                    <a-space style="margin-bottom: 8px">
+                      <a-tag>分区 {{ lakePartitions.length }} 个</a-tag>
+                      <span style="color: var(--text-secondary); font-size: 12px">
+                        最近分区：{{ lakePartitions[0]?.path || '-' }}
+                      </span>
+                    </a-space>
+                    <a-table
+                      v-if="previewResult"
+                      :data-source="previewResult.rows.map((r, i) => ({ key: i, ...Object.fromEntries(previewResult!.columns.map((c, ci) => [c, r[ci]])) }))"
+                      :columns="previewResult.columns.map((c) => ({ title: c, dataIndex: c, ellipsis: true }))"
+                      :pagination="{ pageSize: 10 }"
+                      size="small"
+                      :scroll="{ x: 'max-content' }"
+                    />
+                  </template>
+                </a-card>
+              </a-col>
+            </a-row>
+
+            <a-divider>即席查询（只读）</a-divider>
+            <a-textarea v-model:value="sqlText" :rows="3" placeholder="SELECT ... （仅允许只读查询）" />
+            <a-space style="margin-top: 8px">
+              <a-button type="primary" :loading="sqlRunning" @click="runSql">执行</a-button>
+              <span style="color: var(--text-secondary); font-size: 12px">
+                仅 SELECT/WITH/DESCRIBE/SHOW/PRAGMA，最多返回 1000 行
+              </span>
+            </a-space>
+            <a-table
+              v-if="sqlResult"
+              style="margin-top: 12px"
+              :data-source="sqlResult.rows.map((r, i) => ({ key: i, ...Object.fromEntries(sqlResult!.columns.map((c, ci) => [c, r[ci]])) }))"
+              :columns="sqlResult.columns.map((c) => ({ title: c, dataIndex: c, ellipsis: true }))"
+              :pagination="{ pageSize: 20 }"
+              size="small"
+              :scroll="{ x: 'max-content' }"
+            />
+          </a-spin>
+        </a-tab-pane>
+
+        <!-- ========== 房型月度指标 ========== -->
+        <a-tab-pane key="datalake-monthly" tab="房型月度指标">
+          <a-alert
+            v-if="monthlyError"
+            type="warning"
+            :message="monthlyError"
+            show-icon
+            style="margin-bottom: 12px"
+          />
+          <a-space style="margin-bottom: 12px">
+            <a-date-picker v-model:value="monthlyFrom" value-format="YYYY-MM-DD" placeholder="起始月" />
+            <a-date-picker v-model:value="monthlyTo" value-format="YYYY-MM-DD" placeholder="结束月" />
+            <a-button type="primary" :loading="monthlyLoading" @click="loadMonthly">查询</a-button>
+          </a-space>
+          <a-spin :spinning="monthlyLoading">
+            <EmptyState
+              v-if="!monthlyLoading && monthlyRows.length === 0"
+              description="暂无数据，需先运行数据湖-预聚合"
+            />
+            <a-table
+              v-else
+              :data-source="monthlyRows.map((r, i) => ({ key: i, ...r }))"
+              size="small"
+              :pagination="{ pageSize: 10 }"
+            >
+              <a-table-column title="月份" data-index="month" />
+              <a-table-column title="房型" data-index="room_type_code" />
+              <a-table-column title="房型名" data-index="room_type_name" />
+              <a-table-column title="入住率" data-index="occupancy_rate" />
+              <a-table-column title="客单价" data-index="adr_fen">
+                <template #default="{ record }">{{ fmtFen(record.adr_fen) }}</template>
+              </a-table-column>
             </a-table>
           </a-spin>
         </a-tab-pane>
