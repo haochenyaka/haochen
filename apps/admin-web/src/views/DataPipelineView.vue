@@ -107,9 +107,52 @@ const statsItems = computed(() => [
 
 /* ---- Rule CRUD ---- */
 
+interface ConfigField {
+  key: string
+  label: string
+  type: 'number' | 'boolean' | 'tables'
+  placeholder?: string
+}
+
+// 各管道的可编辑参数（与 handler 的 config 约定一致）
+const CONFIG_FIELDS: Record<string, ConfigField[]> = {
+  'data_pipeline.clean_conversations': [
+    { key: 'batch_size', label: '批大小', type: 'number', placeholder: '500' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.dedup_feedback': [{ key: 'dry_run', label: '仅统计不写入', type: 'boolean' }],
+  'data_pipeline.archive_audit_logs': [
+    { key: 'retention_days', label: '保留天数', type: 'number', placeholder: '90' },
+    { key: 'batch_size', label: '批大小', type: 'number', placeholder: '1000' },
+    { key: 'tables', label: '归档表', type: 'tables' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.validate_kb_consistency': [
+    { key: 'freshness_days', label: '新鲜度天数', type: 'number', placeholder: '180' },
+    { key: 'min_chunk_length', label: '最短分块长度', type: 'number', placeholder: '10' },
+  ],
+  'data_pipeline.clean_qa_labels': [
+    { key: 'confidence_threshold', label: '低置信阈值', type: 'number', placeholder: '0.6' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.export_messages': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.export_audits': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.export_business': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.build_aggregates': [],
+}
+
+const TASK_TYPE_OPTIONS = Object.keys(PIPELINE_TYPES)
+
+const currentConfigFields = computed<ConfigField[]>(
+  () => CONFIG_FIELDS[ruleForm.value.task_type] || [],
+)
+
+const ruleConfig = ref<Record<string, unknown>>({})
+
 function openCreateModal() {
   editingRule.value = null
   ruleForm.value = { name: '', task_type: '', description: null, schedule_cron: null, config: null }
+  ruleConfig.value = {}
   ruleModalVisible.value = true
 }
 
@@ -122,7 +165,17 @@ function openEditModal(rule: CleaningRule) {
     schedule_cron: rule.schedule_cron,
     config: rule.config,
   }
+  ruleConfig.value = { ...(rule.config || {}) }
   ruleModalVisible.value = true
+}
+
+function onTaskTypeChange() {
+  // 切换任务类型时按新类型的参数键重置（保留同名值）
+  const next: Record<string, unknown> = {}
+  for (const field of currentConfigFields.value) {
+    if (ruleConfig.value[field.key] !== undefined) next[field.key] = ruleConfig.value[field.key]
+  }
+  ruleConfig.value = next
 }
 
 async function handleSaveRule() {
@@ -130,6 +183,12 @@ async function handleSaveRule() {
     message.warning('请填写规则名称和任务类型')
     return
   }
+  // 仅提交非空参数，避免写入 undefined
+  const config: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(ruleConfig.value)) {
+    if (value !== undefined && value !== null && value !== '') config[key] = value
+  }
+  ruleForm.value.config = Object.keys(config).length > 0 ? config : null
   savingRule.value = true
   try {
     if (editingRule.value) {
@@ -387,13 +446,13 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
           <a-input v-model:value="ruleForm.name" placeholder="如：会话数据脱敏" />
         </a-form-item>
         <a-form-item label="任务类型" required>
-          <a-select v-model:value="ruleForm.task_type" placeholder="选择清洗管道">
+          <a-select v-model:value="ruleForm.task_type" placeholder="选择清洗管道" @change="onTaskTypeChange">
             <a-select-option
-              v-for="(label, type) in PIPELINE_TYPES"
+              v-for="type in TASK_TYPE_OPTIONS"
               :key="type"
               :value="type"
             >
-              {{ label }}
+              {{ PIPELINE_TYPES[type] }}
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -403,6 +462,31 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
         <a-form-item label="定时调度 (cron)">
           <a-input v-model:value="ruleForm.schedule_cron" placeholder="留空=仅手动触发，如 0 2 * * *" />
         </a-form-item>
+
+        <template v-if="currentConfigFields.length > 0">
+          <a-divider style="margin: 8px 0">规则参数</a-divider>
+          <a-form-item v-for="field in currentConfigFields" :key="field.key" :label="field.label">
+            <a-input-number
+              v-if="field.type === 'number'"
+              v-model:value="ruleConfig[field.key] as number"
+              :placeholder="field.placeholder"
+              style="width: 100%"
+            />
+            <a-switch
+              v-else-if="field.type === 'boolean'"
+              v-model:checked="ruleConfig[field.key] as boolean"
+            />
+            <a-select
+              v-else-if="field.type === 'tables'"
+              v-model:value="ruleConfig[field.key] as string[]"
+              mode="multiple"
+              placeholder="选择要归档的表"
+            >
+              <a-select-option value="model_audit">model_audit</a-select-option>
+              <a-select-option value="tool_audit">tool_audit</a-select-option>
+            </a-select>
+          </a-form-item>
+        </template>
       </a-form>
     </a-modal>
   </a-space>

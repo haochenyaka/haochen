@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.security import Identity, require_roles
-from app.services.data_pipeline_service import DataPipelineService
+from app.services.data_pipeline_service import (
+    DataPipelineService,
+    UnknownPipelineTypeError,
+)
 from app.services.task_dispatch import TaskDispatcher
 
 logger = logging.getLogger(__name__)
@@ -23,6 +26,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/data-pipeline", tags=["admin-data-pipeline"])
 
 pipeline_guard = require_roles("admin", "manager")
+
+
+def _validate_cron(expr: str | None) -> None:
+    """保存前校验 cron 表达式（非法即 422），避免运行期静默跳过。"""
+    if not expr:
+        return
+    from croniter import croniter
+
+    try:
+        croniter(expr)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=f"cron 表达式非法：{expr}（{exc}）") from exc
+
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 GuardDep = Annotated[Identity, Depends(pipeline_guard)]
@@ -139,14 +155,18 @@ async def create_rule(
     _identity: GuardDep,
 ) -> RuleResponse:
     """创建清洗规则。"""
+    _validate_cron(body.schedule_cron)
     svc = DataPipelineService(session)
-    rule = await svc.create_rule(
-        name=body.name,
-        description=body.description,
-        task_type=body.task_type,
-        schedule_cron=body.schedule_cron,
-        config=body.config,
-    )
+    try:
+        rule = await svc.create_rule(
+            name=body.name,
+            description=body.description,
+            task_type=body.task_type,
+            schedule_cron=body.schedule_cron,
+            config=body.config,
+        )
+    except UnknownPipelineTypeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     await session.commit()
     return _rule_to_response(rule)
 
@@ -159,6 +179,7 @@ async def update_rule(
     _identity: GuardDep,
 ) -> RuleResponse:
     """更新清洗规则。"""
+    _validate_cron(body.schedule_cron)
     svc = DataPipelineService(session)
     rule = await svc.update_rule(
         rule_id,

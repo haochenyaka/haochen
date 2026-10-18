@@ -12,9 +12,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.data_pipeline import DataCleaningRule, DataPipelineRun
 from app.services.task_dispatch import TaskDispatcher, dispatch_task
+from app.services.task_registry import registered_handlers
 from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
+
+PIPELINE_TASK_PREFIX = "data_pipeline."
+
+
+class UnknownPipelineTypeError(ValueError):
+    """未知管道 task_type（未注册的 handler），应显式拒绝。"""
+
+
+def _registered_pipeline_types() -> frozenset[str]:
+    return frozenset(
+        task_type
+        for (task_type, _version) in registered_handlers()
+        if task_type.startswith(PIPELINE_TASK_PREFIX)
+    )
+
+
+def validate_task_type(task_type: str) -> str:
+    """校验 task_type 是已注册的 data_pipeline handler（fail-closed，白名单）。"""
+    known = _registered_pipeline_types()
+    if task_type not in known:
+        raise UnknownPipelineTypeError(f"未知管道任务类型：{task_type}；已注册：{sorted(known)}")
+    return task_type
 
 
 class DataPipelineService:
@@ -43,6 +66,7 @@ class DataPipelineService:
         schedule_cron: str | None,
         config: dict[str, object] | None,
     ) -> DataCleaningRule:
+        validate_task_type(task_type)
         rule = DataCleaningRule(
             name=name,
             description=description,
