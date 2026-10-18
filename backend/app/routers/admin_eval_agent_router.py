@@ -59,7 +59,7 @@ class MetricsModel(BaseModel):
     questions: int
     avg_tool_accuracy: float
     avg_args_match_rate: float
-    task_success_rate: float | None
+    task_success_rate: float | None = None
     total_passed: int
     by_tag: dict[str, dict[str, float]]
     avg_judge_score: float | None = None

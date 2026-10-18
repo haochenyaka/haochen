@@ -451,3 +451,20 @@ class TestRunner:
             "edge",
         }
         assert required <= covered, f"覆盖类别缺失：{sorted(required - covered)}"
+
+
+def test_report_metrics_without_task_success_rate_is_serializable() -> None:
+    """历史报告不含 task_success_rate 时，列表接口不应因校验失败返回 500。"""
+    from app.routers.admin_eval_agent_router import MetricsModel
+
+    payload = {
+        "by_tag": {"edge": {"count": 7, "pass_rate": 1.0}},
+        "questions": 7,
+        "total_passed": 7,
+        "avg_tool_accuracy": 1.0,
+        "avg_args_match_rate": 1.0,
+    }
+
+    model = MetricsModel(**payload)
+
+    assert model.task_success_rate is None
