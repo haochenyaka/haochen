@@ -276,9 +276,7 @@ def test_scheduler_submits_due_rule_and_dedupes_within_minute(runtime_db_url: st
         )
 
         async with factory() as session:
-            runs = (
-                await session.execute(select(DataPipelineRun))
-            ).scalars().all()
+            runs = (await session.execute(select(DataPipelineRun))).scalars().all()
         return {
             "first_count": len(first),
             "second_count": len(second),

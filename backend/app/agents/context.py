@@ -168,6 +168,7 @@ class DeclaredBuiltinPolicy:
     declared_tools: frozenset[str] = frozenset()
     knowledge_bases: frozenset[str] = frozenset()
     skills: frozenset[str] = frozenset()
+    mcp_servers: frozenset[str] = frozenset()
 
     async def authorizes(self, ref: ResourceRef) -> bool:
         if ref.kind == "tool":
@@ -176,6 +177,8 @@ class DeclaredBuiltinPolicy:
             return ref.id in self.knowledge_bases
         if ref.kind == "skill":
             return ref.id in self.skills
+        if ref.kind == "mcp_server":
+            return ref.id in self.mcp_servers
         return False
 
 

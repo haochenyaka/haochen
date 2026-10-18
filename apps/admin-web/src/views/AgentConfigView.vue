@@ -13,11 +13,13 @@ import {
   type Skill,
   type ConfigItem,
 } from '@/api/agentConfig'
+import { listMcpServers as listMcpServersApi, type McpServer } from '@/api/mcpServer'
 import { EmptyState, SectionCard } from '@/components'
 
 const agents = ref<AgentDetail[]>([])
 const tools = ref<Tool[]>([])
 const skills = ref<Skill[]>([])
+const mcpServers = ref<McpServer[]>([])
 const selectedSlug = ref('')
 const detail = ref<AgentDetail | null>(null)
 const loading = ref(true)
@@ -28,17 +30,20 @@ const activeTab = ref('basic')
 const formValues = ref<Record<string, unknown>>({})
 const enabledTools = ref<string[]>([])
 const enabledSkills = ref<string[]>([])
+const enabledMcpServers = ref<string[]>([])
 
 onMounted(async () => {
   try {
-    const [agentsData, toolsData, skillsData] = await Promise.all([
+    const [agentsData, toolsData, skillsData, mcpData] = await Promise.all([
       listAgents(),
       listTools(),
       listSkills(),
+      listMcpServersApi(true),
     ])
     agents.value = agentsData
     tools.value = toolsData
     skills.value = skillsData
+    mcpServers.value = mcpData
   } catch {
     message.error('加载数据失败')
   } finally {
@@ -67,6 +72,7 @@ async function loadDetail(slug: string) {
     }
     enabledTools.value = d.enabled_tools ? [...d.enabled_tools] : [...d.tool_ids]
     enabledSkills.value = d.enabled_skills ? [...d.enabled_skills] : [...d.skill_ids]
+    enabledMcpServers.value = d.enabled_mcp_servers ? [...d.enabled_mcp_servers] : []
   } catch {
     message.error('加载 Agent 详情失败')
   } finally {
@@ -136,6 +142,7 @@ async function handleSave() {
       },
       enabled_tools: enabledTools.value.length > 0 ? enabledTools.value : null,
       enabled_skills: enabledSkills.value.length > 0 ? enabledSkills.value : null,
+      enabled_mcp_servers: enabledMcpServers.value.length > 0 ? enabledMcpServers.value : null,
     })
     message.success('配置已保存')
     await loadDetail(selectedSlug.value)
@@ -324,6 +331,38 @@ const toolsByCategory = computed(() => {
             </a-checkbox-group>
           </a-tab-pane>
 
+          <!-- MCP 服务器 -->
+          <a-tab-pane key="mcp" tab="MCP 服务器">
+            <a-alert
+              type="info"
+              show-icon
+              message="启用的 MCP 服务器工具会在运行期注入本 Agent（工具名带 server slug 前缀；MCP 工具默认走人工审批）。"
+              style="margin-bottom: 12px"
+            />
+            <template v-if="mcpServers.length === 0">
+              <EmptyState description="暂无已启用的 MCP 服务器，请先在「MCP 服务器」页添加并测试连接" />
+            </template>
+            <a-checkbox-group v-else v-model:value="enabledMcpServers">
+              <a-row :gutter="[16, 8]">
+                <a-col v-for="server in mcpServers" :key="server.slug" :span="12">
+                  <a-checkbox :value="server.slug">
+                    {{ server.name }}
+                    <a-tag
+                      v-if="server.last_status"
+                      :color="server.last_status === 'ok' ? 'success' : 'error'"
+                      style="margin-left: 6px"
+                    >
+                      {{ server.last_status === 'ok' ? '正常' : '探测失败' }}
+                    </a-tag>
+                    <div style="font-size:12px;color:var(--text-4);margin-top:2px">
+                      {{ server.slug }} · {{ server.discovered_tools?.length ?? 0 }} 个工具
+                    </div>
+                  </a-checkbox>
+                </a-col>
+              </a-row>
+            </a-checkbox-group>
+          </a-tab-pane>
+
           <!-- 配置预览 -->
           <a-tab-pane key="preview" tab="配置预览">
             <a-descriptions :column="1" size="small" bordered>
@@ -343,6 +382,9 @@ const toolsByCategory = computed(() => {
               </a-descriptions-item>
               <a-descriptions-item label="当前启用 Skill">
                 {{ enabledSkills.join(', ') || '无' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="启用的 MCP 服务器">
+                {{ enabledMcpServers.join(', ') || '无' }}
               </a-descriptions-item>
               <a-descriptions-item label="代码声明知识库">
                 {{ detail.knowledge_base_ids.join(', ') || '无' }}

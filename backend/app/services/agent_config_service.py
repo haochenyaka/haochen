@@ -35,6 +35,7 @@ class AgentRuntimeConfig:
     enabled_tools: tuple[str, ...] | None = None
     enabled_skills: tuple[str, ...] | None = None
     enabled_knowledge_bases: tuple[str, ...] | None = None
+    enabled_mcp_servers: tuple[str, ...] | None = None
 
 
 def normalize_config_json(
@@ -70,6 +71,7 @@ class AgentConfigDTO:
     enabled_tools: list[str] | None
     enabled_skills: list[str] | None
     enabled_knowledge_bases: list[str] | None
+    enabled_mcp_servers: list[str] | None
 
 
 @dataclass
@@ -119,6 +121,7 @@ class AgentConfigService:
                     enabled_tools=db_conf.enabled_tools if db_conf else None,
                     enabled_skills=db_conf.enabled_skills if db_conf else None,
                     enabled_knowledge_bases=db_conf.enabled_knowledge_bases if db_conf else None,
+                    enabled_mcp_servers=db_conf.enabled_mcp_servers if db_conf else None,
                 )
             )
         return results
@@ -141,6 +144,7 @@ class AgentConfigService:
             enabled_tools=db_conf.enabled_tools if db_conf else None,
             enabled_skills=db_conf.enabled_skills if db_conf else None,
             enabled_knowledge_bases=db_conf.enabled_knowledge_bases if db_conf else None,
+            enabled_mcp_servers=db_conf.enabled_mcp_servers if db_conf else None,
         )
 
     async def save_agent_config(
@@ -151,6 +155,7 @@ class AgentConfigService:
         enabled_tools: list[str] | None = None,
         enabled_skills: list[str] | None = None,
         enabled_knowledge_bases: list[str] | None = None,
+        enabled_mcp_servers: list[str] | None = None,
     ) -> AgentConfigDTO:
         """保存 Agent 配置覆盖。传入 None 的字段保留 DB 既有值（不覆盖）。"""
         agent = get_agent(slug)
@@ -170,6 +175,8 @@ class AgentConfigService:
             db_conf.enabled_skills = enabled_skills or None
         if enabled_knowledge_bases is not None:
             db_conf.enabled_knowledge_bases = enabled_knowledge_bases or None
+        if enabled_mcp_servers is not None:
+            db_conf.enabled_mcp_servers = enabled_mcp_servers or None
 
         await self._session.commit()
         await self._session.refresh(db_conf)
@@ -188,6 +195,7 @@ class AgentConfigService:
             enabled_tools=db_conf.enabled_tools,
             enabled_skills=db_conf.enabled_skills,
             enabled_knowledge_bases=db_conf.enabled_knowledge_bases,
+            enabled_mcp_servers=db_conf.enabled_mcp_servers,
         )
 
     async def delete_agent_config(self, slug: str) -> None:
@@ -245,6 +253,9 @@ class AgentConfigService:
             enabled_skills=tuple(db_conf.enabled_skills) if db_conf.enabled_skills else None,
             enabled_knowledge_bases=(
                 tuple(db_conf.enabled_knowledge_bases) if db_conf.enabled_knowledge_bases else None
+            ),
+            enabled_mcp_servers=(
+                tuple(db_conf.enabled_mcp_servers) if db_conf.enabled_mcp_servers else None
             ),
         )
 
