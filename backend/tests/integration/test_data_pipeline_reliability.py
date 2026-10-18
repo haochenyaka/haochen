@@ -234,3 +234,58 @@ def test_trigger_rejects_concurrent_same_rule(runtime_db_url: str) -> None:
     assert result["first_ok"] is True
     assert result["second_none"] is True, "运行中的同规则不应重复触发"
     assert result["runs"] == 1
+
+
+def test_scheduler_submits_due_rule_and_dedupes_within_minute(runtime_db_url: str) -> None:
+    """调度器：命中的规则提交一次 scheduled run；同一分钟内重复调用不重复提交。"""
+    from app.data_pipeline.scheduler import submit_due_pipelines
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        async with factory() as session:
+            session.add(
+                DataCleaningRule(
+                    name="每分钟",
+                    task_type="data_pipeline.validate_kb_consistency",
+                    handler_version=1,
+                    schedule_cron="* * * * *",
+                    config={},
+                    enabled=True,
+                )
+            )
+            # 未命中（3:00）的规则
+            session.add(
+                DataCleaningRule(
+                    name="每天三点",
+                    task_type="data_pipeline.dedup_feedback",
+                    handler_version=1,
+                    schedule_cron="0 3 * * *",
+                    config={},
+                    enabled=True,
+                )
+            )
+            await session.commit()
+
+        dispatcher = RecordingTaskDispatcher()
+        moment = datetime(2026, 10, 18, 9, 17, 5, tzinfo=UTC)
+        first = await submit_due_pipelines(
+            now=moment, session_factory=factory, dispatcher=dispatcher
+        )
+        # 同一分钟（不同秒）再跑一次：应被分钟级去重键拦下
+        second = await submit_due_pipelines(
+            now=moment.replace(second=40), session_factory=factory, dispatcher=dispatcher
+        )
+
+        async with factory() as session:
+            runs = (
+                await session.execute(select(DataPipelineRun))
+            ).scalars().all()
+        return {
+            "first_count": len(first),
+            "second_count": len(second),
+            "triggers": sorted(r.trigger for r in runs),
+        }
+
+    result = run_with_session_factory(runtime_db_url, _body)
+    assert result["first_count"] == 1, "仅每分钟规则命中"
+    assert result["second_count"] == 0, "同一分钟不重复提交"
+    assert result["triggers"] == ["scheduled"]

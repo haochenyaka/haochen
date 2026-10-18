@@ -18,6 +18,7 @@ from arq.logs import default_log_config
 
 from app.agents import close_shared_checkpointer
 from app.config import get_settings
+from app.data_pipeline.scheduler import submit_pipeline_schedules_job
 from app.knowledge.recovery import release_expired_claims_job
 from app.lock.task_handlers import submit_daily_rotation_job
 from app.quality.task_handlers import submit_qa_audit_job
@@ -150,6 +151,8 @@ class TaskWorkerSettings:
         cron(submit_daily_rotation_job, minute=set(range(0, 60, 5)), second={0}),
         # 质检跑批：每小时提交一次（小时级去重键，重启补发不堆积）
         cron(submit_qa_audit_job, minute={10}, second={0}),
+        # 数据管道调度：每分钟扫描命中的清洗规则（分钟级去重键保证多副本安全）
+        cron(submit_pipeline_schedules_job, minute=set(range(0, 60)), second={20}),
     ]
     on_startup = task_startup
     on_shutdown = task_shutdown

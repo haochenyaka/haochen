@@ -240,7 +240,8 @@ async def trigger_pipeline_task(
     run = await svc.trigger_pipeline_once(
         task_type, config=None, trigger="api", dispatcher=dispatcher
     )
-    await session.commit()
+    if run is None:
+        raise HTTPException(status_code=400, detail="管道任务已在队列中，且同一分钟不重复触发")
     return TriggerResponse(run_id=str(run.id))
 
 

@@ -129,38 +129,45 @@ class DataPipelineService:
         task_type: str,
         handler_version: int,
         config: dict[str, object] | None,
+        dedupe_key: str | None = None,
         dispatcher: TaskDispatcher | None = None,
-    ) -> DataPipelineRun:
+    ) -> DataPipelineRun | None:
         """创建运行记录 + 提交 durable task。
 
         **竞态修复**：run 行与 task 行在同一事务内落库并**提交**，提交后才投递 ARQ。
         此前先 `add` 后 `submit_task`（后者自持事务、提交即派发），worker 可能在 run 行
         提交前执行 handler，`complete_run` 的 `WHERE status='running'` 匹配 0 行，run 永
         卡 `running`。现在把 task 行并入本 session 提交，投递发生在提交之后。
-        """
-        pipeline_run = DataPipelineRun(
-            id=run_id,
-            rule_id=rule_id,
-            trigger=trigger,
-            task_type=task_type,
-            status="running",
-        )
-        self._session.add(pipeline_run)
 
+        `dedupe_key` 为 None 时按 run 维度生成（每次触发必产出新任务）；调度器传入分钟级
+        去重键以确保同一分钟只提交一次。命中去重键时**不建 run 行**并返回 None（避免孤儿）。
+        """
         payload: dict[str, object] = {
             "pipeline_run_id": str(run_id),
             "rule_id": rule_id,
             "trigger": trigger,
             "config": config or {},
         }
-        # task 行并入同一事务（不在此处投递）；去重键按 run 维度，避免跨 run 复用任务
+        # task 行并入同一事务（不在此处投递）
         submission = await TaskService(self._session).submit(
             task_type=task_type,
             handler_version=handler_version,
             payload=payload,
-            dedupe_key=f"pipeline:{run_id}",
+            dedupe_key=dedupe_key or f"pipeline:{run_id}",
         )
-        pipeline_run.task_id = submission.task_id
+        if submission.deduplicated:
+            # 同键任务已在队列/运行中：复用既有任务，不为本次新建 run 行（避免孤儿 running）
+            return None
+
+        pipeline_run = DataPipelineRun(
+            id=run_id,
+            rule_id=rule_id,
+            trigger=trigger,
+            task_type=task_type,
+            status="running",
+            task_id=submission.task_id,
+        )
+        self._session.add(pipeline_run)
         await self._session.commit()
 
         # 提交之后才投递：投递失败由 pending 补发恢复，run 行已可见
@@ -184,6 +191,7 @@ class DataPipelineService:
         rule_id: int,
         *,
         trigger: str = "manual",
+        dedupe_key: str | None = None,
         dispatcher: TaskDispatcher | None = None,
     ) -> DataPipelineRun | None:
         """触发规则对应的清洗管道。
@@ -205,6 +213,7 @@ class DataPipelineService:
             task_type=rule.task_type,
             handler_version=rule.handler_version,
             config=rule.config,
+            dedupe_key=dedupe_key,
             dispatcher=dispatcher,
         )
 
@@ -215,7 +224,7 @@ class DataPipelineService:
         config: dict[str, object] | None = None,
         trigger: str = "api",
         dispatcher: TaskDispatcher | None = None,
-    ) -> DataPipelineRun:
+    ) -> DataPipelineRun | None:
         """触发一次性管道（不关联规则）。"""
         return await self._create_run_and_task(
             run_id=uuid4(),
