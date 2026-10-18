@@ -142,3 +142,50 @@ async def test_complete_run_merges_scope_and_checkpoint_into_summary() -> None:
     assert captured["summary"]["_scope"] == "data_pipeline.export_messages"
     assert captured["summary"]["checkpoint"] == 99
     assert captured["summary"]["exported"] == 3
+
+
+@pytest.mark.asyncio
+async def test_pipeline_failure_marks_run_failed_with_source() -> None:
+    """租约过期等异常终止应把运行记录收敛为 failed，并回填数据源。"""
+    from app.data_pipeline import task_handlers
+
+    captured: dict[str, Any] = {}
+
+    class _Svc:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        async def fail_run(self, run_id: UUID, **kwargs: Any) -> None:
+            captured["run_id"] = run_id
+            captured.update(kwargs)
+
+    session = _FakeSession()
+    ctx = _ctx(session)
+
+    import app.services.data_pipeline_service as svc_mod
+
+    original = svc_mod.DataPipelineService
+    svc_mod.DataPipelineService = _Svc  # type: ignore[misc]
+    try:
+        await task_handlers._pipeline_failure(session, ctx, "worker_lease_expired")
+    finally:
+        svc_mod.DataPipelineService = original  # type: ignore[misc]
+
+    assert captured["run_id"] == UUID(ctx.payload_value("pipeline_run_id"))
+    assert captured["source_table"] == "messages"
+    assert captured["error"] == "worker_lease_expired"
+
+
+def test_all_pipeline_handlers_register_failure_hook() -> None:
+    """所有 data_pipeline.* 处理器都必须注册失败收敛钩子。"""
+    from app.services.task_registry import registered_handlers
+
+    specs = registered_handlers()
+    pipeline_specs = [
+        spec
+        for (task_type, _version), spec in specs.items()
+        if task_type.startswith("data_pipeline.")
+    ]
+    assert pipeline_specs
+    missing = [spec.task_type for spec in pipeline_specs if spec.on_failure is None]
+    assert missing == []

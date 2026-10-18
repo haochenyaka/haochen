@@ -153,6 +153,46 @@ def test_archive_audit_logs_archives_by_real_primary_key(runtime_db_url: str) ->
     assert result["run_status"] == "completed"
 
 
+def test_lease_expiry_converges_pipeline_run(runtime_db_url: str) -> None:
+    """任务租约过期时，运行记录也应收敛为 failed 并回填数据源，不再永卡 running。"""
+    from app.repositories.task_repository import TaskRepository
+    from app.services.task_service import reconcile_expired_tasks
+
+    async def _body(factory: SessionFactoryArg) -> dict[str, Any]:
+        run_id = await _create_running_run(factory, "data_pipeline.export_messages")
+        async with factory() as session:
+            repo = TaskRepository(session)
+            task = await repo.create(
+                task_type="data_pipeline.export_messages",
+                handler_version=1,
+                payload={"pipeline_run_id": str(run_id)},
+            )
+            claimed = await repo.claim(task.id, owner_token="dead-worker", lease_seconds=-60)
+            await session.commit()
+            assert claimed == 1
+
+        converged = await reconcile_expired_tasks(session_factory=factory)
+
+        async with factory() as session:
+            row = (
+                await session.execute(select(DataPipelineRun).where(DataPipelineRun.id == run_id))
+            ).scalar_one()
+        return {
+            "converged": converged,
+            "status": row.status,
+            "source_table": row.source_table,
+            "error": row.error,
+            "duration_seconds": row.duration_seconds,
+        }
+
+    result = run_with_session_factory(runtime_db_url, _body)
+    assert result["converged"] >= 1
+    assert result["status"] == "failed"
+    assert result["source_table"] == "messages"
+    assert result["error"] == "worker_lease_expired"
+    assert (result["duration_seconds"] or 0) > 0
+
+
 def test_trigger_commits_run_and_task_together(runtime_db_url: str) -> None:
     """回归 bug 4：触发后 run 行与其 task 行在同一事务可见，run 不再永卡 running。"""
     from app.models.task import Task

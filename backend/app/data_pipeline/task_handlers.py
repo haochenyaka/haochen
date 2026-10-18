@@ -20,6 +20,8 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.task_registry import TaskContext, task_handler
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,19 @@ _ID_CARD_PATTERN = re.compile(
 
 
 CHECKPOINT_SCOPE_KEY = "_scope"
+
+# 各管道的目标数据源：任务异常终止时回填到运行记录，保证列表仍能展示数据源。
+PIPELINE_SOURCE_TABLES: dict[str, str] = {
+    "data_pipeline.clean_conversations": "messages",
+    "data_pipeline.dedup_feedback": "message_feedback",
+    "data_pipeline.archive_audit_logs": "model_audit,tool_audit",
+    "data_pipeline.validate_kb_consistency": "kb_documents,kb_chunks",
+    "data_pipeline.clean_qa_labels": "qa_labels",
+    "data_pipeline.export_messages": "messages",
+    "data_pipeline.export_audits": "model_audit,tool_audit",
+    "data_pipeline.export_business": "orders",
+    "data_pipeline.build_aggregates": "agg",
+}
 
 
 async def _complete_run(
@@ -66,12 +81,26 @@ async def _complete_run(
         await session.commit()
 
 
+async def _pipeline_failure(session: AsyncSession, ctx: TaskContext, error: str) -> None:
+    """任务异常终止（含租约过期）时收敛运行记录，避免永久卡在 running。"""
+    run_id_str = ctx.payload_value("pipeline_run_id")
+    if not run_id_str:
+        return
+    from app.services.data_pipeline_service import DataPipelineService
+
+    await DataPipelineService(session).fail_run(
+        UUID(run_id_str),
+        source_table=PIPELINE_SOURCE_TABLES.get(ctx.task_type),
+        error=error,
+    )
+
+
 # ---------------------------------------------------------------------------
 # 管道 1：会话数据脱敏
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.clean_conversations", 1)
+@task_handler("data_pipeline.clean_conversations", 1, on_failure=_pipeline_failure)
 async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
     """扫描 messages.content，对手机号和身份证号做脱敏处理。
 
@@ -189,7 +218,7 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.dedup_feedback", 1)
+@task_handler("data_pipeline.dedup_feedback", 1, on_failure=_pipeline_failure)
 async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
     """按 (message_id, user_id) 合并多条反馈记录，保留最新一条。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -285,7 +314,7 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.archive_audit_logs", 1)
+@task_handler("data_pipeline.archive_audit_logs", 1, on_failure=_pipeline_failure)
 async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
     """将 N 天前的审计记录从主表归档到 data_archives，主表软删除。
 
@@ -424,7 +453,7 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.validate_kb_consistency", 1)
+@task_handler("data_pipeline.validate_kb_consistency", 1, on_failure=_pipeline_failure)
 async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
     """检测知识库中的冲突和过期文档。
 
@@ -525,7 +554,7 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.clean_qa_labels", 1)
+@task_handler("data_pipeline.clean_qa_labels", 1, on_failure=_pipeline_failure)
 async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
     """合并低置信度的自动质检标签，标记需人工复核的条目。
 
@@ -745,7 +774,7 @@ async def _export_batch(
     return {"table": table, "exported": total_rows, "max_id": max_id}
 
 
-@task_handler("data_pipeline.export_messages", 1)
+@task_handler("data_pipeline.export_messages", 1, on_failure=_pipeline_failure)
 async def export_messages(ctx: TaskContext) -> Mapping[str, Any]:
     """导出 messages 表到数据湖 Parquet，增量基于 seq。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -788,11 +817,17 @@ async def export_messages(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("export_messages 失败")
-        await _complete_run(ctx, status="failed", error=str(e), duration_seconds=duration)
+        await _complete_run(
+            ctx,
+            status="failed",
+            source_table="messages",
+            error=str(e),
+            duration_seconds=duration,
+        )
         raise
 
 
-@task_handler("data_pipeline.export_audits", 1)
+@task_handler("data_pipeline.export_audits", 1, on_failure=_pipeline_failure)
 async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
     """导出 model_audit 和 tool_audit 到数据湖。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -860,6 +895,7 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
         await _complete_run(
             ctx,
             status="failed",
+            source_table="model_audit,tool_audit",
             error=str(e),
             duration_seconds=duration,
             checkpoint_scope="data_pipeline.export_audits",
@@ -1007,7 +1043,7 @@ async def _next_part_offset(storage: Any, table: str, day: date) -> int:
     return max(offsets, default=-1) + 1
 
 
-@task_handler("data_pipeline.export_business", 1)
+@task_handler("data_pipeline.export_business", 1, on_failure=_pipeline_failure)
 async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
     """导出订单与房型/房间维度，供 DuckDB 生成房型月度入住率与客单价。
 
@@ -1079,6 +1115,7 @@ async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
         await _complete_run(
             ctx,
             status="failed",
+            source_table="orders",
             error=str(e),
             duration_seconds=duration,
             checkpoint_scope="data_pipeline.export_business",
@@ -1091,7 +1128,7 @@ async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
 # ===================================================================
 
 
-@task_handler("data_pipeline.build_aggregates", 1)
+@task_handler("data_pipeline.build_aggregates", 1, on_failure=_pipeline_failure)
 async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
     """使用 DuckDB 读取数据湖 Parquet，生成预聚合 Parquet。
 
