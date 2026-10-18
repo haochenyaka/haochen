@@ -95,6 +95,15 @@ class DatalakeQueryService:
 
         return await asyncio.to_thread(_run)
 
+    async def preview_table(self, table: str, limit: int = 20) -> dict[str, Any]:
+        """预览表的前 N 行：表名经 `list_tables` 白名单校验，杜绝标识符拼接注入。"""
+        known = await self.list_tables()
+        if table not in known:
+            raise DatalakeQueryError(f"未知数据湖表：{table}")
+        safe_limit = max(1, min(int(limit), 100))
+        sql = f'SELECT * FROM "{table}" LIMIT {safe_limit}'
+        return await self.query(sql, limit=0)
+
     async def query(self, sql: str, limit: int = 1000) -> dict[str, Any]:
         """执行只读 SQL 查询，返回结果集。
 

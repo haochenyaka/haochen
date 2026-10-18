@@ -25,6 +25,7 @@ export interface AgentDetail {
   enabled_tools: string[] | null
   enabled_skills: string[] | null
   enabled_knowledge_bases: string[] | null
+  enabled_mcp_servers: string[] | null
 }
 
 export interface Tool {
@@ -51,6 +52,7 @@ export interface SaveAgentConfigBody {
   enabled_tools?: string[] | null
   enabled_skills?: string[] | null
   enabled_knowledge_bases?: string[] | null
+  enabled_mcp_servers?: string[] | null
 }
 
 export async function listAgents(): Promise<AgentDetail[]> {

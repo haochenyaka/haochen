@@ -7,6 +7,7 @@
 """
 
 from app.wechat.client import (
+    PayOrderStatus,
     PrepayOrder,
     SubscribeMessage,
     WechatClient,
@@ -17,6 +18,7 @@ from app.wechat.client import (
 from app.wechat.signature import canonical_signature, verify_callback_signature
 
 __all__ = [
+    "PayOrderStatus",
     "PrepayOrder",
     "SubscribeMessage",
     "WechatClient",

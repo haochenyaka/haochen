@@ -19,7 +19,7 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；Phase 4 已交付 P4.2 安全加固、P4.3 可观测告警（2026-10-17）、P4.4 可靠性与容量（2026-10-18）与 P4.5 备份与合规（2026-10-18），P4.1 待做
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；Phase 4 已交付 P4.2 安全加固、P4.3 可观测告警（2026-10-17）、P4.4 可靠性与容量（2026-10-18）与 P4.5 备份与合规（2026-10-18），P4.1 待做；**补充交付（2026-10-18）**：MCP 运行时真接（PR-M1–M3）与数据管道可靠性补齐（PR-D1–D5），验收 A9/A10 已回填
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
@@ -199,6 +199,23 @@
   - **验证**：ruff / ruff format / mypy 全绿；单元 **425 passed**；本地集成 **331 passed / 3 skipped**；base 与 prod compose `config --quiet` 通过；`bash -n` 脚本语法通过。
 
 **验收**：一份「上线就绪 checklist」，逐条有证据。
+
+---
+
+### Phase 4 补充 — MCP 运行时与数据管道可靠性（2026-10-18 交付）
+
+> 上游方案：[remediation-mcp-plan.md](./remediation-mcp-plan.md) · [remediation-data-pipeline-plan.md](./remediation-data-pipeline-plan.md)。验收证据见 [acceptance-matrix.md](./acceptance-matrix.md) A9/A10。
+
+- [x] **PR-M1 MCP 客户端与连接测试**：`app/agents/mcp/`（client/probe）；传输白名单（拒绝 `stdio`）、配置哈希缓存、凭证仅从 `MCP_<SLUG>_API_KEY` 注入；管理端 `POST /{id}/test`、`GET /{id}/tools`。测试：单测 8 + 集成 5。
+- [x] **PR-M2 运行期接线**：`AgentConfig.enabled_mcp_servers`（迁移 0028）；`run_body` 构造 `mcp_server` 资源快照；装配期按启用 slug 装载工具、加 `{slug}__` 前缀、默认危险（`read_only_tools` 豁免）、`disabled_tools` 剔除；Run 级注册表不污染进程级；经同一 `build_tool_node` 获得审计/打码/审批。测试：单测 5 + 集成 2。
+- [x] **PR-M3 mcp-gateway 独立服务**：`app/mcp_gateway/` 以子路径暴露 `/lock/mcp`、`/robot/mcp`、`/wechat/mcp`，复用 `LockClient` / `RobotClient` / `WechatClient`（内部走 device-sim）；compose 新增 `mcp-gateway` 与健康检查；seed 预置三条 `mcp_servers`。测试：网关 12 + 渠道契约 2 + 种子集成 1。
+- [x] **PR-M4 验收与文档**：A9 回填；§2.7 与 design/README 按交付事实更正。
+- [x] **PR-D1 运行记录可靠性**：修 checkpoint 键、预聚合静默返回、归档主键/分批/失败语义、run/task 事务竞态；同规则并发互斥。测试：handler 单测 4 + 集成 5。
+- [x] **PR-D2 规则种子与参数化**：9 条默认规则 + `config` 参数编辑；`task_type` 白名单与 cron 保存校验。测试：集成 4。
+- [x] **PR-D3 真实调度器**：task-worker 每分钟扫描 `schedule_cron`，`croniter` 命中判定 + 分钟级去重键提交 `scheduled` run。测试：调度单测 5 + 集成 1。
+- [x] **PR-D4 数据湖前端页**：管道页新增「数据湖」tab（分区浏览/预览/只读 SQL/房型月度指标），湖不可达显式降级。
+- [x] **PR-D5 报表预聚合新鲜度守卫**：`REPORT_AGG_ENABLED` 默认关（走 PG）；开启时校验分片新鲜度，陈旧自动回落 PG，不再静默归零。测试：降级 4 例。
+- [x] **PR-D6 验收与文档**：A10 回填；§2.15 与 README 更新。
 
 ---
 

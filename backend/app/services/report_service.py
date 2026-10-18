@@ -18,7 +18,7 @@ import logging
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import duckdb
@@ -180,15 +180,39 @@ class ReportService:
     async def _duckdb_query_agg(self, agg_table: str, sql: str) -> list[dict[str, Any]] | None:
         """对数据湖中的预聚合 Parquet 表执行 DuckDB 查询。
 
-        返回 [{col: value, ...}, ...] 或 None（表不存在、数据湖不可达或查询失败）。
-        整个探测与读取过程都在兜底范围内：湖不可达时按契约降级，由调用方走 PostgreSQL。
+        返回 [{col: value, ...}, ...] 或 None（开关关闭、表不存在、分片陈旧、湖不可达或
+        查询失败）。整个探测与读取过程都在兜底范围内：不可用即按契约降级，由调用方走
+        PostgreSQL。
+
+        **新鲜度守卫**（remediation-plan §A4 张力）：预聚合默认关闭（`report_agg_enabled`）；
+        开启后若分片最后修改时间早于 `now - report_agg_max_staleness_seconds`，判为陈旧并
+        回落 PG——陈旧分片会令 token/tool 指标静默归零。
         """
+        from app.config import get_settings
+
+        settings = get_settings()
+        if not settings.report_agg_enabled:
+            return None
+
         from app.data_pipeline.lake_storage import LakeStorage
 
         try:
             storage = LakeStorage.from_settings()
             files = await storage.list_partitions(agg_table)
             if not files:
+                return None
+
+            latest = await storage.latest_modification(agg_table)
+            max_staleness = settings.report_agg_max_staleness_seconds
+            now = datetime.now(UTC)
+            if latest is None or (
+                max_staleness > 0 and (now - latest).total_seconds() > max_staleness
+            ):
+                logger.warning(
+                    "预聚合分片陈旧，回落 PostgreSQL：table=%s latest=%s",
+                    agg_table,
+                    latest,
+                )
                 return None
 
             local_paths = [str(await storage.read_parquet_to_temp(f)) for f in files]

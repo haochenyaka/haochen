@@ -58,6 +58,7 @@ class AgentDetailModel(BaseModel):
     enabled_tools: list[str] | None = None
     enabled_skills: list[str] | None = None
     enabled_knowledge_bases: list[str] | None = None
+    enabled_mcp_servers: list[str] | None = None
 
 
 class ToolModel(BaseModel):
@@ -84,6 +85,7 @@ class SaveAgentConfigBody(BaseModel):
     enabled_tools: list[str] | None = None
     enabled_skills: list[str] | None = None
     enabled_knowledge_bases: list[str] | None = None
+    enabled_mcp_servers: list[str] | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -118,6 +120,7 @@ def _to_dto(dto: AgentConfigDTO) -> AgentDetailModel:
         enabled_tools=dto.enabled_tools,
         enabled_skills=dto.enabled_skills,
         enabled_knowledge_bases=dto.enabled_knowledge_bases,
+        enabled_mcp_servers=dto.enabled_mcp_servers,
     )
 
 
@@ -163,6 +166,7 @@ async def save_agent_config(
             enabled_tools=body.enabled_tools,
             enabled_skills=body.enabled_skills,
             enabled_knowledge_bases=body.enabled_knowledge_bases,
+            enabled_mcp_servers=body.enabled_mcp_servers,
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

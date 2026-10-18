@@ -29,6 +29,9 @@ class AgentConfig(Base):
     enabled_knowledge_bases: Mapped[list[str] | None] = mapped_column(JSONB)
     """管理员显式勾选启用的知识库代码列表；null 表示使用 agent 代码声明的 knowledge_base_ids。"""
 
+    enabled_mcp_servers: Mapped[list[str] | None] = mapped_column(JSONB)
+    """管理员显式勾选启用的 MCP server slug 列表；null 表示不启用任何远程 MCP 工具。"""
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

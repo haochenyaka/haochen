@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     device_sim_base_url: str = "http://localhost:9100"
     device_sim_signing_secret: str = DEV_DEVICE_SIM_SECRET
 
+    # MCP 网关默认走 compose 内部 DNS；本地直连可设 MCP_GATEWAY_BASE_URL=http://127.0.0.1:9200
+    mcp_gateway_base_url: str = "http://mcp-gateway:9200"
+
     model_name: str = ""
     model_base_url: str = ""
     model_api_key: str = ""
@@ -169,6 +172,12 @@ class Settings(BaseSettings):
     # 报表：模型输入单价（每 1K tokens，元），用于估算缓存命中的成本节省；留 0 表示不估算
     report_price_input_per_1k: float = 0.0
     report_price_cached_input_per_1k: float = 0.0
+
+    # 报表预聚合（数据湖 agg_* 分片）开关：默认关闭，报表一律走 PostgreSQL 重算。
+    # 陈旧分片会令 token/tool 指标静默归零（remediation-plan §A4 张力），故默认不开快路径。
+    report_agg_enabled: bool = False
+    # 开启预聚合时的新鲜度上限：分片最后修改时间早于 now - 该秒数即判陈旧 → 回落 PG
+    report_agg_max_staleness_seconds: int = 3600
 
     # 管理员前端跨域来源（部署时设为具体域名，如 ["https://admin.example.com"]）
     cors_origins: list[str] = ["*"]

@@ -27,4 +27,16 @@ withDefaults(defineProps<{ column?: number; gutter?: number }>(), {
 .stat-grid :deep(> *) {
   min-width: 0;
 }
+
+@media (max-width: 1200px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

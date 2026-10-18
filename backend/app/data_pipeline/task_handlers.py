@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -18,6 +19,8 @@ from collections.abc import Mapping, Sequence
 from datetime import date
 from typing import Any
 from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.task_registry import TaskContext, task_handler
 
@@ -31,12 +34,46 @@ _ID_CARD_PATTERN = re.compile(
 )
 
 
-async def _complete_run(ctx: TaskContext, **kwargs: Any) -> None:
-    """调用 DataPipelineService.complete_run 更新运行记录。"""
+CHECKPOINT_SCOPE_KEY = "_scope"
+
+# 各管道的目标数据源：任务异常终止时回填到运行记录，保证列表仍能展示数据源。
+PIPELINE_SOURCE_TABLES: dict[str, str] = {
+    "data_pipeline.clean_conversations": "messages",
+    "data_pipeline.dedup_feedback": "message_feedback",
+    "data_pipeline.archive_audit_logs": "model_audit,tool_audit",
+    "data_pipeline.validate_kb_consistency": "kb_documents,kb_chunks",
+    "data_pipeline.clean_qa_labels": "qa_labels",
+    "data_pipeline.export_messages": "messages",
+    "data_pipeline.export_audits": "model_audit,tool_audit",
+    "data_pipeline.export_business": "orders",
+    "data_pipeline.build_aggregates": "agg",
+}
+
+
+async def _complete_run(
+    ctx: TaskContext,
+    *,
+    checkpoint_scope: str | None = None,
+    checkpoint: Any = None,
+    **kwargs: Any,
+) -> None:
+    """调用 DataPipelineService.complete_run 更新运行记录。
+
+    `checkpoint_scope` / `checkpoint` 由本函数并入 `summary`：checkpoint 的读取键与写入
+    键由此统一（此前导出管道用 task_type 查、用 source_table 写，键永不匹配，增量失效）。
+    """
     run_id_str = ctx.payload_value("pipeline_run_id")
     if not run_id_str:
         return
     from app.services.data_pipeline_service import DataPipelineService
+
+    summary = dict(kwargs.get("summary") or {})
+    if checkpoint_scope is not None:
+        summary[CHECKPOINT_SCOPE_KEY] = checkpoint_scope
+    if checkpoint is not None:
+        summary["checkpoint"] = checkpoint
+    if summary:
+        kwargs["summary"] = summary
 
     async with ctx.session_factory() as session:
         svc = DataPipelineService(session)
@@ -44,12 +81,26 @@ async def _complete_run(ctx: TaskContext, **kwargs: Any) -> None:
         await session.commit()
 
 
+async def _pipeline_failure(session: AsyncSession, ctx: TaskContext, error: str) -> None:
+    """任务异常终止（含租约过期）时收敛运行记录，避免永久卡在 running。"""
+    run_id_str = ctx.payload_value("pipeline_run_id")
+    if not run_id_str:
+        return
+    from app.services.data_pipeline_service import DataPipelineService
+
+    await DataPipelineService(session).fail_run(
+        UUID(run_id_str),
+        source_table=PIPELINE_SOURCE_TABLES.get(ctx.task_type),
+        error=error,
+    )
+
+
 # ---------------------------------------------------------------------------
 # 管道 1：会话数据脱敏
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.clean_conversations", 1)
+@task_handler("data_pipeline.clean_conversations", 1, on_failure=_pipeline_failure)
 async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
     """扫描 messages.content，对手机号和身份证号做脱敏处理。
 
@@ -167,7 +218,7 @@ async def clean_conversations(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.dedup_feedback", 1)
+@task_handler("data_pipeline.dedup_feedback", 1, on_failure=_pipeline_failure)
 async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
     """按 (message_id, user_id) 合并多条反馈记录，保留最新一条。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -263,91 +314,122 @@ async def dedup_feedback(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.archive_audit_logs", 1)
+@task_handler("data_pipeline.archive_audit_logs", 1, on_failure=_pipeline_failure)
 async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
-    """将 90 天前的审计记录从主表归档到 data_archives，主表软删除。
+    """将 N 天前的审计记录从主表归档到 data_archives，主表软删除。
 
     配置（config）：
       - retention_days: 保留天数，默认 90
       - tables: 要归档的表名列表，默认 [model_audit, tool_audit]
+      - batch_size: 每批归档行数，默认 1000
+      - dry_run: 仅统计不写入，默认 false
+
+    失败语义：任一表抛错即整体 `failed`（写 error），不再"逐表吞异常仍报 completed"。
     """
     config = dict(ctx.payload.get("config", {}) or {})
     retention_days = config.get("retention_days", 90)
     tables = config.get("tables", ["model_audit", "tool_audit"])
+    batch_size = int(config.get("batch_size", 1000))
     dry_run = config.get("dry_run", False)
 
     start = time.time()
     total_archived = 0
-    total_errors = 0
+    failed_tables: list[str] = []
 
     try:
         for table_name in tables:
-            async with ctx.session_factory() as session:
-                from sqlalchemy import text
+            archived_for_table = 0
+            try:
+                while True:
+                    async with ctx.session_factory() as session:
+                        from sqlalchemy import text
 
-                try:
-                    rows = (
-                        (
-                            await session.execute(
-                                text(f"""
-                            SELECT * FROM {table_name}
-                            WHERE created_at < now() - :retention * INTERVAL '1 day'
-                              AND deleted_at IS NULL
-                            ORDER BY created_at
-                            LIMIT 1000
-                        """),
-                                {"retention": retention_days},
+                        rows = (
+                            (
+                                await session.execute(
+                                    text(f"""
+                                SELECT * FROM {table_name}
+                                WHERE created_at < now() - :retention * INTERVAL '1 day'
+                                  AND deleted_at IS NULL
+                                ORDER BY created_at
+                                LIMIT :limit
+                            """),
+                                    {"retention": retention_days, "limit": batch_size},
+                                )
                             )
+                            .mappings()
+                            .all()
                         )
-                        .mappings()
-                        .all()
-                    )
 
-                    if not rows:
-                        continue
+                        if not rows:
+                            break
 
-                    batch_count = 0
-                    for row in rows:
-                        pk_col = "id" if table_name != "tool_audit" else "run_id"
-                        source_id = row.get(pk_col)
-                        if not source_id:
-                            continue
+                        for row in rows:
+                            source_id = row.get("id")
+                            if source_id is None:
+                                continue
+                            if not dry_run:
+                                await session.execute(
+                                    text("""
+                                        INSERT INTO data_archives
+                                            (source_table, source_id, data)
+                                        VALUES (:tbl, :sid, CAST(:data AS jsonb))
+                                    """),
+                                    {
+                                        "tbl": table_name,
+                                        "sid": source_id,
+                                        "data": json.dumps(dict(row), default=str),
+                                    },
+                                )
+                                soft_delete_sql = (
+                                    f"UPDATE {table_name} SET deleted_at = now() WHERE id = :sid"
+                                )
+                                await session.execute(text(soft_delete_sql), {"sid": source_id})
+                            archived_for_table += 1
+
                         if not dry_run:
-                            await session.execute(
-                                text("""
-                                    INSERT INTO data_archives
-                                        (source_table, source_id, data)
-                                    VALUES (:tbl, :sid, :data::jsonb)
-                                """),
-                                {"tbl": table_name, "sid": source_id, "data": dict(row)},
-                            )
-                            await session.execute(
-                                text(
-                                    f"UPDATE {table_name} SET deleted_at = now() "
-                                    f"WHERE {pk_col} = :sid"
-                                ),
-                                {"sid": source_id},
-                            )
-                        batch_count += 1
+                            await session.commit()
 
-                    total_archived += batch_count
-                    if not dry_run:
-                        await session.commit()
-                except Exception:
-                    logger.exception("归档 %s 失败", table_name)
-                    total_errors += 1
+                    # dry_run 下不写库，靠下方推进分页会死循环；此时只取一批即停
+                    if dry_run:
+                        break
+
+                total_archived += archived_for_table
+            except Exception:
+                logger.exception("归档 %s 失败", table_name)
+                failed_tables.append(table_name)
 
         duration = time.time() - start
-        await _complete_run(
-            ctx,
-            status="completed",
-            source_table=",".join(tables),
-            processed_rows=total_archived,
-            affected_rows=total_archived,
-            error_rows=total_errors,
-            duration_seconds=duration,
-            summary={"retention_days": retention_days, "tables": tables, "dry_run": dry_run},
-        )
+        summary = {
+            "retention_days": retention_days,
+            "tables": tables,
+            "batch_size": batch_size,
+            "dry_run": dry_run,
+            "failed_tables": failed_tables,
+        }
+        if failed_tables:
+            await _complete_run(
+                ctx,
+                status="failed",
+                source_table=",".join(tables),
+                processed_rows=total_archived,
+                affected_rows=total_archived,
+                error_rows=len(failed_tables),
+                duration_seconds=duration,
+                summary=summary,
+                error=f"归档失败的表：{','.join(failed_tables)}",
+            )
+        else:
+            await _complete_run(
+                ctx,
+                status="completed",
+                source_table=",".join(tables),
+                processed_rows=total_archived,
+                affected_rows=total_archived,
+                error_rows=0,
+                duration_seconds=duration,
+                summary=summary,
+            )
     except Exception as e:
         duration = time.time() - start
         logger.exception("archive_audit_logs 失败")
@@ -357,13 +439,13 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
             source_table=",".join(tables),
             processed_rows=total_archived,
             affected_rows=total_archived,
-            error_rows=total_errors,
+            error_rows=len(failed_tables),
             duration_seconds=duration,
             error=str(e),
         )
         raise
 
-    return {"archived": total_archived, "errors": total_errors}
+    return {"archived": total_archived, "failed_tables": failed_tables}
 
 
 # ---------------------------------------------------------------------------
@@ -371,7 +453,7 @@ async def archive_audit_logs(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.validate_kb_consistency", 1)
+@task_handler("data_pipeline.validate_kb_consistency", 1, on_failure=_pipeline_failure)
 async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
     """检测知识库中的冲突和过期文档。
 
@@ -472,7 +554,7 @@ async def validate_kb_consistency(ctx: TaskContext) -> Mapping[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@task_handler("data_pipeline.clean_qa_labels", 1)
+@task_handler("data_pipeline.clean_qa_labels", 1, on_failure=_pipeline_failure)
 async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
     """合并低置信度的自动质检标签，标记需人工复核的条目。
 
@@ -563,8 +645,12 @@ async def clean_qa_labels(ctx: TaskContext) -> Mapping[str, Any]:
 # ===================================================================
 
 
-async def _latest_completed_summary(ctx: TaskContext, source_table: str) -> dict[str, Any] | None:
-    """读取同一数据源最近一次成功运行的 summary。"""
+async def _latest_completed_summary(ctx: TaskContext, scope: str) -> dict[str, Any] | None:
+    """读取同一 checkpoint scope 最近一次成功运行的 summary。
+
+    checkpoint 的读取键与写入键统一为 run.summary 里的 `_scope`（见 `_complete_run`），
+    与 `source_table` 解耦——此前用 task_type 查 source_table，键永不匹配导致增量失效。
+    """
     from sqlalchemy import desc, select
 
     async with ctx.session_factory() as session:
@@ -572,7 +658,7 @@ async def _latest_completed_summary(ctx: TaskContext, source_table: str) -> dict
 
         stmt = (
             select(DataPipelineRun.summary)
-            .where(DataPipelineRun.source_table == source_table)
+            .where(DataPipelineRun.summary[CHECKPOINT_SCOPE_KEY].astext == scope)
             .where(DataPipelineRun.status == "completed")
             .order_by(desc(DataPipelineRun.finished_at))
             .limit(1)
@@ -580,12 +666,20 @@ async def _latest_completed_summary(ctx: TaskContext, source_table: str) -> dict
         return (await session.execute(stmt)).scalar_one_or_none()
 
 
-async def _get_checkpoint(ctx: TaskContext, task_type: str) -> int | None:
-    """从上次运行的 summary 中读取 checkpoint（最大已导出 id）。"""
-    row = await _latest_completed_summary(ctx, task_type)
-    if row and row.get("checkpoint"):
-        return int(row["checkpoint"])
+async def _get_checkpoint(ctx: TaskContext, scope: str) -> Any:
+    """从上次成功运行的 summary 中读取 checkpoint（导出用；无则 None）。"""
+    row = await _latest_completed_summary(ctx, scope)
+    if row and row.get("checkpoint") is not None:
+        return row["checkpoint"]
     return None
+
+
+async def _get_checkpoints(ctx: TaskContext, scope: str) -> dict[str, Any]:
+    """多表导出的分表 checkpoint：`{table_name: max_id}`。"""
+    row = await _latest_completed_summary(ctx, scope)
+    if row and isinstance(row.get("checkpoints"), dict):
+        return dict(row["checkpoints"])
+    return {}
 
 
 async def _export_batch(
@@ -680,7 +774,7 @@ async def _export_batch(
     return {"table": table, "exported": total_rows, "max_id": max_id}
 
 
-@task_handler("data_pipeline.export_messages", 1)
+@task_handler("data_pipeline.export_messages", 1, on_failure=_pipeline_failure)
 async def export_messages(ctx: TaskContext) -> Mapping[str, Any]:
     """导出 messages 表到数据湖 Parquet，增量基于 seq。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -709,23 +803,31 @@ async def export_messages(ctx: TaskContext) -> Mapping[str, Any]:
         summary = {**result, "checkpoint": result["max_id"]}
         await _complete_run(
             ctx,
-            status="completed" if result["exported"] > 0 else "completed",
+            status="completed",
             source_table="messages",
             processed_rows=result["exported"],
             affected_rows=0,
             error_rows=0,
             duration_seconds=duration,
             summary=summary,
+            checkpoint_scope="data_pipeline.export_messages",
+            checkpoint=result["max_id"],
         )
         return result
     except Exception as e:
         duration = time.time() - start
         logger.exception("export_messages 失败")
-        await _complete_run(ctx, status="failed", error=str(e), duration_seconds=duration)
+        await _complete_run(
+            ctx,
+            status="failed",
+            source_table="messages",
+            error=str(e),
+            duration_seconds=duration,
+        )
         raise
 
 
-@task_handler("data_pipeline.export_audits", 1)
+@task_handler("data_pipeline.export_audits", 1, on_failure=_pipeline_failure)
 async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
     """导出 model_audit 和 tool_audit 到数据湖。"""
     config = dict(ctx.payload.get("config", {}) or {})
@@ -733,11 +835,11 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
 
     start = time.time()
     total_rows = 0
-    errors = 0
+    checkpoints: dict[str, Any] = await _get_checkpoints(ctx, "data_pipeline.export_audits")
     try:
         for table_name in ["model_audit", "tool_audit"]:
-            checkpoint = await _get_checkpoint(ctx, f"data_pipeline.export_audits.{table_name}")
-            extra = "deleted_at IS NULL" if table_name == "tool_audit" else "deleted_at IS NULL"
+            checkpoint = checkpoints.get(table_name)
+            extra = "deleted_at IS NULL"
 
             cols = [
                 "id",
@@ -768,6 +870,7 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
                 where_extra=extra,
             )
             total_rows += result["exported"]
+            checkpoints[table_name] = result["max_id"]
 
         duration = time.time() - start
         await _complete_run(
@@ -776,15 +879,27 @@ async def export_audits(ctx: TaskContext) -> Mapping[str, Any]:
             source_table="model_audit,tool_audit",
             processed_rows=total_rows,
             affected_rows=0,
-            error_rows=errors,
+            error_rows=0,
             duration_seconds=duration,
-            summary={"exported": total_rows, "tables": ["model_audit", "tool_audit"]},
+            summary={
+                "exported": total_rows,
+                "tables": ["model_audit", "tool_audit"],
+                "checkpoints": checkpoints,
+            },
+            checkpoint_scope="data_pipeline.export_audits",
         )
-        return {"exported": total_rows, "errors": errors}
+        return {"exported": total_rows, "checkpoints": checkpoints}
     except Exception as e:
         duration = time.time() - start
         logger.exception("export_audits 失败")
-        await _complete_run(ctx, status="failed", error=str(e), duration_seconds=duration)
+        await _complete_run(
+            ctx,
+            status="failed",
+            source_table="model_audit,tool_audit",
+            error=str(e),
+            duration_seconds=duration,
+            checkpoint_scope="data_pipeline.export_audits",
+        )
         raise
 
 
@@ -834,7 +949,7 @@ async def _export_orders(ctx: TaskContext, *, batch_size: int) -> dict[str, Any]
     from app.data_pipeline.lake_storage import LakeStorage
 
     storage = LakeStorage.from_settings()
-    summary = await _latest_completed_summary(ctx, "orders")
+    summary = await _latest_completed_summary(ctx, "data_pipeline.export_business")
     checkpoint = (summary or {}).get("checkpoint") or {}
     cp_updated_at = checkpoint.get("updated_at") if isinstance(checkpoint, dict) else None
     cp_id = checkpoint.get("id") if isinstance(checkpoint, dict) else None
@@ -928,7 +1043,7 @@ async def _next_part_offset(storage: Any, table: str, day: date) -> int:
     return max(offsets, default=-1) + 1
 
 
-@task_handler("data_pipeline.export_business", 1)
+@task_handler("data_pipeline.export_business", 1, on_failure=_pipeline_failure)
 async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
     """导出订单与房型/房间维度，供 DuckDB 生成房型月度入住率与客单价。
 
@@ -986,6 +1101,8 @@ async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
                 "rooms": rooms,
                 "checkpoint": orders["checkpoint"],
             },
+            checkpoint_scope="data_pipeline.export_business",
+            checkpoint=orders["checkpoint"],
         )
         return {
             "orders": orders["exported"],
@@ -995,7 +1112,14 @@ async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
     except Exception as e:
         duration = time.time() - start
         logger.exception("export_business 失败")
-        await _complete_run(ctx, status="failed", error=str(e), duration_seconds=duration)
+        await _complete_run(
+            ctx,
+            status="failed",
+            source_table="orders",
+            error=str(e),
+            duration_seconds=duration,
+            checkpoint_scope="data_pipeline.export_business",
+        )
         raise
 
 
@@ -1004,7 +1128,7 @@ async def export_business(ctx: TaskContext) -> Mapping[str, Any]:
 # ===================================================================
 
 
-@task_handler("data_pipeline.build_aggregates", 1)
+@task_handler("data_pipeline.build_aggregates", 1, on_failure=_pipeline_failure)
 async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
     """使用 DuckDB 读取数据湖 Parquet，生成预聚合 Parquet。
 
@@ -1037,6 +1161,16 @@ async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
         room_files = await storage.list_partitions("rooms")
 
         if not any((audit_files, tool_files, msg_files, order_files)):
+            await _complete_run(
+                ctx,
+                status="completed",
+                source_table="agg",
+                processed_rows=0,
+                affected_rows=0,
+                error_rows=0,
+                duration_seconds=time.time() - start,
+                summary={"status": "skipped", "reason": "no parquet files found"},
+            )
             return {"status": "skipped", "reason": "no parquet files found"}
 
         # DuckDB 聚合
@@ -1114,10 +1248,30 @@ async def build_aggregates(ctx: TaskContext) -> Mapping[str, Any]:
                     logger.info("room type monthly aggregation: %d rows", agg.num_rows)
 
             duration = time.time() - start
+            await _complete_run(
+                ctx,
+                status="completed",
+                source_table="agg",
+                processed_rows=sum(results.values()),
+                affected_rows=sum(results.values()),
+                error_rows=0,
+                duration_seconds=duration,
+                summary={"status": "completed", "results": results},
+            )
             return {"status": "completed", "results": results, "duration_seconds": duration}
         finally:
             con.close()
     except Exception as e:
         duration = time.time() - start
         logger.exception("build_aggregates 失败")
-        return {"status": "failed", "error": str(e), "duration_seconds": duration}
+        await _complete_run(
+            ctx,
+            status="failed",
+            source_table="agg",
+            processed_rows=0,
+            affected_rows=0,
+            error_rows=1,
+            duration_seconds=duration,
+            error=str(e),
+        )
+        raise

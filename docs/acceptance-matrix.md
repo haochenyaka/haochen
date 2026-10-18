@@ -1,7 +1,7 @@
 # 验收主张取证矩阵
 
-状态：in_progress（P9.5 交付物，逐条回填中）
-日期：2026-09-30
+状态：已回填（P9.5 交付物；A9/A10 于 2026-10-18 改造补充）
+日期：2026-09-30（A9/A10 更新：2026-10-18）
 相关文档：[架构选型决策记录](./2026-09-27-hotel-agent-server-design.md)、[design.md](./design.md)、[development-plan.md](./development-plan.md)
 
 本文档是 P9.5 的交付物：逐条执行 6 条验收主张，回填直接证据与负向案例结果。
@@ -234,6 +234,84 @@
 
 ---
 
+## A9 — MCP 服务器运行时生效
+
+| 项目 | 内容 |
+| --- | --- |
+| 主张 | 管理端注册并启用的 MCP 服务器在运行时真实生效：连接测试只发现工具、不执行副作用；启用的工具进入模型可见集合并经统一工具节点审计；单工具可禁用；外部渠道经 `mcp-gateway` 以 `streamable_http` 暴露 |
+| 失败面 | MCP 配置只落库不消费、连接测试执行工具产生副作用、未启用工具仍对模型可见、`stdio` 被注入、凭证明文落库、server 不可达拖垮 Run |
+| 直接证据 | 客户端/探测单测、运行期装载单测、gateway 三 server 契约测试、真实 PostgreSQL 的运行期集成测试 |
+| 负向案例 | `stdio` 拒绝（422）、未启用不可见、`disabled_tools` 剔除、不可达跳过并告警、探测只 `tools/list`、凭证只从环境变量注入 |
+
+**证据清单：**
+
+| # | 测试用例 | 描述 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | `test_mcp_client.py::test_validate_transport_rejects_stdio_and_unknown` | 传输白名单 | `stdio` 与未知传输被拒 | 通过 |
+| 2 | `test_mcp_client.py::test_discover_tools_returns_metadata_only` | 探测只发现工具 | 仅返回名称/描述元数据，不调用任何工具 | 通过 |
+| 3 | `test_mcp_client.py::test_probe_server_caches_by_config_hash` | 工具对象缓存 | 配置哈希不变复用，变更失效 | 通过 |
+| 4 | `test_mcp_runtime.py::test_load_mcp_tools_prefixes_and_marks_dangerous` | 运行期装载 | 工具加 `{slug}__` 前缀、默认 `dangerous=True` | 通过 |
+| 5 | `test_mcp_runtime.py::test_read_only_and_disabled_tools` | 单工具治理 | `read_only_tools` 豁免审批，`disabled_tools` 不装载 | 通过 |
+| 6 | `test_mcp_runtime.py::test_skips_unreachable_server` | 失败语义 | 不可达 server 跳过并告警，不阻断装配 | 通过 |
+| 7 | `test_mcp_gateway.py`（12 例） | gateway 三 server | `/lock`、`/robot`、`/wechat` 的 `streamable_http` 工具可发现；工具转发到渠道客户端；渠道失败收敛为 `{ok:false}` | 通过 |
+| 8 | `test_mcp_gateway.py::test_lock_tool_reaches_device_sim_contract` | 全链契约 | MCP 工具 → `LockClient` → device-sim 签发凭证成功 | 通过 |
+| 9 | `test_robot_wechat_clients.py`（2 例） | 渠道客户端契约 | 配送下单/回读、支付单状态回读与 404 显式失败 | 通过 |
+| 10 | `test_agent_mcp_tools.py::test_enabled_mcp_server_tools_reach_model` | 运行时注入 | 写 `enabled_mcp_servers` → 工具对模型可见 | 通过 |
+| 11 | `test_mcp_servers_api.py::test_test_connection_writes_probe_result` | 连接测试落库 | 探测结论写回 `last_status/last_error/last_tested_at/discovered_tools` | 通过 |
+| 12 | `test_mcp_servers_api.py::test_seed_registers_gateway_servers_idempotently` | 种子注册 | 空库 seed 后 lock/robot/wechat 三条记录存在且重复 seed 不重复 | 通过 |
+
+**负向取证：**
+
+| # | 场景 | 注入 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | 配置 `stdio` 传输 | 创建/更新时传 `transport=stdio` | 422 拒绝，不写入 | 通过 |
+| 2 | 未启用 MCP server | 不写 `enabled_mcp_servers` | 工具不出现在模型可见集合 | 通过 |
+| 3 | 单工具禁用 | `config_json.disabled_tools` 命中 | 该工具不装载、模型不可见 | 通过 |
+| 4 | server 不可达 | 装载期连接失败 | 跳过该 server 工具并告警，Run 继续 | 通过 |
+| 5 | 探测副作用 | 连接测试 | 只发 `initialize` + `tools/list`，无 `tools/call` | 通过 |
+| 6 | 凭证落库 | 扫描 `mcp_servers` 行与连接描述 | 无 api_key/授权头明文，凭证仅从 `MCP_<SLUG>_API_KEY` 环境注入 | 通过 |
+| 7 | 越权管理 | staff/manager 写 MCP 配置 | 403 拒绝；admin 通过 | 通过 |
+
+---
+
+## A10 — 数据管道可靠调度与失败可见
+
+| 项目 | 内容 |
+| --- | --- |
+| 主张 | 清洗管道每次运行都有确定终态、失败可见；导出按 checkpoint 增量、归档按真实主键推进；规则开箱可用且 cron 由 task-worker 真调度（分钟级去重）；数据湖与管理端指标可查；报表预聚合陈旧时自动回落 PostgreSQL，不再静默归零 |
+| 失败面 | Run 永卡 `running`、失败被伪装为 `completed`、checkpoint 键不匹配导致每轮全量重导、同规则并发重叠、`schedule_cron` 只存不执行、陈旧预聚合分片让指标静默归零 |
+| 直接证据 | 真实 PostgreSQL 集成测试（终态/归档/事务/互斥/调度）、handler 单测、报表降级单测、管理端数据湖页构建 |
+| 负向案例 | 预聚合抛错必须落 `failed`、同规则并发第二次拒绝、同一分钟重复调度不重复提交、非法 cron/task_type 保存即 422、陈旧分片触发 PG 回落 |
+
+**证据清单：**
+
+| # | 测试用例 | 描述 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | `test_data_pipeline_reliability.py::test_build_aggregates_failure_writes_failed_terminal` | 预聚合失败终态 | Run 落 `failed` 且 `error` 留痕 | 通过 |
+| 2 | `test_data_pipeline_reliability.py::test_archive_audit_logs_archives_by_real_primary_key` | 归档主键 | `tool_audit` 按真实 `id` 归档并软删主表，Run `completed` | 通过 |
+| 3 | `test_data_pipeline_reliability.py::test_trigger_commits_run_and_task_together` | 事务竞态回归 | run 行与 task 行同事务可见，提交后投递一次 | 通过 |
+| 4 | `test_data_pipeline_reliability.py::test_trigger_rejects_concurrent_same_rule` | 并发互斥 | 运行中的同规则第二次触发返回 `None`，仅一条 run | 通过 |
+| 5 | `test_data_pipeline_reliability.py::test_scheduler_submits_due_rule_and_dedupes_within_minute` | 真实调度 | 命中规则产生 `scheduled` run；同一分钟重复调用不重复提交 | 通过 |
+| 6 | `test_data_pipeline_handlers.py::test_get_checkpoint_reads_by_scope_not_source_table` | 增量导出 | checkpoint 按作用域读取，与 `source_table` 解耦 | 通过 |
+| 7 | `test_data_pipeline_handlers.py::test_complete_run_merges_scope_and_checkpoint_into_summary` | 终态摘要 | 完成时将 scope/checkpoint 合并进 `summary` | 通过 |
+| 8 | `test_data_pipeline_rules_api.py::test_seed_cleaning_rules_idempotent` | 规则种子 | 空库 9 条默认规则，重复 seed 不重复插入 | 通过 |
+| 9 | `test_pipeline_scheduler.py`（5 例） | cron 判定 | 每分钟/定点/步长命中正确；非法 cron 不抛；去重键按分钟 | 通过 |
+| 10 | `test_report_service_degrade.py`（4 例） | 报表新鲜度守卫 | 默认走 PG；湖不可达/分片陈旧回落 PG 且不归零；新鲜分片走快路径 | 通过 |
+| 11 | `admin-web` `type-check` + `build` | 数据湖前端页 | 分区浏览/预览/只读 SQL/房型月度指标可构建，湖不可达显式降级 | 通过 |
+
+**负向取证：**
+
+| # | 场景 | 注入 | 断言 | 结果 |
+| --- | --- | --- | --- | --- |
+| 1 | 预聚合抛错 | lake 不可达 | Run 终态 `failed`，带 `error`，不再静默返回 | 通过 |
+| 2 | 失败伪装成功 | 归档表级异常 | 整体 `failed` 并留痕，不再报 `completed` | 通过（代码路径 + 终态测试） |
+| 3 | 同规则并发 | 连续两次触发 | 第二次拒绝，不产生孤儿 run | 通过 |
+| 4 | 调度重复 | 同一分钟两次扫描 | 第二次提交数为 0 | 通过 |
+| 5 | 非法任务/表达式 | 未知 `task_type` / 非法 cron | 保存即 422，运行期不静默跳过 | 通过 |
+| 6 | 陈旧预聚合分片 | 分片早于窗口 | 指标回落 PG 重算，结果与审计重算一致（不归零） | 通过 |
+
+---
+
 ## 汇总
 
 | 验收主张 | 状态 | 正例数 | 负例数 | 关键证据 |
@@ -246,5 +324,7 @@
 | A6 服务端授权 | ✅ 通过 | 6 | 14 | 越权负向测试全部通过 |
 | A7 运行期配置生效 | ✅ 通过 | 4 组 | 2 | 配置接线集成测试 + 形状兼容单测 |
 | A8 保洁客评闭环 | ✅ 通过 | 3 | 4 | 评分列落地 + 端到端评分 + 归属/状态守卫 |
+| A9 MCP 服务器运行时生效 | ✅ 通过 | 12 | 7 | 探测/装载/网关契约 + 运行期可见集合 + 种子注册 |
+| A10 数据管道可靠调度与失败可见 | ✅ 通过 | 11 | 6 | 终态/归档/事务/互斥/调度 + 报表降级 + 前端构建 |
 
-**P9.5 结论**：全部 7 条验收主张均有直接证据，正例 32 个 + 负例 28 个，矩阵全绿。项目就绪可进入灰度上线。（A7、A8 为 2026-10-13 改造新增。）
+**P9.5 结论**：原 8 条验收主张（A1–A8）均有直接证据（正例 38 个 + 负例 31 个）。2026-10-18 改造补充 A9（MCP 运行时）与 A10（数据管道可靠性），当前矩阵共 **10 条主张全绿**（正例 61 个 + 负例 44 个）；A9/A10 的 23 个正例与 13 个负例均有可复跑用例（单测 / 集成 / 前端构建）。

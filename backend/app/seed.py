@@ -11,12 +11,17 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db import SessionFactory
+from app.models.data_pipeline import DataCleaningRule
 from app.models.domain import Room
+from app.models.mcp_server import McpServer
 from app.repositories import (
     GuestRepository,
     HousekeepingTaskRepository,
@@ -102,6 +107,99 @@ DEMO_ROOM_NO = "301"
 DEMO_ORDER_AMOUNT_FEN = 119400
 DEMO_CREDENTIAL_VALID_DAYS = 2
 DEMO_TASK_DEDUPE_KEY = "seed:call_clean:302"
+
+# MCP 网关各渠道端点（子路径挂载）：URL 前缀取 settings.mcp_gateway_base_url。
+MCP_GATEWAY_SERVERS: tuple[dict[str, object], ...] = (
+    {
+        "slug": "lock-mcp",
+        "name": "门锁 MCP 网关",
+        "path": "/lock/mcp",
+        "description": "lock-mcp：凭证签发/轮换/吊销/开锁记录（内部走 device-sim 契约模拟器）",
+        "read_only_tools": ["get_credential_metadata", "list_unlock_records"],
+    },
+    {
+        "slug": "robot-mcp",
+        "name": "机器人 MCP 网关",
+        "path": "/robot/mcp",
+        "description": "robot-mcp：机器人配送下单与状态查询（内部走 device-sim 契约模拟器）",
+        "read_only_tools": ["get_delivery"],
+    },
+    {
+        "slug": "wechat-mcp",
+        "name": "微信 MCP 网关",
+        "path": "/wechat/mcp",
+        "description": "wechat-mcp：支付单状态查询（不返回 openid/prepay_id）",
+        "read_only_tools": ["get_pay_order_status"],
+    },
+)
+
+# 数据管道默认规则：9 个 handler 各一条，带生产合理 cron 与参数（可编辑、可停用）。
+# 导出入湖类与预聚合相位错开：export 每 30 分钟，aggregate 每小时 10 分，避免空跑。
+CLEANING_RULE_PLAN: tuple[dict[str, object], ...] = (
+    {
+        "name": "会话数据脱敏",
+        "task_type": "data_pipeline.clean_conversations",
+        "schedule_cron": "0 3 * * *",
+        "config": {"batch_size": 500, "dry_run": False},
+        "description": "扫描 messages，对手机号/身份证号脱敏",
+    },
+    {
+        "name": "反馈数据去重",
+        "task_type": "data_pipeline.dedup_feedback",
+        "schedule_cron": "0 4 * * *",
+        "config": {"dry_run": False},
+        "description": "按 (message_id, user_id) 合并重复反馈，保留最新",
+    },
+    {
+        "name": "审计记录归档",
+        "task_type": "data_pipeline.archive_audit_logs",
+        "schedule_cron": "0 5 * * *",
+        "config": {"retention_days": 90, "tables": ["model_audit", "tool_audit"]},
+        "description": "将 90 天前审计记录迁至 data_archives 并软删",
+    },
+    {
+        "name": "知识库一致性校验",
+        "task_type": "data_pipeline.validate_kb_consistency",
+        "schedule_cron": "0 6 * * 1",
+        "config": {"freshness_days": 180, "min_chunk_length": 10},
+        "description": "检测过期文档、空块与重复块",
+    },
+    {
+        "name": "质检标签清洗",
+        "task_type": "data_pipeline.clean_qa_labels",
+        "schedule_cron": "0 7 * * *",
+        "config": {"confidence_threshold": 0.6, "dry_run": False},
+        "description": "低置信度自动标签标记待人工复核",
+    },
+    {
+        "name": "数据湖-消息导出",
+        "task_type": "data_pipeline.export_messages",
+        "schedule_cron": "*/30 * * * *",
+        "config": {"batch_size": 2000},
+        "description": "messages 增量导出至数据湖 Parquet",
+    },
+    {
+        "name": "数据湖-审计导出",
+        "task_type": "data_pipeline.export_audits",
+        "schedule_cron": "*/30 * * * *",
+        "config": {"batch_size": 2000},
+        "description": "model_audit / tool_audit 增量导出",
+    },
+    {
+        "name": "数据湖-订单导出",
+        "task_type": "data_pipeline.export_business",
+        "schedule_cron": "*/30 * * * *",
+        "config": {"batch_size": 2000},
+        "description": "订单事实 + 房型/房间维度导出",
+    },
+    {
+        "name": "数据湖-预聚合",
+        "task_type": "data_pipeline.build_aggregates",
+        "schedule_cron": "10 * * * *",
+        "config": {},
+        "description": "DuckDB 生成 token/工具/房型月度预聚合",
+    },
+)
 
 ACCOUNT_PLAN: tuple[tuple[str, str, str], ...] = (
     ("admin-demo", "admin", "皓晨管理员"),
@@ -267,6 +365,54 @@ async def _seed_demo_flow(
         report.count("housekeeping_tasks")
 
 
+async def _seed_cleaning_rules(session: AsyncSession, report: SeedReport) -> None:
+    """幂等补齐数据管道默认规则：按 task_type 判存，不覆盖既有。"""
+    existing = set((await session.execute(select(DataCleaningRule.task_type))).scalars().all())
+    for spec in CLEANING_RULE_PLAN:
+        task_type = str(spec["task_type"])
+        if task_type in existing:
+            continue
+        config_raw = spec.get("config") or {}
+        config_val: dict[str, object] = dict(config_raw) if isinstance(config_raw, dict) else {}
+        session.add(
+            DataCleaningRule(
+                name=str(spec["name"]),
+                description=str(spec.get("description") or ""),
+                task_type=task_type,
+                handler_version=1,
+                schedule_cron=str(spec.get("schedule_cron") or "") or None,
+                config=config_val,
+                enabled=True,
+            )
+        )
+        report.count("cleaning_rules")
+
+
+async def _seed_mcp_servers(session: AsyncSession, report: SeedReport) -> None:
+    """幂等注册 mcp-gateway 的三个渠道 server；已存在的 slug 不覆盖（保留管理端改动）。"""
+    base_url = get_settings().mcp_gateway_base_url.rstrip("/")
+    existing = set((await session.execute(select(McpServer.slug))).scalars().all())
+    for item in MCP_GATEWAY_SERVERS:
+        slug = str(item["slug"])
+        if slug in existing:
+            continue
+        session.add(
+            McpServer(
+                slug=slug,
+                name=str(item["name"]),
+                description=str(item["description"]),
+                server_url=f"{base_url}{item['path']}",
+                transport="streamable_http",
+                config_json={
+                    "timeout_seconds": 10,
+                    "read_only_tools": cast(list[str], item["read_only_tools"]),
+                },
+                active=True,
+            )
+        )
+        report.count("mcp_servers")
+
+
 async def seed(session: AsyncSession) -> SeedReport:
     report = SeedReport()
     account_ids = await _seed_accounts(session, report)
@@ -276,6 +422,8 @@ async def seed(session: AsyncSession) -> SeedReport:
     await _seed_demo_flow(
         session, report, rooms=rooms, staff_ids=staff_ids, account_ids=account_ids
     )
+    await _seed_cleaning_rules(session, report)
+    await _seed_mcp_servers(session, report)
     await session.commit()
     return report
 

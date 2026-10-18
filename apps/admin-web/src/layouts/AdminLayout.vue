@@ -1,22 +1,8 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
-  DashboardOutlined,
-  RobotOutlined,
-  CloudServerOutlined,
-  MessageOutlined,
-  BarChartOutlined,
-  HeartOutlined,
-  FileTextOutlined,
-  DatabaseOutlined,
-  BulbOutlined,
-  CustomerServiceOutlined,
-  ExperimentOutlined,
-  BookOutlined,
-  AuditOutlined,
-  ApiOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
@@ -25,23 +11,7 @@ import {
 import { fetchMe, logout } from '@/api/auth'
 import { ADMIN_MENU } from '@/router'
 import { ROLE_LABELS, clearSession, useAuthState } from '@/stores/auth'
-
-const ICON_MAP: Record<string, ReturnType<typeof h>> = {
-  dashboard: h(DashboardOutlined),
-  agents: h(RobotOutlined),
-  'mcp-servers': h(CloudServerOutlined),
-  conversations: h(MessageOutlined),
-  reports: h(BarChartOutlined),
-  health: h(HeartOutlined),
-  logs: h(FileTextOutlined),
-  data: h(DatabaseOutlined),
-  memories: h(BulbOutlined),
-  handoff: h(CustomerServiceOutlined),
-  'eval-agent': h(ExperimentOutlined),
-  'eval-kb': h(BookOutlined),
-  'quality-scorecard': h(AuditOutlined),
-  'data-pipeline': h(ApiOutlined),
-}
+import { navIconNode } from '@/theme/navIcons'
 
 const { session } = useAuthState()
 const route = useRoute()
@@ -52,7 +22,7 @@ const menuItems = computed(() =>
   ADMIN_MENU.filter((item) => !item.roles || (session !== null && item.roles.includes(session.role))).map(
     (item) => ({
       key: item.name,
-      icon: ICON_MAP[item.name] || undefined,
+      icon: navIconNode(item.name),
       label: item.title,
     }),
   ),
@@ -249,12 +219,15 @@ onMounted(async () => {
 
 /* ───── 头部 ───── */
 .header {
+  position: sticky;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
   height: 56px;
-  background: var(--bg-container);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--divider);
   box-shadow: 0 1px 4px rgba(26, 58, 107, 0.05);
   z-index: 10;
@@ -321,7 +294,7 @@ onMounted(async () => {
 /* ───── 内容区 ───── */
 .content {
   margin: 0;
-  padding: 20px;
+  padding: 24px;
   background: var(--bg-layout);
   min-height: calc(100vh - 56px);
 }

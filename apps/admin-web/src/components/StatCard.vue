@@ -73,8 +73,16 @@ withDefaults(
 }
 
 .stat-card__icon {
-  color: var(--brand-4);
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--brand-6);
+  font-size: 17px;
+  background: var(--brand-1);
+  border-radius: 9px;
+  flex-shrink: 0;
 }
 
 .stat-card__value {
@@ -93,19 +101,26 @@ withDefaults(
 }
 
 .stat-card__trend {
-  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 1px 8px;
   font-size: 12px;
+  background: var(--bg-hover);
+  border-radius: 999px;
 }
 
 .stat-card__trend.is-up {
   color: var(--success);
+  background: rgba(46, 158, 91, 0.08);
 }
 
 .stat-card__trend.is-down {
   color: var(--error);
+  background: rgba(208, 48, 80, 0.08);
 }
 
 .stat-card__trend.is-neutral {
-  color: var(--text-4);
+  color: var(--text-3);
 }
 </style>

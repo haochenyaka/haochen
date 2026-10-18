@@ -10,7 +10,7 @@ import io
 import logging
 import re
 import tempfile
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -179,6 +179,31 @@ class LakeStorage:
 
         await asyncio.to_thread(_list)
         return sorted(files)
+
+    async def latest_modification(self, table: str) -> datetime | None:
+        """表下最新一个 Parquet 分片的最后修改时间（供报表新鲜度校验）。
+
+        无分片或湖不可达时返回 None（调用方据此判为陈旧并回落 PG）。
+        """
+        prefix = f"{table}/"
+        await self.ensure_bucket()
+        latest: datetime | None = None
+
+        def _scan() -> None:
+            nonlocal latest
+            for obj in self._client.list_objects(self._bucket, prefix=prefix, recursive=True):
+                if not (obj.object_name and obj.object_name.endswith(".parquet")):
+                    continue
+                ts = getattr(obj, "last_modified", None)
+                if ts is None:
+                    continue
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=UTC)
+                if latest is None or ts > latest:
+                    latest = ts
+
+        await asyncio.to_thread(_scan)
+        return latest
 
     async def delete_partition(self, object_key: str) -> None:
         """删除指定 Parquet 文件（幂等）。"""

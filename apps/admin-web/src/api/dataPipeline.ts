@@ -20,6 +20,7 @@ export interface PipelineRun {
   rule_id: number | null
   task_id: string | null
   trigger: string
+  task_type: string | null
   status: string
   source_table: string | null
   processed_rows: number | null

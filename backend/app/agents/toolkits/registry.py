@@ -99,6 +99,19 @@ class ToolRegistry:
     def names(self) -> tuple[str, ...]:
         return tuple(self._tools)
 
+    def copy(self) -> ToolRegistry:
+        """浅拷贝注册表：供 Run 级装配（内置工具 + MCP 工具）叠加，不污染进程级单例。"""
+        clone = ToolRegistry()
+        clone._tools = dict(self._tools)
+        return clone
+
+    def adopt(self, tool: BaseTool) -> BaseTool:
+        """登记一个已带注册元数据的工具（MCP 装配用）：不改写元数据，重名即失败。"""
+        if tool.name in self._tools:
+            raise ToolRegistrationError(f"工具重名：{tool.name}")
+        self._tools[tool.name] = tool
+        return tool
+
     def get(self, name: str) -> BaseTool:
         tool = self._tools.get(name)
         if tool is None:

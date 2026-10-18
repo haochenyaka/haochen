@@ -15,6 +15,16 @@ import {
   type RuleCreateBody,
   type RuleUpdateBody,
 } from '@/api/dataPipeline'
+import {
+  listDatalakeTables,
+  listDatalakePartitions,
+  previewDatalakeTable,
+  queryDatalake,
+  getRoomTypeMonthly,
+  type DatalakePartition,
+  type DatalakeQueryResult,
+  type RoomTypeMonthlyRow,
+} from '@/api/datalake'
 import { EmptyState, SectionCard, StatCard, StatGrid } from '@/components'
 
 /* ---- State ---- */
@@ -107,9 +117,52 @@ const statsItems = computed(() => [
 
 /* ---- Rule CRUD ---- */
 
+interface ConfigField {
+  key: string
+  label: string
+  type: 'number' | 'boolean' | 'tables'
+  placeholder?: string
+}
+
+// 各管道的可编辑参数（与 handler 的 config 约定一致）
+const CONFIG_FIELDS: Record<string, ConfigField[]> = {
+  'data_pipeline.clean_conversations': [
+    { key: 'batch_size', label: '批大小', type: 'number', placeholder: '500' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.dedup_feedback': [{ key: 'dry_run', label: '仅统计不写入', type: 'boolean' }],
+  'data_pipeline.archive_audit_logs': [
+    { key: 'retention_days', label: '保留天数', type: 'number', placeholder: '90' },
+    { key: 'batch_size', label: '批大小', type: 'number', placeholder: '1000' },
+    { key: 'tables', label: '归档表', type: 'tables' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.validate_kb_consistency': [
+    { key: 'freshness_days', label: '新鲜度天数', type: 'number', placeholder: '180' },
+    { key: 'min_chunk_length', label: '最短分块长度', type: 'number', placeholder: '10' },
+  ],
+  'data_pipeline.clean_qa_labels': [
+    { key: 'confidence_threshold', label: '低置信阈值', type: 'number', placeholder: '0.6' },
+    { key: 'dry_run', label: '仅统计不写入', type: 'boolean' },
+  ],
+  'data_pipeline.export_messages': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.export_audits': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.export_business': [{ key: 'batch_size', label: '批大小', type: 'number', placeholder: '2000' }],
+  'data_pipeline.build_aggregates': [],
+}
+
+const TASK_TYPE_OPTIONS = Object.keys(PIPELINE_TYPES)
+
+const currentConfigFields = computed<ConfigField[]>(
+  () => CONFIG_FIELDS[ruleForm.value.task_type] || [],
+)
+
+const ruleConfig = ref<Record<string, unknown>>({})
+
 function openCreateModal() {
   editingRule.value = null
   ruleForm.value = { name: '', task_type: '', description: null, schedule_cron: null, config: null }
+  ruleConfig.value = {}
   ruleModalVisible.value = true
 }
 
@@ -122,7 +175,17 @@ function openEditModal(rule: CleaningRule) {
     schedule_cron: rule.schedule_cron,
     config: rule.config,
   }
+  ruleConfig.value = { ...(rule.config || {}) }
   ruleModalVisible.value = true
+}
+
+function onTaskTypeChange() {
+  // 切换任务类型时按新类型的参数键重置（保留同名值）
+  const next: Record<string, unknown> = {}
+  for (const field of currentConfigFields.value) {
+    if (ruleConfig.value[field.key] !== undefined) next[field.key] = ruleConfig.value[field.key]
+  }
+  ruleConfig.value = next
 }
 
 async function handleSaveRule() {
@@ -130,6 +193,12 @@ async function handleSaveRule() {
     message.warning('请填写规则名称和任务类型')
     return
   }
+  // 仅提交非空参数，避免写入 undefined
+  const config: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(ruleConfig.value)) {
+    if (value !== undefined && value !== null && value !== '') config[key] = value
+  }
+  ruleForm.value.config = Object.keys(config).length > 0 ? config : null
   savingRule.value = true
   try {
     if (editingRule.value) {
@@ -227,6 +296,88 @@ function fmtDuration(seconds: number | null): string {
 function ruleTaskTypeLabel(rule: CleaningRule): string {
   return PIPELINE_TYPES[rule.task_type] || rule.task_type
 }
+
+/* ---- 数据湖 tab ---- */
+
+const lakeTables = ref<string[]>([])
+const lakeLoading = ref(false)
+const lakeError = ref('')
+const selectedTable = ref<string | null>(null)
+const lakePartitions = ref<DatalakePartition[]>([])
+const previewResult = ref<DatalakeQueryResult | null>(null)
+const sqlText = ref('SELECT * FROM messages LIMIT 50')
+const sqlResult = ref<DatalakeQueryResult | null>(null)
+const sqlRunning = ref(false)
+const monthlyRows = ref<RoomTypeMonthlyRow[]>([])
+const monthlyFrom = ref<string | null>(null)
+const monthlyTo = ref<string | null>(null)
+const monthlyLoading = ref(false)
+const monthlyError = ref('')
+
+async function loadLakeTables() {
+  lakeLoading.value = true
+  lakeError.value = ''
+  try {
+    lakeTables.value = (await listDatalakeTables()).map((t) => t.name)
+  } catch (err) {
+    lakeError.value = (err as { message?: string }).message || '数据湖不可达'
+    lakeTables.value = []
+  } finally {
+    lakeLoading.value = false
+  }
+}
+
+async function selectLakeTable(table: string) {
+  selectedTable.value = table
+  previewResult.value = null
+  lakePartitions.value = []
+  try {
+    lakePartitions.value = await listDatalakePartitions(table)
+    previewResult.value = await previewDatalakeTable(table, 20)
+  } catch (err) {
+    message.error((err as { message?: string }).message || '加载表失败')
+  }
+}
+
+async function runSql() {
+  if (!sqlText.value.trim()) return
+  sqlRunning.value = true
+  try {
+    sqlResult.value = await queryDatalake(sqlText.value, 1000)
+    if (sqlResult.value.row_count === 0) message.info('查询无结果')
+  } catch (err) {
+    message.error((err as { message?: string }).message || '查询失败')
+    sqlResult.value = null
+  } finally {
+    sqlRunning.value = false
+  }
+}
+
+async function loadMonthly() {
+  monthlyLoading.value = true
+  monthlyError.value = ''
+  try {
+    monthlyRows.value = await getRoomTypeMonthly(
+      monthlyFrom.value || undefined,
+      monthlyTo.value || undefined,
+    )
+  } catch (err) {
+    monthlyRows.value = []
+    monthlyError.value = (err as { message?: string }).message || '房型月度指标不可用（需先跑预聚合）'
+  } finally {
+    monthlyLoading.value = false
+  }
+}
+
+function fmtFen(fen: unknown): string {
+  if (fen === null || fen === undefined) return '-'
+  return `¥${(Number(fen) / 100).toFixed(2)}`
+}
+
+function onTabChange(key: string) {
+  if (key === 'datalake' && lakeTables.value.length === 0) loadLakeTables()
+  if (key === 'datalake-monthly') loadMonthly()
+}
 </script>
 
 <template>
@@ -234,7 +385,7 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
     <a-alert v-if="error" type="warning" :message="error" show-icon closable @close="error = ''" />
 
     <SectionCard title="数据管道">
-      <a-tabs v-model:activeKey="activeTab">
+      <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
         <!-- ========== 概览 ========== -->
         <a-tab-pane key="overview" tab="概览">
           <a-spin :spinning="loading">
@@ -328,7 +479,7 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
               v-if="!runsLoading && runs.length > 0"
               :data-source="runs"
               :columns="[
-                { title: '管道', dataIndex: 'task_id', width: 180 },
+                { title: '管道', dataIndex: 'task_type', width: 180 },
                 { title: '触发方式', dataIndex: 'trigger', width: 90 },
                 { title: '状态', dataIndex: 'status', width: 90 },
                 { title: '数据源', dataIndex: 'source_table', width: 130 },
@@ -336,14 +487,15 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
                 { title: '影响行数', dataIndex: 'affected_rows', width: 90 },
                 { title: '耗时', dataIndex: 'duration_seconds', width: 80 },
                 { title: '时间', dataIndex: 'created_at', width: 160 },
+                { title: '错误', dataIndex: 'error', width: 200, ellipsis: true },
               ]"
               :pagination="{ pageSize: 10 }"
               row-key="id"
               size="small"
             >
               <template #bodyCell="{ column, record }">
-                <template v-if="column.dataIndex === 'task_id'">
-                  {{ pipelineTypeLabel(record.summary ? null : record.task_id) }}
+                <template v-if="column.dataIndex === 'task_type'">
+                  {{ pipelineTypeLabel(record.task_type) }}
                 </template>
                 <template v-else-if="column.dataIndex === 'trigger'">
                   {{ TRIGGER_LABELS[record.trigger] || record.trigger }}
@@ -362,7 +514,117 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
                 <template v-else-if="column.dataIndex === 'created_at'">
                   {{ record.created_at?.substring(0, 19)?.replace('T', ' ') }}
                 </template>
+                <template v-else-if="column.dataIndex === 'error'">
+                  <span v-if="record.error" style="color: var(--error)">{{ record.error }}</span>
+                  <span v-else>-</span>
+                </template>
               </template>
+            </a-table>
+          </a-spin>
+        </a-tab-pane>
+
+        <!-- ========== 数据湖 ========== -->
+        <a-tab-pane key="datalake" tab="数据湖">
+          <a-alert
+            v-if="lakeError"
+            type="warning"
+            :message="`数据湖不可达，按契约降级：${lakeError}`"
+            show-icon
+            style="margin-bottom: 12px"
+          />
+          <a-spin :spinning="lakeLoading">
+            <a-row :gutter="16">
+              <a-col :span="6">
+                <a-card size="small" title="表">
+                  <EmptyState v-if="lakeTables.length === 0" description="暂无数据湖表" />
+                  <a-list v-else :data-source="lakeTables" size="small">
+                    <template #renderItem="{ item }">
+                      <a-list-item
+                        style="cursor: pointer"
+                        :style="{ fontWeight: selectedTable === item ? 'bold' : 'normal' }"
+                        @click="selectLakeTable(item)"
+                      >
+                        <code>{{ item }}</code>
+                      </a-list-item>
+                    </template>
+                  </a-list>
+                </a-card>
+              </a-col>
+              <a-col :span="18">
+                <a-card size="small" :title="selectedTable ? `预览 · ${selectedTable}` : '预览'">
+                  <EmptyState v-if="!selectedTable" description="选择左侧表查看分区与预览" />
+                  <template v-else>
+                    <a-space style="margin-bottom: 8px">
+                      <a-tag>分区 {{ lakePartitions.length }} 个</a-tag>
+                      <span style="color: var(--text-secondary); font-size: 12px">
+                        最近分区：{{ lakePartitions[0]?.path || '-' }}
+                      </span>
+                    </a-space>
+                    <a-table
+                      v-if="previewResult"
+                      :data-source="previewResult.rows.map((r, i) => ({ key: i, ...Object.fromEntries(previewResult!.columns.map((c, ci) => [c, r[ci]])) }))"
+                      :columns="previewResult.columns.map((c) => ({ title: c, dataIndex: c, ellipsis: true }))"
+                      :pagination="{ pageSize: 10 }"
+                      size="small"
+                      :scroll="{ x: 'max-content' }"
+                    />
+                  </template>
+                </a-card>
+              </a-col>
+            </a-row>
+
+            <a-divider>即席查询（只读）</a-divider>
+            <a-textarea v-model:value="sqlText" :rows="3" placeholder="SELECT ... （仅允许只读查询）" />
+            <a-space style="margin-top: 8px">
+              <a-button type="primary" :loading="sqlRunning" @click="runSql">执行</a-button>
+              <span style="color: var(--text-secondary); font-size: 12px">
+                仅 SELECT/WITH/DESCRIBE/SHOW/PRAGMA，最多返回 1000 行
+              </span>
+            </a-space>
+            <a-table
+              v-if="sqlResult"
+              style="margin-top: 12px"
+              :data-source="sqlResult.rows.map((r, i) => ({ key: i, ...Object.fromEntries(sqlResult!.columns.map((c, ci) => [c, r[ci]])) }))"
+              :columns="sqlResult.columns.map((c) => ({ title: c, dataIndex: c, ellipsis: true }))"
+              :pagination="{ pageSize: 20 }"
+              size="small"
+              :scroll="{ x: 'max-content' }"
+            />
+          </a-spin>
+        </a-tab-pane>
+
+        <!-- ========== 房型月度指标 ========== -->
+        <a-tab-pane key="datalake-monthly" tab="房型月度指标">
+          <a-alert
+            v-if="monthlyError"
+            type="warning"
+            :message="monthlyError"
+            show-icon
+            style="margin-bottom: 12px"
+          />
+          <a-space style="margin-bottom: 12px">
+            <a-date-picker v-model:value="monthlyFrom" value-format="YYYY-MM-DD" placeholder="起始月" />
+            <a-date-picker v-model:value="monthlyTo" value-format="YYYY-MM-DD" placeholder="结束月" />
+            <a-button type="primary" :loading="monthlyLoading" @click="loadMonthly">查询</a-button>
+          </a-space>
+          <a-spin :spinning="monthlyLoading">
+            <EmptyState
+              v-if="!monthlyLoading && monthlyRows.length === 0"
+              description="暂无数据，需先运行数据湖-预聚合"
+            />
+            <a-table
+              v-else
+              :data-source="monthlyRows.map((r, i) => ({ key: i, ...r }))"
+              size="small"
+              :pagination="{ pageSize: 10 }"
+            >
+              <a-table-column title="月份" data-index="month" />
+              <a-table-column title="房型" data-index="room_type_code" />
+              <a-table-column title="房型名" data-index="room_type_name" />
+              <a-table-column title="入住率" data-index="occupancy_rate" />
+              <a-table-column title="客单价" data-index="adr_fen">
+                <template #default="{ record }">{{ fmtFen(record.adr_fen) }}</template>
+              </a-table-column>
             </a-table>
           </a-spin>
         </a-tab-pane>
@@ -382,13 +644,13 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
           <a-input v-model:value="ruleForm.name" placeholder="如：会话数据脱敏" />
         </a-form-item>
         <a-form-item label="任务类型" required>
-          <a-select v-model:value="ruleForm.task_type" placeholder="选择清洗管道">
+          <a-select v-model:value="ruleForm.task_type" placeholder="选择清洗管道" @change="onTaskTypeChange">
             <a-select-option
-              v-for="(label, type) in PIPELINE_TYPES"
+              v-for="type in TASK_TYPE_OPTIONS"
               :key="type"
               :value="type"
             >
-              {{ label }}
+              {{ PIPELINE_TYPES[type] }}
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -398,6 +660,31 @@ function ruleTaskTypeLabel(rule: CleaningRule): string {
         <a-form-item label="定时调度 (cron)">
           <a-input v-model:value="ruleForm.schedule_cron" placeholder="留空=仅手动触发，如 0 2 * * *" />
         </a-form-item>
+
+        <template v-if="currentConfigFields.length > 0">
+          <a-divider style="margin: 8px 0">规则参数</a-divider>
+          <a-form-item v-for="field in currentConfigFields" :key="field.key" :label="field.label">
+            <a-input-number
+              v-if="field.type === 'number'"
+              v-model:value="ruleConfig[field.key] as number"
+              :placeholder="field.placeholder"
+              style="width: 100%"
+            />
+            <a-switch
+              v-else-if="field.type === 'boolean'"
+              v-model:checked="ruleConfig[field.key] as boolean"
+            />
+            <a-select
+              v-else-if="field.type === 'tables'"
+              v-model:value="ruleConfig[field.key] as string[]"
+              mode="multiple"
+              placeholder="选择要归档的表"
+            >
+              <a-select-option value="model_audit">model_audit</a-select-option>
+              <a-select-option value="tool_audit">tool_audit</a-select-option>
+            </a-select>
+          </a-form-item>
+        </template>
       </a-form>
     </a-modal>
   </a-space>

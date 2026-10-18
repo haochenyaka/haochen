@@ -15,7 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.security import Identity, require_roles
-from app.services.data_pipeline_service import DataPipelineService
+from app.services.data_pipeline_service import (
+    DataPipelineService,
+    UnknownPipelineTypeError,
+)
 from app.services.task_dispatch import TaskDispatcher
 
 logger = logging.getLogger(__name__)
@@ -23,6 +26,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/data-pipeline", tags=["admin-data-pipeline"])
 
 pipeline_guard = require_roles("admin", "manager")
+
+
+def _validate_cron(expr: str | None) -> None:
+    """保存前校验 cron 表达式（非法即 422），避免运行期静默跳过。"""
+    if not expr:
+        return
+    from croniter import croniter
+
+    try:
+        croniter(expr)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=f"cron 表达式非法：{expr}（{exc}）") from exc
+
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 GuardDep = Annotated[Identity, Depends(pipeline_guard)]
@@ -72,6 +88,7 @@ class PipelineRunResponse(BaseModel):
     rule_id: int | None
     task_id: str | None
     trigger: str
+    task_type: str | None
     status: str
     source_table: str | None
     processed_rows: int | None
@@ -138,14 +155,18 @@ async def create_rule(
     _identity: GuardDep,
 ) -> RuleResponse:
     """创建清洗规则。"""
+    _validate_cron(body.schedule_cron)
     svc = DataPipelineService(session)
-    rule = await svc.create_rule(
-        name=body.name,
-        description=body.description,
-        task_type=body.task_type,
-        schedule_cron=body.schedule_cron,
-        config=body.config,
-    )
+    try:
+        rule = await svc.create_rule(
+            name=body.name,
+            description=body.description,
+            task_type=body.task_type,
+            schedule_cron=body.schedule_cron,
+            config=body.config,
+        )
+    except UnknownPipelineTypeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     await session.commit()
     return _rule_to_response(rule)
 
@@ -158,6 +179,7 @@ async def update_rule(
     _identity: GuardDep,
 ) -> RuleResponse:
     """更新清洗规则。"""
+    _validate_cron(body.schedule_cron)
     svc = DataPipelineService(session)
     rule = await svc.update_rule(
         rule_id,
@@ -202,8 +224,7 @@ async def trigger_pipeline(
     svc = DataPipelineService(session)
     run = await svc.trigger_pipeline(rule_id, trigger="manual", dispatcher=dispatcher)
     if run is None:
-        raise HTTPException(status_code=400, detail="规则不存在或已禁用")
-    await session.commit()
+        raise HTTPException(status_code=400, detail="规则不存在、已禁用，或已有运行中的同规则管道")
     return TriggerResponse(run_id=str(run.id))
 
 
@@ -219,7 +240,8 @@ async def trigger_pipeline_task(
     run = await svc.trigger_pipeline_once(
         task_type, config=None, trigger="api", dispatcher=dispatcher
     )
-    await session.commit()
+    if run is None:
+        raise HTTPException(status_code=400, detail="管道任务已在队列中，且同一分钟不重复触发")
     return TriggerResponse(run_id=str(run.id))
 
 
@@ -298,6 +320,7 @@ def _run_to_response(run: object) -> PipelineRunResponse:
         rule_id=r.rule_id,
         task_id=str(r.task_id) if r.task_id else None,
         trigger=r.trigger,
+        task_type=r.task_type,
         status=r.status,
         source_table=r.source_table,
         processed_rows=r.processed_rows,

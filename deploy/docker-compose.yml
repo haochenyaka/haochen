@@ -162,6 +162,30 @@ services:
       timeout: 5s
       retries: 12
 
+  # MCP 网关：把内部渠道（门锁/机器人/微信）以远程 MCP（streamable_http）暴露给 Agent。
+  # 子路径：/lock/mcp、/robot/mcp、/wechat/mcp；seed 已预置三条 mcp_servers 记录。
+  # 工具内部走 device-sim 契约模拟器，业务服务与失败语义不变。
+  mcp-gateway:
+    build: ../backend
+    command: ["uvicorn", "app.mcp_gateway.main:app", "--host", "0.0.0.0", "--port", "9200"]
+    environment:
+      DEVICE_SIM_BASE_URL: http://device-sim:9100
+      LOCK_MASTER_KEY: ${LOCK_MASTER_KEY:-change-me}
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9200/healthz')\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      device-sim:
+        condition: service_healthy
+
   api:
     build: ../backend
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -20,6 +20,7 @@ from app.agents import (
     DeclaredBuiltinPolicy,
     ResourcePolicy,
     ResourceRef,
+    ResourceSnapshot,
     RuntimeContext,
     ToolRegistry,
     default_registry,
@@ -166,13 +167,21 @@ class AgentRunBody:
                     ResourceRef(kind="skill", id=slug)
                     for slug in _enabled_skills(agent, agent_config)
                 )
+                + tuple(
+                    ResourceRef(kind="mcp_server", id=slug)
+                    for slug in _enabled_mcp_servers(agent_config)
+                )
             ),
             policy=self._resource_policy
             or _default_resource_policy(
                 declared_tools=frozenset(agent.tool_ids),
                 knowledge_bases=frozenset(agent.knowledge_base_ids),
                 skills=frozenset(agent.skill_ids),
+                mcp_servers=frozenset(_enabled_mcp_servers(agent_config)),
             ),
+        )
+        resources, tool_registry = await self._with_mcp_tools(
+            resources, session_factory=ctx.session_factory
         )
         runtime = RuntimeContext(
             agent_slug=identity.agent_slug,
@@ -188,7 +197,7 @@ class AgentRunBody:
             recorder=recorder,
             workdir=Path(get_settings().workdir_root) / "threads" / str(identity.thread_id),
             middleware_config=agent_config.middleware,  # 中间件配置段（config_json.middleware）
-            tool_registry=self._tool_registry,
+            tool_registry=tool_registry,
             memory_provider=DbMemoryProvider(ctx.session_factory),
             cancel_event=ctx.cancel_event,
             events=ctx.events,
@@ -231,6 +240,40 @@ class AgentRunBody:
             token_usage=token_usage if isinstance(token_usage, dict) else None,
             langfuse_trace_id=langfuse_trace_id,
         )
+
+    async def _with_mcp_tools(
+        self,
+        resources: ResourceSnapshot,
+        *,
+        session_factory: Any,
+    ) -> tuple[ResourceSnapshot, Any]:
+        """把本 Agent 启用的 MCP 工具并入资源快照与 Run 级工具注册表。
+
+        - 无启用的 MCP server 时原样返回（`tool_registry` 走注入覆盖或进程级内置，行为不变）；
+        - 有 MCP 时：装载工具 → 工具名并入 `resources.tools`（模型可见集合只由 tools 桶决定，
+          `mcp_server` 桶已在授权归一化阶段放行）→ 构造**独立**注册表（内置 + 远程）避免污染
+          进程级单例、跨 Run 泄漏；
+        - MCP 工具名加 `{slug}__` 前缀，与内置工具并存不冲突。
+        """
+        mcp_slugs = resources.ids("mcp_server")
+        if not mcp_slugs:
+            return resources, self._tool_registry
+
+        from dataclasses import replace
+
+        from app.agents.mcp.runtime import load_mcp_tools_for_agent
+        from app.agents.toolkits.registry import default_registry
+
+        mcp_tools = await load_mcp_tools_for_agent(mcp_slugs, session_factory=session_factory)
+        if not mcp_tools:
+            return resources, self._tool_registry
+
+        extra_refs = tuple(ResourceRef(kind="tool", id=tool.name) for tool in mcp_tools)
+        merged_resources = replace(resources, tools=resources.tools + extra_refs)
+        registry = (self._tool_registry or default_registry()).copy()
+        for tool in mcp_tools:
+            registry.adopt(tool)
+        return merged_resources, registry
 
     async def _resolve_resume(self, ctx: RunContext) -> dict[str, object] | None:
         """恢复路径：存在已决定（approved/denied）且未消费的审批 → 构造 resume 续跑图。
@@ -344,20 +387,30 @@ def _enabled_skills(agent: Any, config: AgentRuntimeConfig) -> tuple[str, ...]:
     return config.enabled_skills if config.enabled_skills is not None else agent.skill_ids
 
 
+def _enabled_mcp_servers(config: AgentRuntimeConfig) -> tuple[str, ...]:
+    """管理端显式启用的 MCP server slug（None = 不启用任何远程 MCP 工具）。"""
+    return config.enabled_mcp_servers or ()
+
+
 def _default_resource_policy(
     *,
     declared_tools: frozenset[str],
     knowledge_bases: frozenset[str],
     skills: frozenset[str] = frozenset(),
+    mcp_servers: frozenset[str] = frozenset(),
 ) -> ResourcePolicy:
     """P3 过渡：Agent 代码声明的内置工具、知识库与 Skill 放行（P2 权限数据接管后替换）。
 
     注册表只放行已注册的声明项：代码声明了但未注册的工具在装配期显式失败（不静默）。
+    `mcp_servers` 为管理端显式启用的 MCP server slug 集合（放行对应远程工具）。
     """
     registered = frozenset(default_registry().names())
     missing = sorted(declared_tools - registered)
     if missing:
         raise LookupError(f"Agent 声明的工具未注册：{', '.join(missing)}")
     return DeclaredBuiltinPolicy(
-        declared_tools=declared_tools, knowledge_bases=knowledge_bases, skills=skills
+        declared_tools=declared_tools,
+        knowledge_bases=knowledge_bases,
+        skills=skills,
+        mcp_servers=mcp_servers,
     )

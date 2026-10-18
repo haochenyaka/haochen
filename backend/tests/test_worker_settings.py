@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.data_pipeline.scheduler import submit_pipeline_schedules_job
 from app.knowledge.recovery import release_expired_claims_job
 from app.lock.task_handlers import submit_daily_rotation_job
 from app.quality.task_handlers import submit_qa_audit_job
@@ -95,6 +96,7 @@ def test_task_cron_recovery_jobs_registered() -> None:
         "cron:release_expired_claims_job",
         "cron:submit_daily_rotation_job",
         "cron:submit_qa_audit_job",
+        "cron:submit_pipeline_schedules_job",
     }
     assert jobs["cron:repost_pending_tasks_job"].coroutine is repost_pending_tasks_job
     assert jobs["cron:reconcile_expired_tasks_job"].coroutine is reconcile_expired_tasks_job
@@ -113,6 +115,11 @@ def test_task_cron_recovery_jobs_registered() -> None:
     assert audit.coroutine is submit_qa_audit_job
     assert audit.minute == {10}
     assert audit.second == {0}
+    # 数据管道调度：每分钟扫描命中的清洗规则（分钟级去重键）
+    pipeline = jobs["cron:submit_pipeline_schedules_job"]
+    assert pipeline.coroutine is submit_pipeline_schedules_job
+    assert pipeline.minute == set(range(0, 60))
+    assert pipeline.second == {20}
 
 
 def test_task_worker_startup_hooks_registered() -> None:

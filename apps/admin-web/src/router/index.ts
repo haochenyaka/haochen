@@ -14,17 +14,32 @@ interface AdminPage {
   name: string
   path: string
   title: string
+  description: string
   stage: string
   roles?: AdminRole[]
 }
 
 const pages: AdminPage[] = [
-  { name: 'dashboard', path: 'dashboard', title: '仪表盘', stage: 'P1 已接入运行与审计事实，P7 完善报表' },
-  { name: 'agents', path: 'agents', title: 'Agent 配置与管理', stage: 'P7 Agent 配置台（配置/Skill/MCP 管理）', roles: ['admin'] },
+  {
+    name: 'dashboard',
+    path: 'dashboard',
+    title: '仪表盘',
+    description: '运营总览、关键指标与待办事项',
+    stage: 'P1 已接入运行与审计事实，P7 完善报表',
+  },
+  {
+    name: 'agents',
+    path: 'agents',
+    title: 'Agent 配置与管理',
+    description: 'Agent 人设、工具、Skill 与知识库配置',
+    stage: 'P7 Agent 配置台（配置/Skill/MCP 管理）',
+    roles: ['admin'],
+  },
   {
     name: 'mcp-servers',
     path: 'mcp-servers',
     title: 'MCP 服务器',
+    description: '外部 MCP 服务接入、地址与启停管理',
     stage: 'P7 MCP 服务器管理（CRUD + 启停）',
     roles: ['admin', 'manager'],
   },
@@ -32,6 +47,7 @@ const pages: AdminPage[] = [
     name: 'conversations',
     path: 'conversations',
     title: '会话监控与质检',
+    description: '会话记录、消息详情与质检标签',
     stage: 'P7 会话监控（列表/详情/质检标签 CRUD）',
     roles: ['admin', 'manager', 'operator'],
   },
@@ -39,17 +55,47 @@ const pages: AdminPage[] = [
     name: 'reports',
     path: 'reports',
     title: '数据报表',
+    description: '接待量、解决率、缓存命中与运行性能',
     stage: 'P7 报表：终态分布、解决率、转人工率与缓存命中率等 Agent 性能指标',
     roles: ['admin', 'manager'],
   },
-  { name: 'health', path: 'health', title: '运行健康面板', stage: 'P7 健康面板：Run 终态分布、TTFT、缓存命中率趋势', roles: ['admin', 'manager'] },
-  { name: 'logs', path: 'logs', title: '智能体日志', stage: 'P7 日志检索（审计读接口 500 条 + truncated）', roles: ['admin', 'manager'] },
-  { name: 'data', path: 'data', title: '酒店基础数据', stage: 'P7 基础数据增强（搜索/设施/房态快捷/酒店配置）', roles: ['admin', 'manager'] },
-  { name: 'memories', path: 'memories', title: '记忆管理', stage: 'P7 记忆查看/敏感标记/软删/恢复', roles: ['admin', 'manager'] },
+  {
+    name: 'health',
+    path: 'health',
+    title: '运行健康面板',
+    description: '运行告警、终态分布与缓存命中趋势',
+    stage: 'P7 健康面板：Run 终态分布、TTFT、缓存命中率趋势',
+    roles: ['admin', 'manager'],
+  },
+  {
+    name: 'logs',
+    path: 'logs',
+    title: '智能体日志',
+    description: '运行日志、时间线与管理员操作审计',
+    stage: 'P7 日志检索（审计读接口 500 条 + truncated）',
+    roles: ['admin', 'manager'],
+  },
+  {
+    name: 'data',
+    path: 'data',
+    title: '酒店基础数据',
+    description: '房型、客房、员工、账号与酒店配置',
+    stage: 'P7 基础数据增强（搜索/设施/房态快捷/酒店配置）',
+    roles: ['admin', 'manager'],
+  },
+  {
+    name: 'memories',
+    path: 'memories',
+    title: '记忆管理',
+    description: '客人长期记忆查看、敏感标记与恢复',
+    stage: 'P7 记忆查看/敏感标记/软删/恢复',
+    roles: ['admin', 'manager'],
+  },
   {
     name: 'handoff',
     path: 'handoff',
     title: '人工接线',
+    description: '待接线工单处理与客服回复',
     stage: 'P7 人工工作台（接单/关单/客服回复/对话面板）',
     roles: ['admin', 'manager', 'operator'],
   },
@@ -57,6 +103,7 @@ const pages: AdminPage[] = [
     name: 'approvals',
     path: 'approvals',
     title: '工具审批',
+    description: '危险工具调用挂起审批与恢复',
     stage: 'P0.5b 危险工具挂起审批（批准/拒绝 + 恢复）',
     roles: ['admin', 'manager'],
   },
@@ -64,6 +111,7 @@ const pages: AdminPage[] = [
     name: 'eval-agent',
     path: 'eval-agent',
     title: '智能体评估',
+    description: '端到端智能体回归评估与评分卡',
     stage: 'P8 智能体评估：Langfuse Dataset 驱动端到端实验',
     roles: ['admin', 'manager'],
   },
@@ -71,6 +119,7 @@ const pages: AdminPage[] = [
     name: 'eval-kb',
     path: 'eval-kb',
     title: '知识库评估',
+    description: '知识库召回质量回归与基线管理',
     stage: 'P8 知识库评估回归：评估集扩充、基线作废与回归报告',
     roles: ['admin', 'manager'],
   },
@@ -78,6 +127,7 @@ const pages: AdminPage[] = [
     name: 'quality-scorecard',
     path: 'quality-scorecard',
     title: '数据质量评分卡',
+    description: '覆盖率、新鲜度、正确性、一致性与召回质量',
     stage: 'P8 评分卡：覆盖率/新鲜度/正确性/一致性/召回质量五维评分',
     roles: ['admin', 'manager'],
   },
@@ -85,6 +135,7 @@ const pages: AdminPage[] = [
     name: 'data-pipeline',
     path: 'data-pipeline',
     title: '数据管道',
+    description: '清洗规则、管道触发与运行记录',
     stage: 'P8 数据中台：清洗规则管理、管道触发、运行记录',
     roles: ['admin', 'manager'],
   },
@@ -93,6 +144,7 @@ const pages: AdminPage[] = [
 export const ADMIN_MENU = pages.map((page) => ({
   name: page.name,
   title: page.title,
+  description: page.description,
   roles: page.roles,
 }))
 
