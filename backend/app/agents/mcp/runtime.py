@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Sequence
 from typing import Any
@@ -19,7 +20,7 @@ from langchain_core.tools import BaseTool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.agents.mcp.client import load_tools
+from app.agents.mcp.client import load_tools, timeout_seconds
 from app.db import SessionFactory
 from app.models.mcp_server import McpServer
 
@@ -104,13 +105,19 @@ async def load_mcp_tools_for_agent(
             if isinstance(raw_disabled, (list, tuple, set))
             else set()
         )
+        timeout = timeout_seconds(row.config_json)
         try:
-            tools = await load_tools(
-                slug=row.slug,
-                server_url=row.server_url,
-                transport=row.transport,
-                config=row.config_json,
-            )
+            # 每个 server 独立限时：单个端点挂住不能拖垮整个 Run 的装配。
+            async with asyncio.timeout(timeout):
+                tools = await load_tools(
+                    slug=row.slug,
+                    server_url=row.server_url,
+                    transport=row.transport,
+                    config=row.config_json,
+                )
+        except TimeoutError:
+            logger.warning("MCP server 工具装载超时，跳过：slug=%s timeout=%ss", row.slug, timeout)
+            continue
         except Exception as exc:  # noqa: BLE001 — 探测失败不阻断 Run（D-MCP-3）
             logger.warning("MCP server 工具装载失败，跳过：slug=%s error=%s", row.slug, exc)
             continue

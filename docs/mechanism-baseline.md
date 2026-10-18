@@ -98,7 +98,7 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 
 | 项 | 内容 |
 | --- | --- |
-| 机制要点 | 管理接口只接受 `streamable_http` 与 `sse` 远程 MCP；`stdio` 仅限代码维护的系统内置项（命令/版本固定，禁止从 HTTP 或数据库拼接）；MCP 配置存 PostgreSQL，工具对象按配置哈希缓存；连接测试只做 `initialize` + `tools/list`，**绝不 `tools/call`**。运行期按 `AgentConfig.enabled_mcp_servers` 装载工具（加 `{slug}__` 前缀），`config_json.disabled_tools` 剔除、`read_only_tools` 豁免默认危险标记；server 不可达时跳过其工具并告警，不阻断 Run |
+| 机制要点 | 管理接口只接受 `streamable_http` 与 `sse` 远程 MCP；`stdio` 仅限代码维护的系统内置项（命令/版本固定，禁止从 HTTP 或数据库拼接）；MCP 配置存 PostgreSQL，工具对象按配置哈希缓存；连接测试只做 `initialize` + `tools/list`，**绝不 `tools/call`**。探测与运行期装载都以 `config_json.timeout_seconds`（默认 10s）为**总时长上限**：已建连但不响应的端点按时返回失败，运行期按 server 独立限时并跳过，不拖垮管理端请求或 Run。运行期按 `AgentConfig.enabled_mcp_servers` 装载工具（加 `{slug}__` 前缀），`config_json.disabled_tools` 剔除、`read_only_tools` 豁免默认危险标记；server 不可达时跳过其工具并告警，不阻断 Run |
 | 落地方案 | mcp-gateway 作为独立服务，把 lock / robot / wechat 以 `streamable_http` MCP 暴露（内部网络，子路径 `/lock/mcp`、`/robot/mcp`、`/wechat/mcp`），经管理链路注册、测试连接、启用与单工具禁用；`seed` 预置三条记录。工具实现复用既有渠道客户端并走 `app/device_sim` 契约模拟器，Agent 侧不直连硬件 SDK；pms-mcp 暂未落地（非核心，留占位）。P0 已交付契约 mock（`app/device_sim`，含故障注入，见[外部系统接口契约 v0](./contracts/external-systems-v0.md)） |
 | 落地位置 | app/mcp_gateway/（lock-mcp、robot-mcp、wechat-mcp）、app/agents/mcp/（client/probe/runtime）、app/robot/ |
 | 阶段 | P0（mock）、P7（管理链路）、2026-10-18 改造 PR-M1–M3（客户端/运行期/网关）、P9（真机） |

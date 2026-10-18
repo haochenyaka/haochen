@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 import pytest
@@ -109,6 +111,30 @@ async def test_probe_server_converges_config_error_to_failed() -> None:
     assert result.ok is False
     assert result.status == probe_mod.PROBE_FAILED
     assert "stdio" in (result.error or "")
+
+
+@pytest.mark.asyncio
+async def test_probe_server_times_out_within_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.agents.mcp import probe as probe_mod
+
+    async def _hang(**_kwargs: Any) -> list[dict[str, object]]:
+        await asyncio.sleep(5)
+        return []
+
+    monkeypatch.setattr(probe_mod, "discover_tools", _hang)
+
+    started = time.monotonic()
+    result = await probe_mod.probe_server(
+        slug="slow-mcp",
+        server_url="http://gw/mcp",
+        transport="streamable_http",
+        config={"timeout_seconds": 0.05},
+    )
+    elapsed = time.monotonic() - started
+    assert result.ok is False
+    assert result.status == probe_mod.PROBE_FAILED
+    assert "超时" in (result.error or "")
+    assert elapsed < 2, "探测必须有总时长上限，不能随 endpoint 挂起"
 
 
 @pytest.mark.asyncio

@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 import pytest
@@ -117,6 +119,27 @@ async def test_skips_unreachable_server(monkeypatch: Any) -> None:
         ["down-mcp"], session_factory=_factory([row])
     )
     assert tools == (), "不可达 server 跳过其工具，不阻断 Run"
+
+
+@pytest.mark.asyncio
+async def test_skips_hung_server_within_timeout(monkeypatch: Any) -> None:
+    slow = _FakeMcpServerRow("slow-mcp", config={"timeout_seconds": 0.05})
+    healthy = _FakeMcpServerRow("ok-mcp")
+
+    async def _load(*, slug: str, **_kwargs: Any) -> list[Any]:
+        if slug == "slow-mcp":
+            await asyncio.sleep(5)
+        return [_mcp_tool("x")]
+
+    monkeypatch.setattr(mcp_runtime, "load_tools", _load)
+
+    started = time.monotonic()
+    tools = await mcp_runtime.load_mcp_tools_for_agent(
+        ["slow-mcp", "ok-mcp"], session_factory=_factory([slow, healthy])
+    )
+    elapsed = time.monotonic() - started
+    assert {t.name for t in tools} == {"ok-mcp__x"}, "超时 server 跳过，其余照常装载"
+    assert elapsed < 2, "单个 server 挂起不能拖垮装配"
 
 
 @pytest.mark.asyncio

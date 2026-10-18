@@ -6,11 +6,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 
-from app.agents.mcp.client import McpConfigError, discover_tools, validate_transport
+from app.agents.mcp.client import (
+    McpConfigError,
+    discover_tools,
+    timeout_seconds,
+    validate_transport,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +45,30 @@ async def probe_server(
     失败不抛出：以 `ProbeResult(ok=False)` 返回，错误文案留给管理端展示。
     """
     started = time.monotonic()
+    timeout = timeout_seconds(config)
     try:
         validate_transport(transport)
-        tools = await discover_tools(
-            slug=slug, server_url=server_url, transport=transport, config=config
-        )
+        # 适配器的传输 timeout 不能兜住“已建连但不响应”的 endpoint，这里加总时长上限，
+        # 保证管理端测试连接在自身 HTTP 超时之前返回结论。
+        async with asyncio.timeout(timeout):
+            tools = await discover_tools(
+                slug=slug, server_url=server_url, transport=transport, config=config
+            )
         latency = int((time.monotonic() - started) * 1000)
         return ProbeResult(ok=True, status=PROBE_OK, tools=tools, latency_ms=latency)
     except McpConfigError as exc:
         latency = int((time.monotonic() - started) * 1000)
         logger.warning("MCP 探测配置非法：slug=%s error=%s", slug, exc)
         return ProbeResult(ok=False, status=PROBE_FAILED, error=str(exc), latency_ms=latency)
+    except TimeoutError:
+        latency = int((time.monotonic() - started) * 1000)
+        logger.warning("MCP 探测超时：slug=%s timeout=%ss", slug, timeout)
+        return ProbeResult(
+            ok=False,
+            status=PROBE_FAILED,
+            error=f"连接测试超时（{timeout:g} 秒）",
+            latency_ms=latency,
+        )
     except Exception as exc:  # noqa: BLE001 — 探测失败一律收敛为结论，不向上抛
         latency = int((time.monotonic() - started) * 1000)
         logger.warning("MCP 探测失败：slug=%s error=%s", slug, exc)

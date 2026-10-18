@@ -46,8 +46,9 @@ def _resolve_headers(slug: str, config: Mapping[str, Any]) -> dict[str, str] | N
     return {"Authorization": f"Bearer {api_key}"}
 
 
-def _timeout_seconds(config: Mapping[str, Any]) -> float:
-    raw = config.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
+def timeout_seconds(config: Mapping[str, Any] | None) -> float:
+    """解析配置中的超时；探测与装载都以它为**总时长上限**（不只是传输参数）。"""
+    raw = (config or {}).get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
     try:
         value = float(raw)
     except (TypeError, ValueError):
@@ -93,7 +94,7 @@ def build_connection(
     connection: dict[str, Any] = {
         "transport": transport,
         "url": server_url,
-        "timeout": _timeout_seconds(cfg),
+        "timeout": timeout_seconds(cfg),
     }
     headers = _resolve_headers(slug, cfg)
     if headers:
