@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.mcp.client import McpConfigError
 from app.db import get_session
 from app.security import Identity, require_roles
 from app.services.mcp_server_service import McpServerDTO, McpServerService
@@ -34,8 +35,13 @@ class McpServerModel(BaseModel):
     name: str
     description: str | None = None
     server_url: str
+    transport: str = "streamable_http"
     config_json: dict[str, object] | None = None
     active: bool = True
+    last_status: str | None = None
+    last_error: str | None = None
+    last_tested_at: str | None = None
+    discovered_tools: list[dict[str, object]] | None = None
     created_at: str
     updated_at: str
 
@@ -44,6 +50,7 @@ class CreateMcpServerBody(BaseModel):
     slug: str
     name: str
     server_url: str
+    transport: str = "streamable_http"
     description: str | None = None
     config_json: dict[str, object] | None = None
     active: bool = True
@@ -53,8 +60,28 @@ class UpdateMcpServerBody(BaseModel):
     name: str | None = None
     description: str | None = None
     server_url: str | None = None
+    transport: str | None = None
     config_json: dict[str, object] | None = None
     active: bool | None = None
+
+
+class McpToolModel(BaseModel):
+    name: str
+    description: str = ""
+
+
+class McpToolsModel(BaseModel):
+    server_id: int
+    slug: str
+    tools: list[McpToolModel]
+
+
+class McpProbeModel(BaseModel):
+    ok: bool
+    status: str
+    latency_ms: int = 0
+    error: str | None = None
+    tool_count: int = 0
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -67,8 +94,13 @@ def _to_model(dto: McpServerDTO) -> McpServerModel:
         name=dto.name,
         description=dto.description,
         server_url=dto.server_url,
+        transport=dto.transport,
         config_json=dto.config_json,
         active=dto.active,
+        last_status=dto.last_status,
+        last_error=dto.last_error,
+        last_tested_at=dto.last_tested_at.isoformat() if dto.last_tested_at else None,
+        discovered_tools=dto.discovered_tools,
         created_at=dto.created_at.isoformat(),
         updated_at=dto.updated_at.isoformat(),
     )
@@ -113,10 +145,15 @@ async def create_mcp_server(
             slug=body.slug,
             name=body.name,
             server_url=body.server_url,
+            transport=body.transport,
             description=body.description,
             config_json=body.config_json,
             active=body.active,
         )
+    except McpConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _to_model(server)
@@ -135,6 +172,7 @@ async def update_mcp_server(
         name=body.name,
         description=body.description,
         server_url=body.server_url,
+        transport=body.transport,
         config_json=body.config_json,
         active=body.active,
     )
@@ -153,3 +191,42 @@ async def delete_mcp_server(
     deleted = await svc.delete_server(server_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="MCP 服务器不存在")
+
+
+@router.post("/{server_id}/test", response_model=McpProbeModel)
+async def test_mcp_server(
+    server_id: int,
+    session: SessionDep,
+    _identity: WriteGuardDep,
+) -> McpProbeModel:
+    """测试连通性：只发现工具（initialize + tools/list），不执行任何工具。"""
+    svc = McpServerService(session)
+    try:
+        result = await svc.test_connection(server_id)
+    except McpConfigError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return McpProbeModel(
+        ok=result.ok,
+        status=result.status,
+        latency_ms=result.latency_ms,
+        error=result.error,
+        tool_count=len(result.tools),
+    )
+
+
+@router.get("/{server_id}/tools", response_model=McpToolsModel)
+async def list_mcp_tools(
+    server_id: int,
+    session: SessionDep,
+    _identity: GuardDep,
+) -> McpToolsModel:
+    """列出最近一次探测发现的工具清单。"""
+    svc = McpServerService(session)
+    server = await svc.get_server(server_id)
+    if server is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="MCP 服务器不存在")
+    tools = [
+        McpToolModel(name=str(t.get("name", "")), description=str(t.get("description", "")))
+        for t in (server.discovered_tools or [])
+    ]
+    return McpToolsModel(server_id=server_id, slug=server.slug, tools=tools)
