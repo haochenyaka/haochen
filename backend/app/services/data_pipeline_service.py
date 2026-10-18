@@ -270,6 +270,33 @@ class DataPipelineService:
         )
         await self._session.execute(stmt)
 
+    async def fail_run(
+        self,
+        run_id: UUID,
+        *,
+        source_table: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        """收敛未由 handler 回报的运行记录（如 worker 租约过期）。
+
+        只更新 pending/running 行；handler 已自行置为 failed 时不会覆盖其结果。
+        """
+        stmt = (
+            update(DataPipelineRun)
+            .where(DataPipelineRun.id == run_id)
+            .where(DataPipelineRun.status.in_(("pending", "running")))
+            .values(
+                status="failed",
+                source_table=source_table,
+                error=error,
+                duration_seconds=sa_func.extract(
+                    "epoch", sa_func.now() - DataPipelineRun.created_at
+                ),
+                finished_at=sa_func.now(),
+            )
+        )
+        await self._session.execute(stmt)
+
     # ---- 运行记录查询 ----
 
     async def list_runs(
