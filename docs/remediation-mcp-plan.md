@@ -1,6 +1,6 @@
 # MCP 服务器「从配置壳到运行时真接」PR 级实施步骤
 
-状态：待评审（draft）
+状态：已交付（2026-10-18；PR-M1–M4，验收 A9 已回填）
 日期：2026-10-18
 上游：[remediation-plan.md](./remediation-plan.md) · [mechanism-baseline.md](./mechanism-baseline.md) §2.7 · [design.md](./design.md) §Agent 运行时设计
 范围：PR-M1 MCP 客户端与连接测试 · PR-M2 运行期接线（MCP 工具注入 + 授权快照） · PR-M3 mcp_gateway 独立服务 · PR-M4 验收与文档

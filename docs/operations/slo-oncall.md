@@ -158,6 +158,16 @@ ORDER BY age DESC LIMIT 10;
   `RuntimeError: 生产配置不安全`。按提示补齐声明，不要删除守卫。
 - 本地 PostgreSQL 审计始终是权威事实；Langfuse 故障不影响 Run 执行。
 
+### 5.6 报表预聚合陈旧降级
+
+- **默认口径**：`REPORT_AGG_ENABLED=false`，报表一律走 PostgreSQL 重算，不存在陈旧分片问题。
+- **开启快路径后**：分片最后修改时间早于 `now - REPORT_AGG_MAX_STALENESS_SECONDS`（默认 3600s）
+  即判陈旧，日志输出 `预聚合分片陈旧，回落 PostgreSQL：table=... latest=...`，并改用 PG 重算。
+- **处置**：先看 `data_pipeline_runs` 中 `build_aggregates` 是否连续失败（终态 `failed` 带
+  `error`）或调度未触发；再查 MinIO 对应分区是否可读。修复后下一轮管道会刷新分片。
+- **不要**为了消掉日志而调大阈值或关闭开关：指标会静默归零的风险大于多一次 PG 查询。
+- **已知限制**：当前以降级日志为信号，未单独暴露计数器；接入外部指标时以日志计数为准。
+
 ## 6. 升级与沟通
 
 - **P1**：全部会话不可用、大面积 Run 失败、数据库不可写 → 立即通知负责人并启动回滚评估。

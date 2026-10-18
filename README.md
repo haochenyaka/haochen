@@ -16,7 +16,9 @@
 - **三端一体的 Agent 落地**：客人小程序、保洁小程序、管理后台共用一套 Agent 运行时，把自然语言对话接到真实的订单、门锁、客房服务业务链路上，而不是只做问答 Demo。
 - **混合检索知识库**：Milvus 向量检索（含 BM25 稀疏向量）+ Neo4j 关系图补充腿（房型设施 AND、周边类别/距离多跳，故障自动降级），经 Rerank 精排管道；169 题分块级黄金锚点的 `chunk_recall@10` 达 **0.9941**、`primary@1` **0.6746**（本地 BGE-M3 embedding，详见 [评估基线](docs/eval/kb-baseline.json)）。
 - **可观测的 Agent 运行时**：Langfuse 做数据集驱动的评估与链路追踪，全量审计事实可通过 SQL 聚合派生报表，端到端可观测。
-- **数据湖分析层**：业务表增量导出到 MinIO（Parquet + zstd），由嵌入的 DuckDB 直读生成按日与业务预聚合（房型月度入住率/客单价）；20 万订单规模下同一业务查询中位耗时 **568ms → 1.5ms（约 378x）**，预聚合缺失时自动降级回 PostgreSQL 重算（[基准与口径](docs/eval/datalake-benchmark.md)）。
+- **数据湖分析层**：业务表增量导出到 MinIO（Parquet + zstd），由嵌入的 DuckDB 直读生成按日与业务预聚合（房型月度入住率/客单价）；20 万订单规模下同一业务查询中位耗时 **568ms → 1.5ms（约 378x）**，预聚合缺失/陈旧时自动降级回 PostgreSQL 重算（[基准与口径](docs/eval/datalake-benchmark.md)）。
+- **可调度、失败可见的数据管道**：9 条默认清洗规则（参数可编辑），task-worker 按 `schedule_cron` 分钟级扫描并去重提交；每次运行必落 `completed/failed/skipped` 终态并带错误，导出按 checkpoint 增量、归档按真实主键推进，同规则运行中拒绝重叠；管理端提供数据湖分区浏览、只读即席查询与房型月度指标。
+- **MCP 工具运行时真接**：管理端注册、启停远程 MCP（`streamable_http`/`sse`，拒绝 `stdio`）并可做连通性测试（只发现工具、不执行副作用）；Run 装配期按 `enabled_mcp_servers` 注入工具（`{slug}__` 前缀、单工具禁用、默认走审批、只读工具豁免），失败 server 跳过不阻断 Run。内置 `mcp-gateway` 以子路径暴露门锁 / 机器人 / 微信三个渠道（工具内部走 device-sim）。
 - **异步与隔离**：API 与 Worker 分离，LangGraph 会话执行与知识索引、质检跑批等后台任务解耦，避免长任务阻塞交互链路。
 
 ## 界面预览
@@ -53,6 +55,7 @@ flowchart TB
     subgraph Runtime["Agent 运行时"]
         W["worker：AgentRun 执行"]
         TW["task-worker：后台任务 / 清洗管道"]
+        MG["mcp-gateway<br/>lock / robot / wechat"]
     end
 
     subgraph Knowledge["知识库"]
@@ -77,6 +80,7 @@ flowchart TB
     W --> PG
     W --> LF
     TW --> MO --> DK
+    W --> MG --> DS["device-sim 契约模拟器"]
     API --> PG & RD
 ```
 
@@ -84,7 +88,8 @@ flowchart TB
 | --- | --- |
 | `api` | 三端 HTTP 接入、认证、SSE 推送 |
 | `worker` | AgentRun 执行；密码轮换、任务收敛、质检跑批等后台任务 |
-| `task-worker` | 数据清洗管道与数据湖导出 |
+| `task-worker` | 数据清洗管道与数据湖导出（含 cron 调度） |
+| `mcp-gateway` | 把门锁 / 机器人 / 微信渠道以 `streamable_http` MCP 暴露（`/lock/mcp`、`/robot/mcp`、`/wechat/mcp`） |
 | `device-sim` | 门锁 / 机器人 / 微信支付的契约模拟器（含故障注入），真机联调前替代外部设备 |
 | `guest-miniapp` / `staff-miniapp` | uni-app，构建微信小程序与 H5 调试 |
 | `admin-web` | Vue 3 + Ant Design Vue 管理后台 |

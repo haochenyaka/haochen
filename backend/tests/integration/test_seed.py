@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.data_pipeline import DataCleaningRule
 from app.models.domain import (
     Guest,
     HousekeepingTask,
@@ -20,13 +21,16 @@ from app.models.domain import (
     RoomType,
     Staff,
 )
+from app.models.mcp_server import McpServer
 from app.models.runtime import User
 from app.repositories.lock_credential_repository import LockCredentialRepository
 from app.seed import (
     ACCOUNT_PLAN,
+    CLEANING_RULE_PLAN,
     DEMO_ORDER_NO,
     DEMO_ROOM_NO,
     DEMO_TASK_DEDUPE_KEY,
+    MCP_GATEWAY_SERVERS,
     ROOM_PLAN,
     ROOM_TYPES,
     seed,
@@ -62,6 +66,16 @@ def test_seed_is_idempotent_and_demo_flow_is_reproducible(runtime_db_url: str) -
                 ),
                 "housekeeping_tasks": await _count(
                     HousekeepingTask, HousekeepingTask.idempotency_key == DEMO_TASK_DEDUPE_KEY
+                ),
+                "cleaning_rules": await _count(
+                    DataCleaningRule,
+                    DataCleaningRule.task_type.in_(
+                        [str(row["task_type"]) for row in CLEANING_RULE_PLAN]
+                    ),
+                ),
+                "mcp_servers": await _count(
+                    McpServer,
+                    McpServer.slug.in_([str(row["slug"]) for row in MCP_GATEWAY_SERVERS]),
                 ),
             }
 
@@ -123,6 +137,8 @@ def test_seed_is_idempotent_and_demo_flow_is_reproducible(runtime_db_url: str) -
         "orders": 1,
         "lock_credentials": 1,
         "housekeeping_tasks": 1,
+        "cleaning_rules": len(CLEANING_RULE_PLAN),
+        "mcp_servers": len(MCP_GATEWAY_SERVERS),
     }
     assert values["has_guest"] is True
 

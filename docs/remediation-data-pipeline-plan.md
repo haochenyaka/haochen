@@ -1,6 +1,6 @@
 # 数据管道「清洗规则补齐 + 失败治理」PR 级实施步骤
 
-状态：待评审（draft）
+状态：已交付（2026-10-18；PR-D1–D6，验收 A10 已回填）
 日期：2026-10-18
 上游：[remediation-plan.md](./remediation-plan.md) P3.3 · [mechanism-baseline.md](./mechanism-baseline.md) §2.15 · [remaining-work-plan.md](./remaining-work-plan.md)
 范围：PR-D1 运行记录可靠性（4 个真 bug） · PR-D2 规则种子与参数化 · PR-D3 真实调度器 · PR-D4 数据湖前端页 · PR-D5 报表预聚合新鲜度守卫 · PR-D6 验收与文档

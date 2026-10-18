@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     device_sim_base_url: str = "http://localhost:9100"
     device_sim_signing_secret: str = DEV_DEVICE_SIM_SECRET
 
+    # MCP 网关默认走 compose 内部 DNS；本地直连可设 MCP_GATEWAY_BASE_URL=http://127.0.0.1:9200
+    mcp_gateway_base_url: str = "http://mcp-gateway:9200"
+
     model_name: str = ""
     model_base_url: str = ""
     model_api_key: str = ""

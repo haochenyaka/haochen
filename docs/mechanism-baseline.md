@@ -98,10 +98,10 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 
 | 项 | 内容 |
 | --- | --- |
-| 机制要点 | 管理接口只接受 `streamable_http` 与 `sse` 远程 MCP；`stdio` 仅限代码维护的系统内置项（命令/版本固定，禁止从 HTTP 或数据库拼接）；MCP 配置存 PostgreSQL，工具对象按配置哈希缓存；连接测试只发现工具不执行副作用 |
-| 落地方案 | mcp-gateway 作为独立服务，把 lock / robot / wechat-pay / pms 各以 `streamable_http` MCP 暴露（内部网络），经管理链路注册、测试连接、启用与单工具禁用，与此边界一致；Agent 侧不直连硬件 SDK。P0 已交付契约 mock（`app/device_sim`，含故障注入，见[外部系统接口契约 v0](./contracts/external-systems-v0.md)） |
-| 落地位置 | app/mcp_gateway/（lock-mcp、robot-mcp、wechat-mcp、pms-mcp） |
-| 阶段 | P0（mock）、P4–P5（接线）、P9（真机） |
+| 机制要点 | 管理接口只接受 `streamable_http` 与 `sse` 远程 MCP；`stdio` 仅限代码维护的系统内置项（命令/版本固定，禁止从 HTTP 或数据库拼接）；MCP 配置存 PostgreSQL，工具对象按配置哈希缓存；连接测试只做 `initialize` + `tools/list`，**绝不 `tools/call`**。运行期按 `AgentConfig.enabled_mcp_servers` 装载工具（加 `{slug}__` 前缀），`config_json.disabled_tools` 剔除、`read_only_tools` 豁免默认危险标记；server 不可达时跳过其工具并告警，不阻断 Run |
+| 落地方案 | mcp-gateway 作为独立服务，把 lock / robot / wechat 以 `streamable_http` MCP 暴露（内部网络，子路径 `/lock/mcp`、`/robot/mcp`、`/wechat/mcp`），经管理链路注册、测试连接、启用与单工具禁用；`seed` 预置三条记录。工具实现复用既有渠道客户端并走 `app/device_sim` 契约模拟器，Agent 侧不直连硬件 SDK；pms-mcp 暂未落地（非核心，留占位）。P0 已交付契约 mock（`app/device_sim`，含故障注入，见[外部系统接口契约 v0](./contracts/external-systems-v0.md)） |
+| 落地位置 | app/mcp_gateway/（lock-mcp、robot-mcp、wechat-mcp）、app/agents/mcp/（client/probe/runtime）、app/robot/ |
+| 阶段 | P0（mock）、P7（管理链路）、2026-10-18 改造 PR-M1–M3（客户端/运行期/网关）、P9（真机） |
 
 ### 2.8 知识库
 
@@ -174,10 +174,10 @@ P1 已落地运行事件总线与 SSE 端点：api 与 worker 进程启动时各
 
 | 项 | 内容 |
 | --- | --- |
-| 机制要点 | 业务与审计事实增量导出 MinIO Parquet（zstd、按日期分区），DuckDB 直读生成预聚合；报表重聚合优先读预聚合，湖缺失/不可达按契约降级回 PostgreSQL 重算，**PostgreSQL 事实始终是唯一口径来源**；订单按 `[check_in_date, check_out_date)` 逐夜归属，取消/未支付不计，入住率 = 已售房晚 /（房型房间数 × 当月天数），客单价 = 房费收入 / 已售房晚 |
-| 酒店域增量 | `agg_room_type_monthly` 房型月度入住率与客单价预聚合；管理端 `GET /admin/datalake/analysis/room-type-monthly`（支持月份过滤）；`data_pipeline.export_business` 导出订单与房型/房间维度；基准脚本 `bench_datalake.py` 给出 PG 直查 vs 预聚合的可复现数字（20 万订单 568ms → 1.5ms，口径一致，见 `docs/eval/datalake-benchmark.md`） |
-| 落地位置 | app/data_pipeline/（lake_storage.py、business_aggregates.py、task_handlers.py）、app/services/datalake_query_service.py、app/routers/admin_datalake_router.py、backend/bench_datalake.py |
-| 阶段 | P8 链路、P3.3 真实基准与业务口径 |
+| 机制要点 | 业务与审计事实增量导出 MinIO Parquet（zstd、按日期分区），DuckDB 直读生成预聚合；报表默认走 PostgreSQL 重算（`REPORT_AGG_ENABLED=false`），开启预聚合快路径前校验分片新鲜度，湖缺失/不可达/陈旧一律降级回 PostgreSQL，**PostgreSQL 事实始终是唯一口径来源**；订单按 `[check_in_date, check_out_date)` 逐夜归属，取消/未支付不计，入住率 = 已售房晚 /（房型房间数 × 当月天数），客单价 = 房费收入 / 已售房晚。每次管道运行必须落确定终态（`completed`/`failed`/`skipped`），失败带 `error`；导出 checkpoint 按作用域读取，与 `source_table` 解耦 |
+| 酒店域增量 | `agg_room_type_monthly` 房型月度入住率与客单价预聚合；管理端 `GET /admin/datalake/analysis/room-type-monthly`（支持月份过滤）与数据管道页「数据湖」tab（分区浏览/预览/只读 SQL/房型月度指标）；`data_pipeline.export_business` 导出订单与房型/房间维度；`seed` 预置 9 条清洗规则（生产合理 cron + 参数）；task-worker 每分钟扫描 `schedule_cron` 并以分钟级去重键提交 `scheduled` run；同规则运行中拒绝重复触发；基准脚本 `bench_datalake.py` 给出 PG 直查 vs 预聚合的可复现数字（20 万订单 568ms → 1.5ms，口径一致，见 `docs/eval/datalake-benchmark.md`） |
+| 落地位置 | app/data_pipeline/（scheduler.py、lake_storage.py、business_aggregates.py、task_handlers.py）、app/services/data_pipeline_service.py、app/services/report_service.py、app/services/datalake_query_service.py、app/routers/admin_datalake_router.py、backend/bench_datalake.py |
+| 阶段 | P8 链路、P3.3 真实基准与业务口径、2026-10-18 改造 PR-D1–D5（终态/种子/调度/前端/新鲜度守卫） |
 
 ## 3. 中间件装配差分
 

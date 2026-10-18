@@ -23,7 +23,7 @@
 | api | 三端 HTTP 接入、认证、SSE 推送 |
 | worker | AgentRun 执行；Durable Task 运行密码轮换、清洁任务收敛、质检跑批 |
 | web | 管理后台前端 |
-| mcp-gateway | 门锁、机器人、微信支付与 PMS 的 MCP 服务器 |
+| mcp-gateway | 门锁、机器人、微信支付的 MCP 服务器（PMS 暂未落地） |
 | vision-api | 打卡视觉审核：人脸 1:1 比对、工牌 OCR、工服检测 |
 | postgres | 业务事实、请求与 Run、审计、LangGraph checkpoint |
 | redis | ARQ 投递、运行事件、取消信号与短期缓存 |
@@ -97,7 +97,7 @@ Agent 图沿用 LangGraph 中间件流水线（见[中间件装配差分](./mech
 
 Skills 按渐进加载管理（见 [Skills 机制](./mechanism-baseline.md#26-skills)）：checkin-flow（支付校验、密码下发、入住指引）、checkout-flow（退房、清洁、发票）、housekeeping（保洁流程与留证规范，员工 Agent 专用）、complaint-handling（投诉分级与告警）、invoice（发票流程）。
 
-MCP 服务器经管理后台启用与配置（见 [MCP 与网关](./mechanism-baseline.md#27-mcp-与-mcp-gateway)）：lock-mcp（凭证生成、轮换、开锁记录）、robot-mcp（配送下单与状态）、wechat-mcp（登录与支付回调状态）、pms-mcp（可选，房态同步）。
+MCP 服务器经管理后台启用、配置与连通性测试（见 [MCP 与网关](./mechanism-baseline.md#27-mcp-与-mcp-gateway)）：lock-mcp（凭证生成、轮换、开锁记录）、robot-mcp（配送下单与状态）、wechat-mcp（支付单状态，不返回 openid/prepay_id）。启用的 server 在 Run 装配期真实装载工具；pms-mcp（房态同步）暂未落地。
 
 ## 关键链路
 

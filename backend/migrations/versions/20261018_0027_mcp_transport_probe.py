@@ -33,9 +33,7 @@ def upgrade() -> None:
     op.add_column(
         "mcp_servers", sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True)
     )
-    op.add_column(
-        "mcp_servers", sa.Column("discovered_tools", postgresql.JSONB(), nullable=True)
-    )
+    op.add_column("mcp_servers", sa.Column("discovered_tools", postgresql.JSONB(), nullable=True))
 
 
 def downgrade() -> None:

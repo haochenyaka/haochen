@@ -12,14 +12,18 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.agents.mcp.probe import PROBE_FAILED, PROBE_OK, ProbeResult
 from app.db import get_session
 from app.main import app
+from app.models.mcp_server import McpServer
 from app.repositories import UserRepository
 from app.security import hash_password
+from app.seed import MCP_GATEWAY_SERVERS, seed
+from tests.integration.db_utils import run_with_session_factory
 
 pytestmark = pytest.mark.integration
 
@@ -204,3 +208,30 @@ def test_authorization_matrix(api: Api) -> None:
     assert (
         api.client.delete(f"/api/admin/mcp-servers/{sid}", headers=_auth(admin)).status_code == 204
     )
+
+
+def test_seed_registers_gateway_servers_idempotently(runtime_db_url: str) -> None:
+    """空库 seed 后三个渠道 server 可被发现；重复 seed 不重复插入。"""
+
+    async def _body(factory: Any) -> tuple[int, int, list[McpServer]]:
+        async with factory() as session:
+            first = await seed(session)
+            second = await seed(session)
+        async with factory() as session:
+            rows = (
+                (await session.execute(select(McpServer).order_by(McpServer.slug))).scalars().all()
+            )
+        return (
+            first.created.get("mcp_servers", 0),
+            second.created.get("mcp_servers", 0),
+            list(rows),
+        )
+
+    first_count, second_count, rows = run_with_session_factory(runtime_db_url, _body)
+    assert first_count == len(MCP_GATEWAY_SERVERS)
+    assert second_count == 0, "重复 seed 不应重复插入"
+    slugs = {row.slug for row in rows}
+    assert {"lock-mcp", "robot-mcp", "wechat-mcp"} <= slugs
+    seeded = [row for row in rows if row.slug in {"lock-mcp", "robot-mcp", "wechat-mcp"}]
+    assert all(row.server_url.endswith("/mcp") for row in seeded)
+    assert all(row.transport == "streamable_http" for row in seeded)

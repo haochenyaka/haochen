@@ -45,6 +45,16 @@ class SubscribeMessage:
     status: str
 
 
+@dataclass(frozen=True)
+class PayOrderStatus:
+    """支付单状态：不含 openid / prepay_id 等渠道侧标识，仅暴露业务可读字段。"""
+
+    order_no: str
+    amount_fen: int
+    status: str
+    notifications: int
+
+
 class WechatClient:
     def __init__(self, *, base_url: str, timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS) -> None:
         self._client = httpx.AsyncClient(base_url=base_url.rstrip("/"), timeout=timeout_seconds)
@@ -59,9 +69,11 @@ class WechatClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _request(
+        self, method: str, path: str, *, json: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         try:
-            response = await self._client.post(path, json=payload)
+            response = await self._client.request(method, path, json=json)
         except httpx.HTTPError as exc:
             raise WechatUnavailableError(f"微信渠道不可达：{path}") from exc
         if response.status_code >= 400:
@@ -73,6 +85,9 @@ class WechatClient:
         if not isinstance(body, dict):
             raise WechatError(f"微信渠道响应结构不合约：{path}")
         return body
+
+    async def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self._request("POST", path, json=payload)
 
     async def code2session(self, code: str) -> WechatSession:
         body = await self._post("/wechat/v1/login", {"code": code})
@@ -104,6 +119,20 @@ class WechatClient:
         if not isinstance(prepay_id, str) or not prepay_id or not isinstance(pay_params, dict):
             raise WechatError("微信下单响应缺少 prepay_id/pay_params")
         return PrepayOrder(prepay_id=prepay_id, pay_params=dict(pay_params))
+
+    async def get_pay_order(self, order_no: str) -> PayOrderStatus:
+        body = await self._request("GET", f"/wechat/v1/pay/orders/{order_no}")
+        status = body.get("status")
+        amount_fen = body.get("amount_fen")
+        notifications = body.get("notifications", 0)
+        if not isinstance(status, str) or not isinstance(amount_fen, int):
+            raise WechatError("微信支付单响应缺少 status/amount_fen")
+        return PayOrderStatus(
+            order_no=str(body.get("order_no", order_no)),
+            amount_fen=amount_fen,
+            status=status,
+            notifications=notifications if isinstance(notifications, int) else 0,
+        )
 
     async def send_subscribe_message(
         self,

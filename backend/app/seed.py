@@ -11,14 +11,17 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db import SessionFactory
 from app.models.data_pipeline import DataCleaningRule
 from app.models.domain import Room
+from app.models.mcp_server import McpServer
 from app.repositories import (
     GuestRepository,
     HousekeepingTaskRepository,
@@ -104,6 +107,31 @@ DEMO_ROOM_NO = "301"
 DEMO_ORDER_AMOUNT_FEN = 119400
 DEMO_CREDENTIAL_VALID_DAYS = 2
 DEMO_TASK_DEDUPE_KEY = "seed:call_clean:302"
+
+# MCP 网关各渠道端点（子路径挂载）：URL 前缀取 settings.mcp_gateway_base_url。
+MCP_GATEWAY_SERVERS: tuple[dict[str, object], ...] = (
+    {
+        "slug": "lock-mcp",
+        "name": "门锁 MCP 网关",
+        "path": "/lock/mcp",
+        "description": "lock-mcp：凭证签发/轮换/吊销/开锁记录（内部走 device-sim 契约模拟器）",
+        "read_only_tools": ["get_credential_metadata", "list_unlock_records"],
+    },
+    {
+        "slug": "robot-mcp",
+        "name": "机器人 MCP 网关",
+        "path": "/robot/mcp",
+        "description": "robot-mcp：机器人配送下单与状态查询（内部走 device-sim 契约模拟器）",
+        "read_only_tools": ["get_delivery"],
+    },
+    {
+        "slug": "wechat-mcp",
+        "name": "微信 MCP 网关",
+        "path": "/wechat/mcp",
+        "description": "wechat-mcp：支付单状态查询（不返回 openid/prepay_id）",
+        "read_only_tools": ["get_pay_order_status"],
+    },
+)
 
 # 数据管道默认规则：9 个 handler 各一条，带生产合理 cron 与参数（可编辑、可停用）。
 # 导出入湖类与预聚合相位错开：export 每 30 分钟，aggregate 每小时 10 分，避免空跑。
@@ -360,6 +388,31 @@ async def _seed_cleaning_rules(session: AsyncSession, report: SeedReport) -> Non
         report.count("cleaning_rules")
 
 
+async def _seed_mcp_servers(session: AsyncSession, report: SeedReport) -> None:
+    """幂等注册 mcp-gateway 的三个渠道 server；已存在的 slug 不覆盖（保留管理端改动）。"""
+    base_url = get_settings().mcp_gateway_base_url.rstrip("/")
+    existing = set((await session.execute(select(McpServer.slug))).scalars().all())
+    for item in MCP_GATEWAY_SERVERS:
+        slug = str(item["slug"])
+        if slug in existing:
+            continue
+        session.add(
+            McpServer(
+                slug=slug,
+                name=str(item["name"]),
+                description=str(item["description"]),
+                server_url=f"{base_url}{item['path']}",
+                transport="streamable_http",
+                config_json={
+                    "timeout_seconds": 10,
+                    "read_only_tools": cast(list[str], item["read_only_tools"]),
+                },
+                active=True,
+            )
+        )
+        report.count("mcp_servers")
+
+
 async def seed(session: AsyncSession) -> SeedReport:
     report = SeedReport()
     account_ids = await _seed_accounts(session, report)
@@ -370,6 +423,7 @@ async def seed(session: AsyncSession) -> SeedReport:
         session, report, rooms=rooms, staff_ids=staff_ids, account_ids=account_ids
     )
     await _seed_cleaning_rules(session, report)
+    await _seed_mcp_servers(session, report)
     await session.commit()
     return report
 
