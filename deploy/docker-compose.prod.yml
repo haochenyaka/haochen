@@ -66,6 +66,17 @@ services:
       DEVICE_SIM_SIGNING_SECRET: ${DEVICE_SIM_SIGNING_SECRET:?生产环境必须显式设置 DEVICE_SIM_SIGNING_SECRET}
       LOCK_MASTER_KEY: ${LOCK_MASTER_KEY:?生产环境必须显式设置 LOCK_MASTER_KEY}
 
+  backup:
+    environment:
+      DB_PASS: ${POSTGRES_PASSWORD:?生产环境必须显式设置 POSTGRES_PASSWORD}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?生产环境必须显式设置 BACKUP_ENCRYPTION_KEY}
+      BACKUP_REQUIRE_ENCRYPTION: "true"
+      BACKUP_REQUIRE_OFFSITE: "true"
+    volumes: !override
+      - ./backup.sh:/usr/local/bin/haochen-backup.sh:ro
+      - backupdata:/backups
+      - ${OFFSITE_BACKUP_DIR:?生产环境必须显式设置 OFFSITE_BACKUP_DIR}:/offsite
+
   nginx:
     image: ${NGINX_IMAGE:-nginx:1.27-alpine}
     ports:

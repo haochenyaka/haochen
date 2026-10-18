@@ -19,14 +19,14 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；Phase 4 已交付 P4.2 安全加固、P4.3 可观测告警（2026-10-17）与 P4.4 可靠性与容量（2026-10-18），P4.1 / P4.5 待做
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；Phase 4 已交付 P4.2 安全加固、P4.3 可观测告警（2026-10-17）、P4.4 可靠性与容量（2026-10-18）与 P4.5 备份与合规（2026-10-18），P4.1 待做
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
 | --- | --- | --- |
 | 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
 | 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
-| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–3 ✅；P4 进行中（P4.2/P4.3/P4.4 ✅） |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–3 ✅；P4 进行中（P4.2–P4.5 ✅，P4.1 待做） |
 | 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
 
 ---
@@ -189,7 +189,14 @@
   - **长会话截断显式化并接入摘要**：新增 `MESSAGE_HISTORY_LIMIT`（默认 200），只加载最近消息并多取一条判断截断；命中时记录 thread/run 告警并向模型注入显式缺失提示。原实现 `list_for_thread` 取的是**最早** 200 条，长会话会静默丢掉最新消息，本次一并修正；记忆抽取同样改取最近 20 条。摘要阈值默认 100K → **24K**，低于常见 32K/64K 上下文窗口，压缩会真正触发。
   - **审计合并写入**：`AuditRecorder` 把同一短窗口内的并发事实合并为一次事务（`AUDIT_BATCH_WINDOW_MS` 默认 5ms、`AUDIT_BATCH_MAX_FACTS` 默认 32；窗口 0 恢复逐条提交），降低 DB 往返；每个调用仍等待所属批次提交成功才返回，保持「已发生事实不丢」。批次按 model→tool→route 固定顺序写入，避免跨 Run 咨询锁成环。
   - **验证**：ruff / mypy 全绿；单元 419 passed；本地集成 327 passed / 3 skipped（D7 本机无 `pg_dump` 仍 skip，以 CI 为准）；base compose `config --quiet` 通过。
-- [ ] **P4.5 备份与合规**：备份定时 + 异地 + 恢复演练纳入 CI（`deploy/backup.sh` / `restore.sh` 已存在）；PIPL 告知同意、最小必要、出境；客人身份/证件/人脸字段的存储与脱敏方案（**当前完全空白**）。
+- [x] **P4.5 备份与合规**（2026-10-18 交付）：
+  - **备份定时 + 异地 + 加密**：`deploy/backup.sh` 重写为可调度脚本，支持 `BACKUP_INTERVAL_SECONDS`（默认 86400）、`BACKUP_RETENTION_DAYS`（默认 30）、AES-256-CBC(pbkdf2) 加密、SHA-256 校验、manifest 与异地副本；compose 新增 `backup` 服务，生产覆盖层用 `${VAR:?}` 强制 `BACKUP_ENCRYPTION_KEY` 与 `OFFSITE_BACKUP_DIR`，并要求 `BACKUP_REQUIRE_ENCRYPTION/OFFSITE=true`。
+  - **恢复**：`deploy/restore.sh` 支持 `--yes` 非交互、自动识别 `.enc/.gz`、校验和、恢复前确认、恢复到指定新库、`--exit-on-error`，并按 `RESTORE_VERIFY_TABLES` 校验关键表存在与行数。
+  - **CI 演练**：新增 `backup-restore` job，真实执行加密备份 + 异地副本 + 过期清理，随后 `DROP TABLE` 模拟丢失并用 `restore.sh` 恢复到新库、断言行数一致。
+  - **PIPL 告知同意**：新增公开 `GET /api/privacy/notice`、登录态 `GET/POST /api/privacy/consents`；`consent_records` 追加式事件表（迁移 `20261018_0025`），支持同意/撤回、同状态去重、政策版本校验（409）与未知用途拒绝（422）；敏感用途（身份核验、人脸、营销）单独列出。
+  - **合规方案**：`docs/operations/privacy-compliance.md` 覆盖数据清单、最小必要、出境、证件/人脸存储与脱敏方案、权利响应与缺口；新增 PII 明文字段守卫测试，禁止 `id_card*`、`face_image/embedding` 等列进入模型。
+  - **上线 checklist**：`docs/operations/launch-readiness-checklist.md` 逐条列证据并明确 P4.1、前端同意页、服务端同意强制、自动化保留期清理、MinIO 备份与供应商合规等硬缺口；`docs/operations/backup-restore.md` 提供 RPO/RTO、调度、监控与恢复 runbook。
+  - **验证**：ruff / ruff format / mypy 全绿；单元 **425 passed**；本地集成 **331 passed / 3 skipped**；base 与 prod compose `config --quiet` 通过；`bash -n` 脚本语法通过。
 
 **验收**：一份「上线就绪 checklist」，逐条有证据。
 

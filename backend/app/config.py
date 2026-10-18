@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     app_name: str = "haochen-server"
     app_version: str = "0.1.0"
     env: str = "local"
+    # P4.5 隐私告知版本：同意记录必须与该版本一致；政策更新时同步递增
+    privacy_policy_version: str = "2026-10-18"
 
     database_url: str = DEV_DATABASE_URL
     redis_url: str = "redis://localhost:6379/0"

@@ -59,6 +59,14 @@ workdir/
 *.sqlite
 *.sqlite3
 
+# 备份产物（含个人信息，禁止入库）
+deploy/backups/
+deploy/backups-offsite/
+*.dump
+*.dump.gz
+*.dump.gz.enc
+*.sha256
+
 # BGE 模型权重（数 GiB，按 deploy/prepare_bge_models.py 本地准备）
 deploy/models/
 

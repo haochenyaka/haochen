@@ -83,6 +83,88 @@ jobs:
       - name: Integration tests
         run: pytest -q -m integration
 
+  # 真实执行 deploy/backup.sh 与 deploy/restore.sh：加密、异地副本、丢表后恢复到新库。
+  backup-restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: haochen
+          POSTGRES_PASSWORD: haochen
+          POSTGRES_DB: haochen
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U haochen -d haochen"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Seed drill data
+        env:
+          PGPASSWORD: haochen
+        run: |
+          set -euo pipefail
+          psql -h localhost -U haochen -d haochen -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE TABLE rooms (id serial PRIMARY KEY, room_no text NOT NULL);
+          CREATE TABLE orders (id serial PRIMARY KEY, order_no text NOT NULL);
+          CREATE TABLE messages (id serial PRIMARY KEY, content text NOT NULL);
+          CREATE TABLE agent_runs (id serial PRIMARY KEY, status text NOT NULL);
+          INSERT INTO rooms (room_no) VALUES ('A-1'), ('A-2');
+          INSERT INTO orders (order_no) VALUES ('NO-1');
+          INSERT INTO messages (content) VALUES ('你好'), ('退房');
+          INSERT INTO agent_runs (status) VALUES ('succeeded');
+          SQL
+      - name: Run backup with encryption, offsite copy and retention
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: haochen
+          DB_PASS: haochen
+          DB_NAME: haochen
+          BACKUP_DIR: ${{ runner.temp }}/backups
+          OFFSITE_BACKUP_DIR: ${{ runner.temp }}/offsite
+          BACKUP_ENCRYPTION_KEY: ci-only-backup-key-0123456789
+          BACKUP_REQUIRE_ENCRYPTION: "true"
+          BACKUP_REQUIRE_OFFSITE: "true"
+          BACKUP_RETENTION_DAYS: "30"
+        run: |
+          set -euo pipefail
+          mkdir -p "${BACKUP_DIR}" "${OFFSITE_BACKUP_DIR}"
+          touch -d "40 days ago" "${BACKUP_DIR}/haochen_expired.dump.gz" "${OFFSITE_BACKUP_DIR}/haochen_expired.dump.gz"
+          bash deploy/backup.sh
+          test -f "${BACKUP_DIR}/manifest.txt"
+          ARCHIVE="$(find "${BACKUP_DIR}" -maxdepth 1 -name 'haochen_*.dump.gz.enc' | head -1)"
+          test -n "${ARCHIVE}"
+          test -f "${ARCHIVE}.sha256"
+          test -f "${OFFSITE_BACKUP_DIR}/$(basename "${ARCHIVE}")"
+          test ! -e "${BACKUP_DIR}/haochen_expired.dump.gz"
+          test ! -e "${OFFSITE_BACKUP_DIR}/haochen_expired.dump.gz"
+      - name: Simulate data loss and restore to a new database
+        env:
+          PGPASSWORD: haochen
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: haochen
+          DB_PASS: haochen
+          DB_NAME: haochen
+          BACKUP_ENCRYPTION_KEY: ci-only-backup-key-0123456789
+          BACKUP_DIR: ${{ runner.temp }}/backups
+        run: |
+          set -euo pipefail
+          psql -h localhost -U haochen -d haochen -v ON_ERROR_STOP=1 \
+            -c "DROP TABLE rooms, orders, messages, agent_runs CASCADE"
+          ARCHIVE="$(find "${BACKUP_DIR}" -maxdepth 1 -name 'haochen_*.dump.gz.enc' | head -1)"
+          bash deploy/restore.sh "${ARCHIVE}" haochen_restore --yes
+          psql -h localhost -U haochen -d haochen_restore -tAc "SELECT count(*) FROM rooms" | grep -qx 2
+          psql -h localhost -U haochen -d haochen_restore -tAc "SELECT count(*) FROM messages" | grep -qx 2
+
   compose-config:
     runs-on: ubuntu-latest
     steps:
@@ -101,6 +183,8 @@ jobs:
           DEVICE_SIM_SIGNING_SECRET: ci-only-device-sim-secret
           CORS_ORIGINS: '["https://admin.example.com"]'
           SERVER_NAME: hotel.example.com
+          BACKUP_ENCRYPTION_KEY: ci-only-backup-key-0123456789
+          OFFSITE_BACKUP_DIR: /ci/offsite
         run: |
           docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml config --quiet
 

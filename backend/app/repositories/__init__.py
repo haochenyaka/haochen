@@ -12,6 +12,7 @@ from app.repositories.audit_repository import (
     AuditTimeline,
 )
 from app.repositories.complaint_repository import ComplaintRepository
+from app.repositories.consent_repository import ConsentRepository
 from app.repositories.conversation_repository import (
     HandoffRequestRepository,
     MessageFeedbackRepository,
@@ -58,6 +59,7 @@ __all__ = [
     "AuditRepository",
     "AuditTimeline",
     "ComplaintRepository",
+    "ConsentRepository",
     "GuestRepository",
     "HandoffRequestRepository",
     "HousekeepingTaskRepository",

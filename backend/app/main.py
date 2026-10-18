@@ -33,6 +33,7 @@ from app.routers import (
     guest_service_router,
     health,
     knowledge_router,
+    privacy_router,
     staff_attendance_router,
     staff_router,
     wechat_webhook_router,
@@ -100,6 +101,7 @@ def create_app() -> FastAPI:
     )
     setup_rate_limiter(app)
     app.include_router(health.router, prefix="/api")
+    app.include_router(privacy_router.router, prefix="/api")
     app.include_router(auth_router.router, prefix="/api")
     app.include_router(admin_router.router, prefix="/api")
     app.include_router(admin_agent_config_router.router, prefix="/api")

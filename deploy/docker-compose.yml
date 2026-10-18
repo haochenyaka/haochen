@@ -290,6 +290,8 @@ services:
       SUMMARY_THRESHOLD: ${SUMMARY_THRESHOLD:-24000}
       AUDIT_BATCH_WINDOW_MS: ${AUDIT_BATCH_WINDOW_MS:-5}
       AUDIT_BATCH_MAX_FACTS: ${AUDIT_BATCH_MAX_FACTS:-32}
+      # P4.5 隐私告知版本：同意记录必须与该版本一致，否则客户端需要重新展示告知
+      PRIVACY_POLICY_VERSION: ${PRIVACY_POLICY_VERSION:-2026-10-18}
     volumes:
       - workdirdata:/srv/app/data/workdir
     depends_on:
@@ -359,10 +361,44 @@ services:
       retries: 3
       start_period: 20s
 
+  # 定时逻辑备份：默认每天一次，本地保留 30 天；配置 OFFSITE_BACKUP_DIR 后同时写异地副本。
+  # 生产叠加 docker-compose.prod.yml 后强制要求加密密钥与异地目录。
+  backup:
+    image: ${BACKUP_IMAGE:-postgres:16}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-haochen}
+      DB_PASS: ${POSTGRES_PASSWORD:-haochen}
+      DB_NAME: ${POSTGRES_DB:-haochen}
+      BACKUP_DIR: /backups
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:-}
+      BACKUP_REQUIRE_ENCRYPTION: ${BACKUP_REQUIRE_ENCRYPTION:-false}
+      OFFSITE_BACKUP_DIR: /offsite
+      BACKUP_REQUIRE_OFFSITE: ${BACKUP_REQUIRE_OFFSITE:-false}
+    volumes:
+      - ./backup.sh:/usr/local/bin/haochen-backup.sh:ro
+      - backupdata:/backups
+      - ${OFFSITE_BACKUP_DIR:-./backups-offsite}:/offsite
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          bash /usr/local/bin/haochen-backup.sh || echo "[backup] 本次备份失败，等待下一周期" >&2
+          sleep "$${BACKUP_INTERVAL_SECONDS:-86400}"
+        done
+
 volumes:
   pgdata:
   redisdata:
   miniodata:
   milvusdata:
   neo4jdata:
+  backupdata:
   workdirdata:
