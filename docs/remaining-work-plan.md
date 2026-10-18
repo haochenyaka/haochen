@@ -19,14 +19,14 @@
    ↑
 原定阻塞点两个：① P0 未合进 main   ② CI 不可能绿
 —— 两者已于 2026-10-16 全部解除（P0 经 PR #2 合入 main；CI 6/6 全绿）
-当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；P4.2 安全加固已交付（2026-10-17），P4 其余子项待启动
+当前状态：Phase 0–2 已全部交付（P2.1/P2.2 经 PR #5、P2.3/P2.4 经 PR #6 合入 main，`d185fca`）；Phase 3 已全部完成（P3.1 BGE 全量重建 + 169 题基线，P3.2 图多跳补充腿，P3.3 数据湖业务口径与基准）；Phase 4 已交付 P4.2 安全加固、P4.3 可观测告警（2026-10-17）与 P4.4 可靠性与容量（2026-10-18），P4.1 / P4.5 待做
 ```
 
 | 层 | 事项数 | 能否立刻推进 |
 | --- | --- | --- |
 | 第一层：手上未收尾 | 3 | ✅ 已全部收尾 |
 | 第二层：硬门槛 | 3 | ✅ #4/#5 已解除；⚠️ #6 待拍板 |
-| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–3 ✅；P4 待启动 |
+| 第三层：Phase 1–4 | 4 阶段 / 16 子项 | Phase 1–3 ✅；P4 进行中（P4.2/P4.3/P4.4 ✅） |
 | 第四层：零散欠账 | 6 | ✅ 大多可立刻做 |
 
 ---
@@ -184,7 +184,11 @@
   - **告警规则**：`GET /api/admin/health/alerts`（admin/manager 只读）重算四类规则——`run_stuck`（pending > 300s 或 running 心跳 > 180s）、`lease_expiry_rate`（15min 内 ≥10 次已结束尝试且过期率 >5%）、`sse_disconnect`（15min 内 ≥20 次订阅且异常率 >10%，或事件总线读写失败）、`db_pool_exhaustion`（本进程签出率 ≥90%）。返回 `ok/warning/critical` 与可定位 `facts`，阈值全部可配置。
   - **SLO + on-call**：新增 `docs/operations/slo-oncall.md`，含 SLO 口径、告警阈值、逐规则处置 SQL/动作、升级路径、季度演练与已知限制（拉取式评估、池指标单进程、指标 TTL）。
   - **验证**：ruff / mypy 全绿；单元 400 passed；本地集成 326 passed / 3 skipped；base 与 prod compose `config --quiet` 通过。
-- [ ] **P4.4 可靠性与容量**：checkpoint 连接池固定 4（`runtime.py:40-42`）→ 可配置；长会话静默截断（`run_body.py:105` `limit=200`）→ 显式告警 + 接入摘要（当前摘要阈值 10 万 token 几乎不触发）；审计「每次调用单开事务」（`audit_service.py`）→ 批量/复用连接。
+- [x] **P4.4 可靠性与容量**（2026-10-18 交付）：
+  - **checkpoint 连接池可配置**：`CHECKPOINT_POOL_MIN_SIZE` / `CHECKPOINT_POOL_MAX_SIZE` / `CHECKPOINT_POOL_OPEN_TIMEOUT_SECONDS`（默认 1 / 4 / 10s）；`Settings` 启动期与 `resolve_checkpoint_pool_settings` 解析期双重校验，就绪日志输出实际池容量。
+  - **长会话截断显式化并接入摘要**：新增 `MESSAGE_HISTORY_LIMIT`（默认 200），只加载最近消息并多取一条判断截断；命中时记录 thread/run 告警并向模型注入显式缺失提示。原实现 `list_for_thread` 取的是**最早** 200 条，长会话会静默丢掉最新消息，本次一并修正；记忆抽取同样改取最近 20 条。摘要阈值默认 100K → **24K**，低于常见 32K/64K 上下文窗口，压缩会真正触发。
+  - **审计合并写入**：`AuditRecorder` 把同一短窗口内的并发事实合并为一次事务（`AUDIT_BATCH_WINDOW_MS` 默认 5ms、`AUDIT_BATCH_MAX_FACTS` 默认 32；窗口 0 恢复逐条提交），降低 DB 往返；每个调用仍等待所属批次提交成功才返回，保持「已发生事实不丢」。批次按 model→tool→route 固定顺序写入，避免跨 Run 咨询锁成环。
+  - **验证**：ruff / mypy 全绿；单元 419 passed；本地集成 327 passed / 3 skipped（D7 本机无 `pg_dump` 仍 skip，以 CI 为准）；base compose `config --quiet` 通过。
 - [ ] **P4.5 备份与合规**：备份定时 + 异地 + 恢复演练纳入 CI（`deploy/backup.sh` / `restore.sh` 已存在）；PIPL 告知同意、最小必要、出境；客人身份/证件/人脸字段的存储与脱敏方案（**当前完全空白**）。
 
 **验收**：一份「上线就绪 checklist」，逐条有证据。

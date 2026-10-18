@@ -37,6 +37,25 @@ class MessageRepository:
         )
         return list((await self._session.execute(stmt)).scalars())
 
+    async def recent_for_thread(self, thread_id: UUID, *, limit: int) -> tuple[list[Message], bool]:
+        """最近 limit 条消息（仍按 seq 升序）与是否发生截断。
+
+        多取一条用于判断是否还有更早消息，避免额外 count 查询。
+        """
+        if limit < 1:
+            raise ValueError("limit 至少为 1")
+        stmt = (
+            select(Message)
+            .where(Message.thread_id == thread_id)
+            .order_by(Message.seq.desc())
+            .limit(limit + 1)
+        )
+        rows = list((await self._session.execute(stmt)).scalars())
+        truncated = len(rows) > limit
+        rows = rows[:limit]
+        rows.reverse()
+        return rows, truncated
+
     async def latest_for_thread(self, thread_id: UUID, *, limit: int = 50) -> list[Message]:
         """最近 limit 条消息，仍按 seq 升序返回（会话页首屏：优先看最新，顺序照旧）。"""
         stmt = (

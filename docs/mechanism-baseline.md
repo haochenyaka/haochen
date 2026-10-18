@@ -116,7 +116,7 @@ P1 已落地 `app/agents/toolkits/registry.py`：`@builtin_tool(category=...)` �
 
 | 项 | 内容 |
 | --- | --- |
-| 机制要点 | 唯一压力阈值 `summary_threshold`（默认 100K，环境变量 `SUMMARY_THRESHOLD`）+ `summary_keep_messages`（默认 10，`SUMMARY_KEEP_MESSAGES`）；先**确定性压缩**（大工具结果写入 Workdir 的 outputs/large_tool_results/，请求中保留路径 + 哈希 + 预览；`LARGE_RESULT_THRESHOLD_BYTES` / `LARGE_RESULT_PREVIEW_CHARS` 控制），同口径重计量仍达阈值才调摘要模型；摘要事件以图状态 `summarization_events`（追加语义）随 checkpoint 累积，最新一条即本次事件（cutoff + 摘要 + `outputs/summaries/` 历史文件路径 + 压缩前后消息数/近似 token）；**PostgreSQL 聊天消息不因压缩删除**；内部摘要模型带 nostream 标签不流给用户，其用量计入 Run 的 token_usage；主动压缩与普通请求共用 Conversation 行锁，忙时 409 thread_busy |
+| 机制要点 | 唯一压力阈值 `summary_threshold`（默认 24K，环境变量 `SUMMARY_THRESHOLD`；低于常见 32K/64K 上下文窗口，确保压缩在撞模型上限前触发）+ `summary_keep_messages`（默认 10，`SUMMARY_KEEP_MESSAGES`）；单次 Run 只加载最近 `message_history_limit`（默认 200，`MESSAGE_HISTORY_LIMIT`）条消息，发生截断时记录告警并向模型注入缺失提示；先**确定性压缩**（大工具结果写入 Workdir 的 outputs/large_tool_results/，请求中保留路径 + 哈希 + 预览；`LARGE_RESULT_THRESHOLD_BYTES` / `LARGE_RESULT_PREVIEW_CHARS` 控制），同口径重计量仍达阈值才调摘要模型；摘要事件以图状态 `summarization_events`（追加语义）随 checkpoint 累积，最新一条即本次事件（cutoff + 摘要 + `outputs/summaries/` 历史文件路径 + 压缩前后消息数/近似 token）；**PostgreSQL 聊天消息不因压缩删除**；内部摘要模型带 nostream 标签不流给用户，其用量计入 Run 的 token_usage；主动压缩与普通请求共用 Conversation 行锁，忙时 409 thread_busy |
 | 酒店域增量 | 无领域改动；注意 CredentialGuard（§3）必须先于摘要与记忆处理明文 |
 | 落地位置 | app/agents/middlewares/summary.py（摘要）、filesystem.py（确定性压缩）、pipeline.py（装配）、app/services/context_compression_service.py（P1 后续主动压缩接口） |
 | 阶段 | P1 |
@@ -213,9 +213,9 @@ HaoChen 用 `langgraph~=1.0` / `langchain-openai` 承载图与模型接入，但
 
 | 工位 | 框架似有能力 | 自研理由 | 代码锚点 |
 | --- | --- | --- | --- |
-| PatchToolCalls | LangGraph 预建工具节点对悬空 `tool_calls` 的规范化 | 本项目的对话事实来自 **PostgreSQL 消息表整体重放**（非从框架检查点续跑），叠加摘要折叠与外部写入，历史里会出现悬空 `tool_calls` 或孤立 ToolMessage；OpenAI 兼容接口对此直接返回 400。框架的规范化不覆盖"从外部重放的历史被截断"这条路径 | `app/agents/middlewares/patch_tool_calls.py:1-6`（docstring 说明触发场景）、`app/services/run_body.py:104-105,143-144`（历史重放） |
+| PatchToolCalls | LangGraph 预建工具节点对悬空 `tool_calls` 的规范化 | 本项目的对话事实来自 **PostgreSQL 消息表整体重放**（非从框架检查点续跑），叠加摘要折叠与外部写入，历史里会出现悬空 `tool_calls` 或孤立 ToolMessage；OpenAI 兼容接口对此直接返回 400。框架的规范化不覆盖"从外部重放的历史被截断"这条路径 | `app/agents/middlewares/patch_tool_calls.py:1-6`（docstring 说明触发场景）、`app/services/run_body.py:139-141,199`（历史重放） |
 | ModelRetry | `ChatOpenAI(max_retries=...)` 原生重试 | 模型层**显式关闭** `max_retries=0`，为的是让**每次尝试各写一条审计事实**（成功与失败都留痕，供可观测与失败归因）；框架内建重试不落审计 | `app/agents/models.py:111`、`app/agents/middlewares/model_retry.py:1-4`；证据 `tests/integration/test_agent_runtime.py::test_model_failure_leaves_audit_fact_and_fails_run`（默认 3 次尝试 = 3 条失败事实） |
-| TokenUsage | LangChain 的 `usage_metadata` | 该工位做**两件事**：① Provider **实际用量**（复用 `usage_metadata`，含缓存命中 `input_token_details.cache_read`，供缓存命中率与成本报表）；② **近似上下文 token 估算**（CJK 按 1 字符、其余 4 字符）与 `summarization` 的阈值判断**同口径**——框架没有这个估算 | `app/agents/middlewares/token_usage.py:30-34`（估算）、`app/agents/models.py:57-68`（实际用量）、`app/config.py:61`（`summary_threshold`） |
+| TokenUsage | LangChain 的 `usage_metadata` | 该工位做**两件事**：① Provider **实际用量**（复用 `usage_metadata`，含缓存命中 `input_token_details.cache_read`，供缓存命中率与成本报表）；② **近似上下文 token 估算**（CJK 按 1 字符、其余 4 字符）与 `summarization` 的阈值判断**同口径**——框架没有这个估算 | `app/agents/middlewares/token_usage.py:30-34`（估算）、`app/agents/models.py:57-68`（实际用量）、`app/config.py:105`（`summary_threshold`） |
 
 结论：三者中只有"实际用量"一项是框架现成能力；其余（外部历史重放的消息形态修复、逐次留痕的重试、与压缩阈值同口径的近似估算）都是本项目可观测性与上下文治理口径的一部分，收敛掉会丢语义。因此**保留自研**，仅在此登记理由，不做收敛。
 

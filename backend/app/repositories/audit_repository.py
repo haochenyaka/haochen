@@ -58,9 +58,10 @@ class AuditRepository:
     async def _next_seq(self, model: AuditModel, run_key: str) -> int:
         """分配 Run 内下一个 seq，并把同表同 Run 的分配串行化。
 
-        同一 Run 内多个工具事实会并发写（`AuditRecorder` 每次调用各开一个独立事务），
-        `max(seq)+1` 的读后写会让并发事实撞上同一个 seq、触发 `uq_*_run_seq` 而整轮失败。
-        先取事务级咨询锁（随事务提交释放），把分配收进临界区；锁键含表名，互不干扰。
+        同一 Run 内多个工具事实会并发写（`AuditRecorder` 把同窗口并发事实合并为一次事务，
+        但不同批次/进程仍可能并发），`max(seq)+1` 的读后写会让并发事实撞上同一个 seq、
+        触发 `uq_*_run_seq` 而整轮失败。先取事务级咨询锁（随事务提交释放），把分配收进
+        临界区；锁键含表名，互不干扰。
         """
         await self._session.execute(
             select(func.pg_advisory_xact_lock(func.hashtext(f"{model.__tablename__}:{run_key}")))

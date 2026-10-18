@@ -44,6 +44,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 MESSAGE_FACTORIES = {"user": HumanMessage, "assistant": AIMessage, "system": SystemMessage}
+HISTORY_TRUNCATED_NOTICE = (
+    "本次对话只加载了最近的消息，更早的历史已被省略；涉及更早的承诺或事实时，请先向客人确认。"
+)
 
 
 def to_lc_messages(rows: Sequence[Message]) -> list[BaseMessage]:
@@ -75,6 +78,21 @@ def reply_text(message: BaseMessage) -> str:
             block.get("text", "") if isinstance(block, dict) else str(block) for block in content
         )
     return str(content)
+
+
+def build_invoke_input(
+    history: Sequence[Message],
+    *,
+    truncated: bool,
+    resume: dict[str, object] | None,
+) -> Any:
+    """图输入：恢复路径续跑；首次执行按最近历史发起，截断时显式告知模型。"""
+    if resume is not None:
+        return Command(resume=resume)
+    messages = to_lc_messages(history)
+    if truncated:
+        messages.insert(0, SystemMessage(content=HISTORY_TRUNCATED_NOTICE))
+    return {"messages": messages}
 
 
 def final_reply(messages: Sequence[BaseMessage]) -> AIMessage:
@@ -116,10 +134,20 @@ class AgentRunBody:
         # Langfuse 可选 trace：模型执行前预创建 trace 并固化 ID
         langfuse_trace_id = await self._prepare_langfuse_trace(ctx, identity)
 
+        settings = get_settings()
         async with ctx.session_factory() as session:
-            history = await MessageRepository(session).list_for_thread(identity.thread_id)
+            history, history_truncated = await MessageRepository(session).recent_for_thread(
+                identity.thread_id, limit=settings.message_history_limit
+            )
             agent_config = await AgentConfigService(session).load_runtime_config(
                 identity.agent_slug
+            )
+        if history_truncated:
+            logger.warning(
+                "会话历史截断：thread_id=%s run_id=%s 仅加载最近 %d 条，更早消息未进入上下文",
+                identity.thread_id,
+                identity.run_id,
+                settings.message_history_limit,
             )
 
         resources = await prepare_agent_runtime_context(
@@ -168,9 +196,7 @@ class AgentRunBody:
         )
         graph = await agent.build_graph(runtime)
         resume = await self._resolve_resume(ctx)
-        invoke_input: Any = (
-            Command(resume=resume) if resume is not None else {"messages": to_lc_messages(history)}
-        )
+        invoke_input = build_invoke_input(history, truncated=history_truncated, resume=resume)
         output = await graph.ainvoke(
             invoke_input,
             config=runtime.thread_config(),
